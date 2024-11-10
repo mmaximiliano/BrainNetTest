@@ -1,0 +1,14 @@
+Package: BrainNetTest
+Type: Package
+Title: Hypothesis Testing for Brain Network Analysis
+Version: 0.1.0
+Authors@R: person("Maximiliano", "Martino", email = "maxii.martino@gmail.com", role = c("aut", "cre"))
+Description: Provides functions to perform hypothesis testing on brain networks represented as graphs. It includes functionalities to compute central graphs, calculate distances using the Manhattan norm, and compute the test statistic T to determine if different populations of brain networks originate from the same distribution.
+License: MIT + file LICENSE
+Encoding: UTF-8
+LazyData: true
+Imports:
+    Matrix
+Suggests:
+    testthat
+RoxygenNote: 7.1.1
