@@ -11,7 +11,12 @@
 #' @return A numeric value representing the Manhattan distance between G and M.
 #' @export
 #'
+#' @importFrom stats rbinom
 #' @examples
+#' # Generate synthetic data
+#' G1 <- generate_random_graph(n_nodes = 5, edge_prob = 0.1)
+#' G2 <- generate_random_graph(n_nodes = 5, edge_prob = 0.1)
+#' central_graph <- compute_central_graph(list(G1, G2))
 #' distance <- compute_distance(G1, central_graph)
 compute_distance <- function(G, M) {
   if (!is.matrix(G) || !is.matrix(M)) {

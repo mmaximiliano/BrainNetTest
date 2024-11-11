@@ -13,6 +13,7 @@
 #' @return A symmetric binary adjacency matrix with no self-loops.
 #' @export
 #'
+#' @importFrom stats rbinom
 #' @examples
 #' G <- generate_random_graph(n_nodes = 10, edge_prob = 0.1)
 generate_random_graph <- function(n_nodes, edge_prob = 0.1) {
@@ -24,15 +25,19 @@ generate_random_graph <- function(n_nodes, edge_prob = 0.1) {
     stop("edge_prob must be a numeric value between 0 and 1.")
   }
   
-  # Generate upper triangular matrix excluding diagonal
-  upper_tri <- matrix(rbinom(n_nodes * (n_nodes - 1) / 2, 1, edge_prob),
-                      nrow = n_nodes, ncol = n_nodes)
+  # Initialize a matrix of zeros
+  G <- matrix(0, nrow = n_nodes, ncol = n_nodes)
   
-  # Make the matrix symmetric
-  G <- upper_tri
-  G[lower.tri(G)] <- t(upper_tri)[lower.tri(G)]
+  # Get indices of upper triangle excluding the diagonal
+  upper_indices <- which(upper.tri(G), arr.ind = TRUE)
   
-  # Remove self-loops
+  # Assign random edges to upper triangle
+  G[upper_indices] <- rbinom(nrow(upper_indices), 1, edge_prob)
+  
+  # Mirror the upper triangle to the lower triangle to make it symmetric
+  G <- G + t(G)
+  
+  # Ensure diagonal is zero (no self-loops)
   diag(G) <- 0
   
   return(G)

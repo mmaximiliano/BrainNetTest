@@ -11,6 +11,11 @@
 #' @export
 #'
 #' @examples
+#' # Generate synthetic Control data
+#' Control <- list(
+#'   generate_random_graph(n_nodes = 5, edge_prob = 0.1),
+#'   generate_random_graph(n_nodes = 5, edge_prob = 0.1)
+#' )
 #' central_graph <- compute_central_graph(Control)
 compute_central_graph <- function(graph_list) {
   if (length(graph_list) == 0) {

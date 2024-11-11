@@ -8,7 +8,10 @@ License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
 Imports:
-    Matrix
+    stats
 Suggests:
+    knitr,
+    rmarkdown,
     testthat
-RoxygenNote: 7.1.1
+RoxygenNote: 7.3.2
+VignetteBuilder: knitr

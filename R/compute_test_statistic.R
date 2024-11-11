@@ -13,8 +13,27 @@
 #' @return A numeric value representing the test statistic T.
 #' @export
 #'
+#' @importFrom stats rbinom
 #' @examples
+#' # Generate synthetic populations data
+#' Control <- list(
+#'   generate_random_graph(n_nodes = 5, edge_prob = 0.1),
+#'   generate_random_graph(n_nodes = 5, edge_prob = 0.1)
+#' )
+#' Schizophrenia <- list(
+#'   generate_random_graph(n_nodes = 5, edge_prob = 0.15),
+#'   generate_random_graph(n_nodes = 5, edge_prob = 0.15)
+#' )
+#' Alzheimer <- list(
+#'   generate_random_graph(n_nodes = 5, edge_prob = 0.2),
+#'   generate_random_graph(n_nodes = 5, edge_prob = 0.2)
+#' )
+#' 
+#' populations <- list(Control = Control, Schizophrenia = Schizophrenia, Alzheimer = Alzheimer)
+#' 
+#' # Compute the test statistic T
 #' T_value <- compute_test_statistic(populations, a = 1)
+#' print(T_value)
 compute_test_statistic <- function(populations, a = 1) {
   if (!is.list(populations) || length(populations) == 0) {
     stop("populations must be a non-empty list.")
