@@ -3,5 +3,6 @@
 export(compute_central_graph)
 export(compute_distance)
 export(compute_test_statistic)
+export(generate_community_graph)
 export(generate_random_graph)
 importFrom(stats,rbinom)
