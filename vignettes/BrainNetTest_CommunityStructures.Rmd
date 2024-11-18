@@ -1,0 +1,142 @@
+---
+title: "Generating and Analyzing Brain Networks with Community Structures"
+author: "Maximiliano Martino"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Brain Networks with Community Structures}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+Introduction
+In this vignette, we'll explore how to generate brain networks with community structures using BrainNetTest and analyze them to perform hypothesis testing.
+
+Generating Brain Networks with Community Structures
+Using generate_community_graph
+The generate_community_graph function generates a single brain network with specified community structures.
+
+```{r setup, include = FALSE}
+library(BrainNetTest)
+
+# Generate a brain network with community structure
+G <- generate_community_graph(
+  n_nodes = 100,
+  n_communities = 4,
+  intra_prob = 0.8,
+  inter_prob = 0.2,
+  seed = 42
+)
+
+# Display a portion of the adjacency matrix
+print(G[1:10, 1:10])
+```
+
+Visualizing the Network
+We can visualize the network to observe the community structure.
+
+```{r setup, include = FALSE}
+# Install and load igraph for visualization
+if (!requireNamespace("igraph", quietly = TRUE)) {
+  install.packages("igraph")
+}
+library(igraph)
+
+# Create an igraph object
+graph <- graph_from_adjacency_matrix(G, mode = "undirected")
+
+# Assign community membership as vertex attributes
+community_sizes <- NULL
+n_communities <- 4
+n_nodes <- 100
+if (is.null(community_sizes)) {
+  base_size <- n_nodes %/% n_communities
+  remainder <- n_nodes %% n_communities
+  community_sizes <- rep(base_size, n_communities)
+  if (remainder > 0) {
+    community_sizes[1:remainder] <- community_sizes[1:remainder] + 1
+  }
+}
+community_assignments <- rep(1:n_communities, times = community_sizes)
+V(graph)$community <- community_assignments
+
+# Plot the network
+set.seed(123)
+plot(graph, vertex.color = V(graph)$community, vertex.size = 5, vertex.label = NA)
+```
+
+Generating Graphs for a Category with Similar Community Structures
+Using generate_category_graphs
+The generate_category_graphs function generates a set of graphs belonging to the same category with similar community structures.
+
+```{r setup, include = FALSE}
+# Generate 5 graphs for the Control category
+control_graphs <- generate_category_graphs(
+  n_graphs = 5,
+  n_nodes = 100,
+  n_communities = 4,
+  base_intra_prob = 0.8,
+  base_inter_prob = 0.2,
+  intra_prob_variation = 0.05,
+  inter_prob_variation = 0.05,
+  seed = 1
+)
+
+# Check the number of graphs generated
+length(control_graphs)
+```
+
+Performing Hypothesis Testing Between Categories
+Generating Graphs for Multiple Categories
+
+```{r setup, include = FALSE}
+# Generate graphs for the Control category
+control_graphs <- generate_category_graphs(
+  n_graphs = 30,
+  n_nodes = 100,
+  n_communities = 4,
+  base_intra_prob = 0.8,
+  base_inter_prob = 0.2,
+  intra_prob_variation = 0.05,
+  inter_prob_variation = 0.05,
+  seed = 1
+)
+
+# Generate graphs for the Disease category
+disease_graphs <- generate_category_graphs(
+  n_graphs = 30,
+  n_nodes = 100,
+  n_communities = 4,
+  base_intra_prob = 0.6,
+  base_inter_prob = 0.4,
+  intra_prob_variation = 0.05,
+  inter_prob_variation = 0.05,
+  seed = 2
+)
+
+# Combine populations into a list
+populations <- list(Control = control_graphs, Disease = disease_graphs)
+```
+
+Computing the Test Statistic
+
+```{r setup, include = FALSE}
+# Compute the test statistic T
+T_value <- compute_test_statistic(populations, a = 1)
+print(T_value)
+```
+
+Interpreting the Results
+A higher value of the test statistic T indicates greater differences between the populations' brain networks.
+
+Conclusion
+This vignette demonstrated how to generate brain networks with community structures and perform hypothesis testing using BrainNetTest. By simulating realistic brain network data, researchers can test hypotheses and analyze differences between various categories, such as healthy controls and patients with specific conditions.
+
+References

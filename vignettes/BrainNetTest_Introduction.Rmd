@@ -1,19 +1,99 @@
 ---
-title: "BrainNetTest_Introduction"
+title: "Introduction to BrainNetTest"
+author: "Maximiliano Martino"
+date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{BrainNetTest_Introduction}
+  %\VignetteIndexEntry{Introduction to BrainNetTest}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
 
-```{r, include = FALSE}
+```{r setup, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>"
 )
 ```
 
-```{r setup}
+Introduction
+BrainNetTest is an R package designed to perform hypothesis testing on brain networks represented as graphs. It provides functionalities to:
+
+Generate random brain networks.
+Compute central graphs for populations.
+Calculate distances between graphs.
+Compute test statistics to assess differences between populations.
+This vignette introduces the basic usage of BrainNetTest.
+
+Installation
+You can install the development version of BrainNetTest from GitHub:
+
+```{r setup, include = FALSE}
+# Install devtools if not already installed
+install.packages("devtools")
+
+# Install BrainNetTest from GitHub
+devtools::install_github("mmaximiliano/BrainNetTest")
+```
+
+Getting Started
+Load the BrainNetTest package:
+
+```{r setup, include = FALSE}
 library(BrainNetTest)
 ```
+
+Generating Random Brain Networks
+You can generate random symmetric adjacency matrices representing brain networks using the generate_random_graph function.
+
+```{r setup, include = FALSE}
+# Generate a random brain network with 10 nodes and edge probability of 0.1
+G <- generate_random_graph(n_nodes = 10, edge_prob = 0.1)
+print(G)
+```
+
+Computing the Central Graph
+The compute_central_graph function computes the central (representative) graph for a population.
+
+```{r setup, include = FALSE}
+# Generate synthetic data for a population
+population <- list(
+  generate_random_graph(n_nodes = 10, edge_prob = 0.1),
+  generate_random_graph(n_nodes = 10, edge_prob = 0.1)
+)
+
+# Compute the central graph
+central_graph <- compute_central_graph(population)
+print(central_graph)
+```
+
+Computing Distances Between Graphs
+Use compute_distance to calculate the Manhattan norm distance between two graphs.
+
+```{r setup, include = FALSE}
+# Compute distance between a graph and the central graph
+distance <- compute_distance(population[[1]], central_graph)
+print(distance)
+```
+
+Computing the Test Statistic
+The compute_test_statistic function computes the test statistic T to assess whether different populations of brain networks originate from the same distribution.
+
+```{r setup, include = FALSE}
+# Generate synthetic data for three populations
+Control <- replicate(30, generate_random_graph(n_nodes = 10, edge_prob = 0.1), simplify = FALSE)
+Schizophrenia <- replicate(30, generate_random_graph(n_nodes = 10, edge_prob = 0.15), simplify = FALSE)
+Alzheimer <- replicate(30, generate_random_graph(n_nodes = 10, edge_prob = 0.2), simplify = FALSE)
+
+# Combine populations into a list
+populations <- list(Control = Control, Schizophrenia = Schizophrenia, Alzheimer = Alzheimer)
+
+# Compute the test statistic T
+T_value <- compute_test_statistic(populations, a = 1)
+print(T_value)
+```
+
+Conclusion
+This vignette provided an introduction to the basic functionalities of BrainNetTest. In the next vignette, we'll explore generating brain networks with community structures and analyzing them.
+
+References
