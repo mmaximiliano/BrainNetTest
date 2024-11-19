@@ -4,7 +4,7 @@ author: "Maximiliano Martino"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Brain Networks with Community Structures}
+  %\VignetteIndexEntry{Generating and Analyzing Brain Networks with Community Structures}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -23,7 +23,7 @@ Generating Brain Networks with Community Structures
 Using generate_community_graph
 The generate_community_graph function generates a single brain network with specified community structures.
 
-```{r setup, include = FALSE}
+```{r, include = FALSE}
 library(BrainNetTest)
 
 # Generate a brain network with community structure
@@ -42,13 +42,12 @@ print(G[1:10, 1:10])
 Visualizing the Network
 We can visualize the network to observe the community structure.
 
-```{r setup, include = FALSE}
-# Install and load igraph for visualization
-if (!requireNamespace("igraph", quietly = TRUE)) {
-  install.packages("igraph")
-}
+**Note:** This vignette requires the `igraph` package for network visualization. If you haven't installed it yet, please install it using `install.packages("igraph")`.
+
+```{r load-igraph, message=FALSE, warning=FALSE, eval = requireNamespace("igraph", quietly = TRUE)}
 library(igraph)
 
+# Proceed with visualization code
 # Create an igraph object
 graph <- graph_from_adjacency_matrix(G, mode = "undirected")
 
@@ -72,11 +71,17 @@ set.seed(123)
 plot(graph, vertex.color = V(graph)$community, vertex.size = 5, vertex.label = NA)
 ```
 
+```{r, eval = !requireNamespace("igraph", quietly = TRUE)}
+cat("Package 'igraph' is not installed. Visualization steps will be skipped.")
+```
+
+
+
 Generating Graphs for a Category with Similar Community Structures
 Using generate_category_graphs
 The generate_category_graphs function generates a set of graphs belonging to the same category with similar community structures.
 
-```{r setup, include = FALSE}
+```{r, include = FALSE}
 # Generate 5 graphs for the Control category
 control_graphs <- generate_category_graphs(
   n_graphs = 5,
@@ -96,7 +101,7 @@ length(control_graphs)
 Performing Hypothesis Testing Between Categories
 Generating Graphs for Multiple Categories
 
-```{r setup, include = FALSE}
+```{r, include = FALSE}
 # Generate graphs for the Control category
 control_graphs <- generate_category_graphs(
   n_graphs = 30,
@@ -127,7 +132,7 @@ populations <- list(Control = control_graphs, Disease = disease_graphs)
 
 Computing the Test Statistic
 
-```{r setup, include = FALSE}
+```{r, include = FALSE}
 # Compute the test statistic T
 T_value <- compute_test_statistic(populations, a = 1)
 print(T_value)

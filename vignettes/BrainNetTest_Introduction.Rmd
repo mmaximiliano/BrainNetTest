@@ -9,7 +9,7 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-```{r setup, include = FALSE}
+```{r setup_intro, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>"
@@ -28,7 +28,9 @@ This vignette introduces the basic usage of BrainNetTest.
 Installation
 You can install the development version of BrainNetTest from GitHub:
 
-```{r setup, include = FALSE}
+**Note:** To install the development version of **BrainNetTest** from GitHub, you need the `devtools` package. If you haven't installed it yet, you can install it using:
+
+```r
 # Install devtools if not already installed
 install.packages("devtools")
 
@@ -39,14 +41,14 @@ devtools::install_github("mmaximiliano/BrainNetTest")
 Getting Started
 Load the BrainNetTest package:
 
-```{r setup, include = FALSE}
+```{r, include = FALSE}
 library(BrainNetTest)
 ```
 
 Generating Random Brain Networks
 You can generate random symmetric adjacency matrices representing brain networks using the generate_random_graph function.
 
-```{r setup, include = FALSE}
+```{r, include = FALSE}
 # Generate a random brain network with 10 nodes and edge probability of 0.1
 G <- generate_random_graph(n_nodes = 10, edge_prob = 0.1)
 print(G)
@@ -55,7 +57,7 @@ print(G)
 Computing the Central Graph
 The compute_central_graph function computes the central (representative) graph for a population.
 
-```{r setup, include = FALSE}
+```{r, include = FALSE}
 # Generate synthetic data for a population
 population <- list(
   generate_random_graph(n_nodes = 10, edge_prob = 0.1),
@@ -70,7 +72,7 @@ print(central_graph)
 Computing Distances Between Graphs
 Use compute_distance to calculate the Manhattan norm distance between two graphs.
 
-```{r setup, include = FALSE}
+```{r, include = FALSE}
 # Compute distance between a graph and the central graph
 distance <- compute_distance(population[[1]], central_graph)
 print(distance)
@@ -79,7 +81,7 @@ print(distance)
 Computing the Test Statistic
 The compute_test_statistic function computes the test statistic T to assess whether different populations of brain networks originate from the same distribution.
 
-```{r setup, include = FALSE}
+```{r, include = FALSE}
 # Generate synthetic data for three populations
 Control <- replicate(30, generate_random_graph(n_nodes = 10, edge_prob = 0.1), simplify = FALSE)
 Schizophrenia <- replicate(30, generate_random_graph(n_nodes = 10, edge_prob = 0.15), simplify = FALSE)
