@@ -43,7 +43,6 @@
 #' head(edge_df)
 rank_edges <- function(edge_pvalues) {
   # Convert upper triangle of p-value matrix to a vector
-  n_nodes <- nrow(edge_pvalues)
   edge_indices <- which(upper.tri(edge_pvalues), arr.ind = TRUE)
   p_values <- edge_pvalues[edge_indices]
   
