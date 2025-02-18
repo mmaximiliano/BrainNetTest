@@ -75,10 +75,6 @@ generate_category_graphs <- function(n_graphs = 10, n_nodes = 100, n_communities
     }
   }
   
-  # Assign nodes to communities
-  node_indices <- 1:n_nodes
-  community_assignments <- rep(1:n_communities, times = community_sizes)
-  
   # List to store generated graphs
   graph_list <- vector("list", n_graphs)
   
