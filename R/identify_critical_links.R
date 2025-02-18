@@ -65,10 +65,10 @@ identify_critical_links <- function(populations, alpha = 0.05, method = "fisher"
   # Compute initial test statistic
   initial_T <- compute_test_statistic(modified_populations)
   
-  # Define a function to compute p-value from T (this needs to be defined based on your test statistic)
+  # Define a function to compute p-value from T (this needs to be defined based on the test statistic)
   compute_p_value_from_T <- function(T_value) {
     # Placeholder implementation
-    # You need to define this function based on the distribution of T_value
+    # WE need to define this function based on the distribution of T_value
     # For example, if T_value ~ N(0, 1), then:
     p_value <- 1 - pnorm(T_value)
     return(p_value)
@@ -98,20 +98,16 @@ identify_critical_links <- function(populations, alpha = 0.05, method = "fisher"
     for (edge_row in seq_len(nrow(batch_edges))) {
       i <- batch_edges$node1[edge_row]
       j <- batch_edges$node2[edge_row]
-      
       for (k in 1:num_populations) {
         for (g in 1:N[k]) {
           modified_populations[[k]][[g]][i, j] <- 0
           modified_populations[[k]][[g]][j, i] <- 0  # Symmetric
         }
       }
-      
       edges_removed[[length(edges_removed) + 1]] <- c(i, j)
     }
-    
     # Recompute test statistic
     T_value <- compute_test_statistic(modified_populations)
-    
     # Compute p-value from T_value
     p_value <- compute_p_value_from_T(T_value)
     
