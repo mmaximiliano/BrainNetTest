@@ -82,7 +82,7 @@ identify_critical_links <- function(populations, alpha = 0.05, method = "fisher"
     warning("Initial test is not significant. No critical links to identify.")
     return(list(
       critical_edges = NULL,
-      edges_removed = NULL,
+      edges_removed = list(),
       modified_populations = modified_populations
     ))
   }
