@@ -3,3 +3,4 @@
 ^LICENSE\.md$
 ^doc$
 ^Meta$
+^R/test_script\.R$

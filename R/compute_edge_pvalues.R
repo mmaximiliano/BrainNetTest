@@ -66,15 +66,50 @@ compute_edge_pvalues <- function(edge_counts, N, method = "fisher", adjust_metho
         test_result <- fisher.test(counts)
         p_value <- test_result$p.value
       } else if (method == "chi.squared") {
-        test_result <- chisq.test(counts)
-        p_value <- test_result$p.value
+        # Check if any row or column sum is zero
+        row_sums <- rowSums(counts)
+        col_sums <- colSums(counts)
+        
+        if (any(row_sums == 0) || any(col_sums == 0)) {
+          # If zero marginals, fall back to Fisher's exact test
+          test_result <- fisher.test(counts)
+          p_value <- test_result$p.value
+        } else {
+          # Check if expected counts might be too small for chi-square approximation
+          total <- sum(counts)
+          has_small_expected <- FALSE
+          
+          # Calculate expected counts and check if any are < 5
+          for (r in seq_len(nrow(counts))) {
+            for (c in seq_len(ncol(counts))) {
+              expected <- row_sums[r] * col_sums[c] / total
+              if (expected < 5) {
+                has_small_expected <- TRUE
+                break
+              }
+            }
+            if (has_small_expected) break
+          }
+          
+          # Use standard chi-square test (simulation can fail with certain data patterns)
+          test_result <- chisq.test(counts, correct = TRUE)
+          p_value <- test_result$p.value
+        }
       } else if (method == "prop") {
         # Use prop.test for two populations
         if (num_populations != 2) stop("prop.test is only implemented for two populations.")
+        
+        # Check for zero values that might cause issues
         x <- c(edge_counts[i, j, 1], edge_counts[i, j, 2])
         n <- c(N[1], N[2])
-        test_result <- prop.test(x, n)
-        p_value <- test_result$p.value
+        
+        # Handle edge cases
+        if (all(x == 0) || all(x == n)) {
+          p_value <- 1.0  # No difference when all are identical
+        } else {
+          test_result <- prop.test(x, n)
+          p_value <- test_result$p.value
+        }
       } else {
         stop("Invalid method specified.")
       }
