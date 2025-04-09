@@ -1,4 +1,5 @@
 library(testthat)
+library(BrainNetTest)
 
 # Helper function to suppress specific warnings during testing
 suppress_warning <- function(expr, pattern) {
