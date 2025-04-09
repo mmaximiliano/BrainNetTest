@@ -69,7 +69,7 @@ identify_critical_links <- function(populations, alpha = 0.05, method = "fisher"
 compute_p_value_from_T <- function(T_value) {
   # Assuming T follows approximately a normal distribution under H0
   # with mean 0 and standard deviation 1
-  return(pnorm(T_value))
+  return(pnorm(T_value)) -> calculo de proporciones, cuantos T son mas chicos que el T observado
 }
 
   # Compute initial p-value
@@ -91,7 +91,7 @@ compute_p_value_from_T <- function(T_value) {
     # Remove edges in batches
     batch_indices <- idx:min(idx + batch_size - 1, nrow(edge_df))
     batch_edges <- edge_df[batch_indices, ]
-    
+
     # Remove edges from all graphs
     for (edge_row in seq_len(nrow(batch_edges))) {
       i <- batch_edges$node1[edge_row]
