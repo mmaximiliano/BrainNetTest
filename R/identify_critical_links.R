@@ -50,31 +50,31 @@ identify_critical_links <- function(populations, alpha = 0.05, method = "fisher"
                                     adjust_method = "none", batch_size = 1) {
   N <- sapply(populations, length)
   num_populations <- length(populations)
-  
+ 
   # Step 1 & 2: Compute edge frequencies and p-values
   frequencies <- compute_edge_frequencies(populations)
   edge_pvalues <- compute_edge_pvalues(frequencies$edge_counts, N, method, adjust_method)
-  
+
   # Step 3: Rank edges (ascending order of p-values)
   edge_df <- rank_edges(edge_pvalues)
-  
+
   # Initialize variables
   edges_removed <- list()
   modified_populations <- populations
-  
+
   # Compute initial test statistic
   initial_T <- compute_test_statistic(modified_populations)
-  
-  # Define a function to compute p-value from T 
+
+  # Define a function to compute p-value from T
 compute_p_value_from_T <- function(T_value) {
   # Assuming T follows approximately a normal distribution under H0
   # with mean 0 and standard deviation 1
   return(pnorm(T_value))
 }
-  
+
   # Compute initial p-value
   initial_p_value <- compute_p_value_from_T(initial_T)
-  
+
   # Check if initial test is significant
   if (initial_p_value > alpha) {
     warning("Initial test is not significant. No critical links to identify.")
@@ -84,7 +84,7 @@ compute_p_value_from_T <- function(T_value) {
       modified_populations = modified_populations
     ))
   }
-  
+
   significant <- TRUE
   idx <- 1
   while (significant && idx <= nrow(edge_df)) {
