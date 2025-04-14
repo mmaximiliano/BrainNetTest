@@ -13,7 +13,8 @@
 #'   Default is "fisher".
 #' @param adjust_method The method for p-value adjustment for multiple testing. See ?p.adjust. Default is "none".
 #' @param batch_size Number of edges to remove in each iteration. Default is 1.
-#' @importFrom stats pnorm
+#' @param n_bootstrap Number of bootstrap resamples for computing p-value. Default is 1000.
+#' @importFrom stats pnorm sample
 #' @return A list containing critical edges, edges removed, and modified populations.
 #' @export
 #'
@@ -47,10 +48,11 @@
 #' critical_edges <- result$critical_edges
 #' print(critical_edges)
 identify_critical_links <- function(populations, alpha = 0.05, method = "fisher",
-                                    adjust_method = "none", batch_size = 1) {
+                                    adjust_method = "none", batch_size = 1,
+                                    n_bootstrap = 1000) {
   N <- sapply(populations, length)
   num_populations <- length(populations)
- 
+
   # Step 1 & 2: Compute edge frequencies and p-values
   frequencies <- compute_edge_frequencies(populations)
   edge_pvalues <- compute_edge_pvalues(frequencies$edge_counts, N, method, adjust_method)
@@ -65,15 +67,47 @@ identify_critical_links <- function(populations, alpha = 0.05, method = "fisher"
   # Compute initial test statistic
   initial_T <- compute_test_statistic(modified_populations)
 
-  # Define a function to compute p-value from T
-compute_p_value_from_T <- function(T_value) {
-  # Assuming T follows approximately a normal distribution under H0
-  # with mean 0 and standard deviation 1
-  return(pnorm(T_value)) -> calculo de proporciones, cuantos T son mas chicos que el T observado
-}
+  # Define a function to compute p-value from T using bootstrap
+  compute_p_value_from_T <- function(T_observed, populations, n_bootstrap = 1000) {
+    # Flatten all graphs from all populations into a single list
+    all_graphs <- unlist(populations, recursive = FALSE)
+    n_total <- length(all_graphs)
 
-  # Compute initial p-value
-  initial_p_value <- compute_p_value_from_T(initial_T)
+    # Store bootstrap T values
+    t_bootstrap <- numeric(n_bootstrap)
+
+    # Original population sizes
+    pop_sizes <- sapply(populations, length)
+
+    # Perform bootstrap resampling
+    for(b in 1:n_bootstrap) {
+      # For each bootstrap iteration, create random populations by resampling
+      # from the pooled set of graphs (under the null hypothesis that all graphs
+      # come from the same distribution)
+      bootstrap_pops <- list()
+      start_idx <- 1
+      
+      for(p in 1:length(populations)) {
+        # Sample with replacement from all graphs
+        sampled_indices <- sample(1:n_total, pop_sizes[p], replace = TRUE)
+        bootstrap_pops[[p]] <- all_graphs[sampled_indices]
+      }
+
+      names(bootstrap_pops) <- names(populations)
+      
+      # Calculate test statistic for this bootstrap sample
+      t_bootstrap[b] <- compute_test_statistic(bootstrap_pops)
+    }
+    
+    # Calculate p-value as the proportion of bootstrap samples with T statistics
+    # more extreme than or equal to the observed value
+    p_value <- mean(t_bootstrap >= T_observed)
+    
+    return(p_value)
+  }
+
+  # Compute initial p-value using bootstrap
+  initial_p_value <- compute_p_value_from_T(initial_T, modified_populations, n_bootstrap)
 
   # Check if initial test is significant
   if (initial_p_value > alpha) {
@@ -106,14 +140,12 @@ compute_p_value_from_T <- function(T_value) {
     }
     # Recompute test statistic
     T_value <- compute_test_statistic(modified_populations)
-    # Compute p-value from T_value
-    p_value <- compute_p_value_from_T(T_value)
     
-    # Use a near-equality check for alpha=1 to handle floating point precision
-    if (alpha == 1 && p_value > 0.999) {
-      significant <- FALSE
-      break  # Stop removing edges  
-    } else if (p_value > alpha) {
+    # Compute p-value from T_value using bootstrap
+    p_value <- compute_p_value_from_T(T_value, modified_populations, n_bootstrap)
+    
+    # Check if test is no longer significant
+    if (p_value > alpha) {
       significant <- FALSE
       break  # Stop removing edges
     }
