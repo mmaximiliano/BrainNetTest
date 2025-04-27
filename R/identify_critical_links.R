@@ -101,7 +101,7 @@ identify_critical_links <- function(populations, alpha = 0.05, method = "fisher"
     
     # Calculate p-value as the proportion of bootstrap samples with T statistics
     # more extreme than or equal to the observed value
-    p_value <- mean(t_bootstrap >= T_observed)
+    p_value <- mean(t_bootstrap <= T_observed)
     
     # For numerical stability, ensure p_value is never exactly 0
     p_value <- max(p_value, 1/n_bootstrap)
