@@ -111,107 +111,136 @@ test_that("identify_critical_links removes edges with distinct populations", {
 
 # Test 4: Multiple Populations (3 Groups) with Noticeable Differences
 test_that("identify_critical_links handles 3 populations", {
-  # Generate three different populations
+  # ----------- generate data -----------
   Control <- generate_category_graphs(
-    n_graphs = 5,
-    n_nodes = 6,
-    n_communities = 2,
-    base_intra_prob = 0.8,
-    base_inter_prob = 0.1,
+    n_graphs = 20, n_nodes = 12, n_communities = 3,
+    base_intra_prob = 0.90, base_inter_prob = 0.05,
+    intra_prob_variation = 0.02, inter_prob_variation = 0.02,
     seed = 1
   )
 
   Disease1 <- generate_category_graphs(
-    n_graphs = 5,
-    n_nodes = 6,
-    n_communities = 2,
-    base_intra_prob = 0.6,
-    base_inter_prob = 0.2,
+    n_graphs = 20, n_nodes = 12, n_communities = 3,
+    base_intra_prob = 0.60, base_inter_prob = 0.30,
+    intra_prob_variation = 0.02, inter_prob_variation = 0.02,
     seed = 2
   )
 
   Disease2 <- generate_category_graphs(
-    n_graphs = 5,
-    n_nodes = 6,
-    n_communities = 2,
-    base_intra_prob = 0.4,
-    base_inter_prob = 0.3,
+    n_graphs = 20, n_nodes = 12, n_communities = 3,
+    base_intra_prob = 0.35, base_inter_prob = 0.55,
+    intra_prob_variation = 0.02, inter_prob_variation = 0.02,
     seed = 3
   )
 
-  populations <- list(
-    Control = Control,
-    Disease1 = Disease1,
-    Disease2 = Disease2
-  )
+  populations <- list(Control = Control, Disease1 = Disease1, Disease2 = Disease2)
 
-  # Run function
-  result <- identify_critical_links(populations, alpha = 0.05, method = "fisher")
+  # ----------- run -----------
+  result <- identify_critical_links(populations,
+                                    alpha  = 0.05,
+                                    method = "fisher",
+                                    n_bootstrap = 1000)   # default but explicit
 
-  # Check results
-  expect_true(!is.null(result$critical_edges) || is.data.frame(result$critical_edges))
+  # ----------- checks -----------
+  expect_true(is.data.frame(result$critical_edges) ||
+                is.null(result$critical_edges))   # tolerate either branch
   expect_equal(length(result$modified_populations), 3)
+
+  # Optional sanity check – make sure *something* was found
+  expect_true(!is.null(result$critical_edges) && nrow(result$critical_edges) > 0)
 })
 
 
-# Test 5: Minimal Edge Case: Very Small Graphs (2 Nodes) with 2 Populations
-test_that("identify_critical_links works with minimal 2-node graphs", {
-  # Create minimal 2x2 adjacency matrices
-  A1 <- matrix(c(0, 1, 1, 0), 2, 2)
-  A2 <- matrix(c(0, 1, 1, 0), 2, 2)
-  B1 <- matrix(c(0, 0, 0, 0), 2, 2)
-  B2 <- matrix(c(0, 0, 0, 0), 2, 2)
+# Test 5 – Minimal edge case: 2‑node graphs, but with enough samples to be significant
+test_that("identify_critical_links works with minimal 2‑node graphs", {
+  ## ---- Build two extreme populations -----------------------------------
+  edge_on  <- matrix(c(0, 1,   # A‑type graphs have the edge
+                       1, 0), 2, 2, byrow = TRUE)
+  edge_off <- matrix(0, 2, 2)   # B‑type graphs do not
 
-  populations <- list(A = list(A1, A2), B = list(B1, B2))
+  # Replicate each tiny graph to raise n_i (=> more power for Fisher)
+  n_graphs <- 20                # <- key lever
+  populations <- list(
+    A = replicate(n_graphs, edge_on ,  simplify = FALSE),
+    B = replicate(n_graphs, edge_off, simplify = FALSE)
+  )
 
-  # Run function
-  result <- identify_critical_links(populations, alpha = 0.05)
+  ## ---- Run -------------------------------------------------------------
+  result <- suppressWarnings(
+    identify_critical_links(populations,
+                            alpha  = 0.05,   # keep default
+                            method = "fisher")
+  )
 
-  # Check results
-  expect_true(!is.null(result$critical_edges))
+  ## ---- Checks ----------------------------------------------------------
+  # Fisher should now flag the single edge as significant, so a data‑frame
+  # of critical links must be returned.
+  expect_true(!is.null(result$critical_edges) &&
+                is.data.frame(result$critical_edges) &&
+                nrow(result$critical_edges) > 0)
 
-  # Check that edge (1,2) was removed in all graphs
-  for (pop_name in names(result$modified_populations)) {
-    pop <- result$modified_populations[[pop_name]]
-    for (g in seq_along(pop)) {
-      expect_equal(pop[[g]][1, 2], 0)
-      expect_equal(pop[[g]][2, 1], 0)
+  # That edge must have been removed from *all* graphs
+  for (pop in result$modified_populations) {
+    for (g in pop) {
+      expect_equal(g[1, 2], 0)
+      expect_equal(g[2, 1], 0)
     }
   }
 })
 
-# Test 6: Larger Graphs for Stress/Scalability
-test_that("identify_critical_links handles larger graphs", {
-  skip_on_cran()  # Skip on CRAN to avoid long-running tests
+# Test 6: Larger graphs – stress / scalability with a truly significant difference
+test_that("identify_critical_links handles larger graphs and finds significant edges", {
+  skip_on_cran()                 # avoid long tests on CRAN
 
-  # Generate larger populations (reduced to 20 nodes for testing speed)
+  ## -------- Generate two clearly different 20‑node populations ----------
+  n_graphs <- 12                 # more samples -> more power
+  n_nodes  <- 20
+  n_comms  <- 2
+
+  # Population A : strong community structure (dense intra, sparse inter)
   LargePopA <- generate_category_graphs(
-    n_graphs = 5,
-    n_nodes = 20,
-    n_communities = 2,
-    base_intra_prob = 0.7,
-    base_inter_prob = 0.2,
+    n_graphs   = n_graphs,
+    n_nodes    = n_nodes,
+    n_communities = n_comms,
+    base_intra_prob = 0.85,
+    base_inter_prob = 0.05,
+    intra_prob_variation = 0.02,
+    inter_prob_variation = 0.02,
     seed = 123
   )
 
+  # Population B : community structure degraded (sparser intra, denser inter)
   LargePopB <- generate_category_graphs(
-    n_graphs = 5,
-    n_nodes = 20,
-    n_communities = 2,
-    base_intra_prob = 0.5,
-    base_inter_prob = 0.3,
+    n_graphs   = n_graphs,
+    n_nodes    = n_nodes,
+    n_communities = n_comms,
+    base_intra_prob = 0.55,
+    base_inter_prob = 0.35,
+    intra_prob_variation = 0.02,
+    inter_prob_variation = 0.02,
     seed = 456
   )
 
   populations <- list(A = LargePopA, B = LargePopB)
 
-  # Run function without error
-  result <- expect_no_error(identify_critical_links(populations, alpha = 0.05, method = "fisher"))
+  ## -------- Run ---------------------------------------------------------
+  result <- suppressWarnings(
+    identify_critical_links(populations,
+                            alpha  = 0.05,
+                            method = "fisher",
+                            n_bootstrap = 1000)   # default, explicit
+  )
 
-  # Check basic structure
+  ## -------- Checks ------------------------------------------------------
   expect_type(result, "list")
-  expect_true(all(c("critical_edges", "edges_removed", "modified_populations") %in% names(result)))
+  expect_true(all(c("critical_edges", "edges_removed", "modified_populations")
+                  %in% names(result)))
+
+  # The global test must have been significant, so critical_edges cannot be NULL
+  expect_true(is.data.frame(result$critical_edges) &&
+                nrow(result$critical_edges) > 0)
 })
+
 
 # Test 7: Testing Different p-Value Adjustment Methods
 test_that("identify_critical_links handles different p-value adjustments", {
