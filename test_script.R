@@ -242,30 +242,39 @@ test_that("identify_critical_links handles larger graphs and finds significant e
 })
 
 
-# Test 7: Testing Different p-Value Adjustment Methods
-test_that("identify_critical_links handles different p-value adjustments", {
-  # Generate populations
+# Test 7 – p‑value adjustment methods (all must yield significant edges)
+test_that("identify_critical_links handles different p‑value adjustments", {
+
+  ## ------------ Strongly separated 10‑node populations -----------------
+  n_graphs <- 30              # many graphs => high Fisher power
+  n_nodes  <- 10
+  n_comms  <- 2
+
   A <- generate_category_graphs(
-    n_graphs = 5,
-    n_nodes = 5,
-    n_communities = 1,
-    base_intra_prob = 0.8,
-    base_inter_prob = 0.1,
+    n_graphs = n_graphs,
+    n_nodes  = n_nodes,
+    n_communities = n_comms,
+    base_intra_prob = 0.90,    # almost‑clique within communities
+    base_inter_prob = 0.05,    # sparse between communities
+    intra_prob_variation  = 0.02,
+    inter_prob_variation  = 0.02,
     seed = 1
   )
 
   B <- generate_category_graphs(
-    n_graphs = 5,
-    n_nodes = 5,
-    n_communities = 1,
-    base_intra_prob = 0.4,
-    base_inter_prob = 0.3,
+    n_graphs = n_graphs,
+    n_nodes  = n_nodes,
+    n_communities = n_comms,
+    base_intra_prob = 0.30,    # much weaker community structure
+    base_inter_prob = 0.60,
+    intra_prob_variation  = 0.02,
+    inter_prob_variation  = 0.02,
     seed = 2
   )
 
   populations <- list(A = A, B = B)
 
-  # Run with different adjustment methods
+  ## ------------ Run with three adjustment methods ----------------------
   result_none <- identify_critical_links(
     populations, alpha = 0.05, method = "fisher", adjust_method = "none"
   )
@@ -278,47 +287,52 @@ test_that("identify_critical_links handles different p-value adjustments", {
     populations, alpha = 0.05, method = "fisher", adjust_method = "BH"
   )
 
-  # Check all methods completed without error
-  expect_true(is.list(result_none))
-  expect_true(is.list(result_bonferroni))
-  expect_true(is.list(result_bh))
+  ## ------------ Common assertions --------------------------------------
+  for (res in list(result_none, result_bonferroni, result_bh)) {
+    expect_type(res, "list")
+    expect_true(all(c("critical_edges", "edges_removed", "modified_populations")
+                    %in% names(res)))
 
-  # Check for expected behavior
-  expect_true(is.data.frame(result_none$critical_edges) || is.null(result_none$critical_edges))
-  expect_true(is.data.frame(result_bonferroni$critical_edges) || is.null(result_bonferroni$critical_edges))
-  expect_true(is.data.frame(result_bh$critical_edges) || is.null(result_bh$critical_edges))
+    # Global test must have been significant → critical_edges is a non‑empty df
+    expect_true(is.data.frame(res$critical_edges) &&
+                  nrow(res$critical_edges) > 0)
+  }
 })
 
-# Test 8: DenseVsSparse_3x3
-test_that("identify_critical_links works with dense vs sparse 3x3 graphs", {
-  # Create fully connected matrices for population A
-  A1 <- matrix(c(
+
+# Test 8 – Dense vs sparse 3×3 graphs
+test_that("identify_critical_links works with dense vs sparse 3×3 graphs", {
+
+  ## ---------- Build the base 3×3 patterns ------------------------------
+  dense <- matrix(c(
     0, 1, 1,
     1, 0, 1,
     1, 1, 0
   ), nrow = 3, byrow = TRUE)
 
-  A2 <- matrix(c(
-    0, 1, 1,
-    1, 0, 1,
-    1, 1, 0
-  ), nrow = 3, byrow = TRUE)
+  sparse <- matrix(0, nrow = 3, ncol = 3)
 
-  # Create empty matrices for population B
-  B1 <- matrix(0, nrow = 3, ncol = 3)
-  B2 <- matrix(0, nrow = 3, ncol = 3)
+  ## ---------- Replicate to raise n_i (=> much more power) --------------
+  n_rep <- 25                    # ← key lever
+  populations <- list(
+    A = replicate(n_rep, dense ,  simplify = FALSE),
+    B = replicate(n_rep, sparse, simplify = FALSE)
+  )
 
-  # Create populations
-  populations <- list(A = list(A1, A2), B = list(B1, B2))
+  ## ---------- Run -------------------------------------------------------
+  result <- suppressWarnings(
+    identify_critical_links(populations,
+                            alpha  = 0.05,
+                            method = "fisher")
+  )
 
-  # Run function
-  result <- identify_critical_links(populations, alpha = 0.05, method = "fisher")
+  ## ---------- Checks ----------------------------------------------------
+  # 1. A significant global test must have produced a non‑empty data‑frame
+  expect_true(!is.null(result$critical_edges) &&
+                is.data.frame(result$critical_edges) &&
+                nrow(result$critical_edges) >= 2)
 
-  # Check results
-  expect_true(!is.null(result$critical_edges))
-  expect_true(nrow(result$critical_edges) >= 2) # At least 2 nodes should be removed
-
-  # Check that all edges in modified populations are now 0
+  # 2. All graphs in *both* populations should now be edge‑free
   for (pop in result$modified_populations) {
     for (graph in pop) {
       expect_equal(sum(graph), 0)
@@ -326,33 +340,36 @@ test_that("identify_critical_links works with dense vs sparse 3x3 graphs", {
   }
 })
 
-# Test 9: SingleEdgeVsNone_2x2
-test_that("identify_critical_links works with single edge vs none 2x2", {
-  # Create matrices with single edge for population A
-  A1 <- matrix(c(
-    0, 1,
-    1, 0
-  ), nrow = 2)
-  A2 <- matrix(c(
-    0, 1,
-    1, 0
-  ), nrow = 2)
 
-  # Create empty matrices for population B
-  B1 <- matrix(0, nrow = 2, ncol = 2)
-  B2 <- matrix(0, nrow = 2, ncol = 2)
+# Test 9 – Single edge vs none (2 × 2)
+test_that("identify_critical_links works with single edge vs none 2×2", {
 
-  # Create populations
-  populations <- list(A = list(A1, A2), B = list(B1, B2))
+  ## -------- Base patterns ---------------------------------------------
+  edge_on  <- matrix(c(0, 1,
+                       1, 0), nrow = 2, byrow = TRUE)
+  edge_off <- matrix(0, 2, 2)
 
-  # Run function
-  result <- identify_critical_links(populations, alpha = 0.05, method = "fisher")
+  ## -------- Replicate to raise n_i ------------------------------------
+  n_rep <- 30                    # key lever: boosts Fisher power
+  populations <- list(
+    A = replicate(n_rep, edge_on ,  simplify = FALSE),
+    B = replicate(n_rep, edge_off, simplify = FALSE)
+  )
 
-  # Check results
-  expect_true(!is.null(result$critical_edges))
-  expect_true(nrow(result$critical_edges) == 1) # Single edge should be identified
+  ## -------- Run --------------------------------------------------------
+  result <- suppressWarnings(
+    identify_critical_links(populations,
+                            alpha  = 0.05,
+                            method = "fisher")
+  )
 
-  # Check that edge (1,2) was removed in population A
+  ## -------- Checks -----------------------------------------------------
+  # Global test must have been significant → non‑NULL, exactly 1 edge
+  expect_true(!is.null(result$critical_edges) &&
+                is.data.frame(result$critical_edges))
+  expect_equal(nrow(result$critical_edges), 1)   # (1, 2) only
+
+  # Edge (1‑2) must be 0 in every modified graph
   for (pop in result$modified_populations) {
     for (graph in pop) {
       expect_equal(graph[1, 2], 0)
@@ -361,116 +378,138 @@ test_that("identify_critical_links works with single edge vs none 2x2", {
   }
 })
 
-# Test 10: StrongEdgeVsMultipleWeak_5x5
+
+# Test 10 – Strong edge vs multiple weak edges (5 × 5)
 test_that("identify_critical_links identifies strong consistent edge differences", {
   set.seed(123)
 
-  # Create function to generate random adjacency matrices with fixed edge
+  ## ----- Helper: random graph with (i,j) forced to `value` -------------
   generate_with_fixed_edge <- function(n_nodes, edge_prob, i, j, value) {
     G <- generate_random_graph(n_nodes, edge_prob)
     G[i, j] <- G[j, i] <- value
-    return(G)
+    G
   }
 
-  # Generate population A - always has edge (1,2)
-  A <- list()
-  for (i in 1:3) {
-    A[[i]] <- generate_with_fixed_edge(5, 0.3, 1, 2, 1)
-  }
+  n_graphs <- 30           # key lever: Fisher tables 30 + 30 counts
+  n_nodes  <- 5
+  edge_p   <- 0.25         # modest density so (1,2) stands out
 
-  # Generate population B - never has edge (1,2)
-  B <- list()
-  for (i in 1:3) {
-    B[[i]] <- generate_with_fixed_edge(5, 0.3, 1, 2, 0)
-  }
+  ## ----- Build populations ---------------------------------------------
+  A <- lapply(seq_len(n_graphs),
+              \(x) generate_with_fixed_edge(n_nodes, edge_p, 1, 2, 1))  # always edge
+  B <- lapply(seq_len(n_graphs),
+              \(x) generate_with_fixed_edge(n_nodes, edge_p, 1, 2, 0))  # never edge
 
-  # Create populations
   populations <- list(A = A, B = B)
 
-  # Run function
-  result <- identify_critical_links(populations, alpha = 0.05, method = "fisher")
+  ## ----- Run -----------------------------------------------------------
+  result <- suppressWarnings(
+    identify_critical_links(populations,
+                            alpha  = 0.05,
+                            method = "fisher")
+  )
 
-  # Check results
-  expect_true(!is.null(result$critical_edges))
+  ## ----- Checks --------------------------------------------------------
+  # Non‑empty list with critical edges detected
+  expect_true(!is.null(result$critical_edges) &&
+                is.data.frame(result$critical_edges) &&
+                nrow(result$critical_edges) > 0)
 
-  # Check that edge (1,2) was removed (should be the first or among first removed)
-  edge_found <- FALSE
-  for (i in seq_along(result$edges_removed)) {
-    if ((result$edges_removed[[i]][1] == 1 && result$edges_removed[[i]][2] == 2) ||
-        (result$edges_removed[[i]][1] == 2 && result$edges_removed[[i]][2] == 1)) {
-      edge_found <- TRUE
-      break
+  # Edge (1,2) must be among the identified/removed edges
+  edge_found <- any(
+    (result$critical_edges[, 1] == 1 & result$critical_edges[, 2] == 2) |
+      (result$critical_edges[, 1] == 2 & result$critical_edges[, 2] == 1)
+  )
+  expect_true(edge_found)
+
+  # Edge (1,2) should be 0 in every modified graph
+  for (pop in result$modified_populations) {
+    for (graph in pop) {
+      expect_equal(graph[1, 2], 0)
+      expect_equal(graph[2, 1], 0)
     }
   }
-  expect_true(edge_found)
 })
 
-# Test 11: FullVsSparse_4x4
-test_that("identify_critical_links works with full vs Sparse-filled 4x4", {
-  # Create fully connected matrices for population A
-  A1 <- matrix(1, nrow = 4, ncol = 4)
-  diag(A1) <- 0
-  A2 <- A1 # same as A1
 
-  # Create half-filled matrices for population B
-  set.seed(42)
-  B1 <- generate_random_graph(n_nodes = 4, edge_prob = 0.3)
-  B2 <- generate_random_graph(n_nodes = 4, edge_prob = 0.3)
+# Test 11 – Full vs sparse‑filled 4×4 (revised so sum(graph) > 1)
+test_that("identify_critical_links works with full vs sparse‑filled 4×4", {
+  ## ---------- Build deterministic populations --------------------------
+  full4 <- matrix(1, 4, 4); diag(full4) <- 0      # 12 ones
+  sparse4 <- full4
+  sparse4[1, 2] <- sparse4[2, 1] <- 0             # remove three edges
+  sparse4[1, 3] <- sparse4[3, 1] <- 0
+  sparse4[1, 4] <- sparse4[4, 1] <- 0             # 9 ones left
 
-  # Create populations
-  populations <- list(A = list(A1, A2), B = list(B1, B2))
+  n_rep <- 10                                     # enough for Fisher power
 
-  # Run function
-  result <- identify_critical_links(populations, alpha = 0.05, method = "fisher")
+  populations <- list(
+    A = replicate(n_rep, full4 ,  simplify = FALSE),
+    B = replicate(n_rep, sparse4, simplify = FALSE)
+  )
 
-  # Check results
-  expect_true(!is.null(result$critical_edges))
+  ## ---------- Run -------------------------------------------------------
+  result <- suppressWarnings(
+    identify_critical_links(populations,
+                            alpha  = 0.05,
+                            method = "fisher")
+  )
+
+  ## ---------- Checks ----------------------------------------------------
+  expect_true(!is.null(result$critical_edges) &&
+                is.data.frame(result$critical_edges) &&
+                nrow(result$critical_edges) > 0)       # some edges removed
   expect_true(length(result$edges_removed) > 0)
 
-  # Check that sufficient edges were removed to make populations similar
-  # (we expect the modified A graphs to lose most edges that B doesn't have)
-  for (pop_name in names(result$modified_populations)) {
-    for (g in seq_along(result$modified_populations[[pop_name]])) {
-      graph <- result$modified_populations[[pop_name]][[g]]
-      expect_true(sum(graph) < sum(A1)) # Fewer edges than original A
-      expect_true(sum(graph) > 1) # At least one edge remains
+  # Each modified graph in both populations:
+  for (graph_list in result$modified_populations) {
+    for (graph in graph_list) {
+      expect_true(sum(graph) < sum(full4))   # fewer than 12 edges
+      expect_true(sum(graph) > 1)            # at least two edges remain
     }
   }
 })
 
-# Test 12: AlmostIdentical_5x5
+
+
+# Test 12 – Almost‑identical 5×5 graphs: one edge differs, guaranteed significant
 test_that("identify_critical_links identifies single different edge", {
   set.seed(123)
 
-  # Create base matrix
+  ## ------------ Build deterministic base graphs ------------------------
   baseA <- generate_random_graph(n_nodes = 5, edge_prob = 0.8)
+  baseA[2, 3] <- baseA[3, 2] <- 1        # ensure the edge is present
 
-  # Create baseB as copy of baseA, but flip edge (2,3)
   baseB <- baseA
-  baseB[2, 3] <- baseB[3, 2] <- 0  # Ensure this edge is different
+  baseB[2, 3] <- baseB[3, 2] <- 0        # edge absent in B
 
-  # Each population has two copies
-  A <- list(baseA, baseA)
-  B <- list(baseB, baseB)
-  populations <- list(A = A, B = B)
+  ## ------------ Replicate to raise n_i ---------------------------------
+  n_rep <- 40                            # key lever: high Fisher power
+  populations <- list(
+    A = replicate(n_rep, baseA, simplify = FALSE),
+    B = replicate(n_rep, baseB, simplify = FALSE)
+  )
 
-  # Run function
-  result <- identify_critical_links(populations, alpha = 0.05, method = "fisher")
+  ## ------------ Run -----------------------------------------------------
+  result <- suppressWarnings(
+    identify_critical_links(populations,
+                            alpha  = 0.05,
+                            method = "fisher")
+  )
 
-  # Check results
-  expect_true(!is.null(result$critical_edges))
+  ## ------------ Checks --------------------------------------------------
+  expect_true(!is.null(result$critical_edges) &&
+                is.data.frame(result$critical_edges) &&
+                nrow(result$critical_edges) > 0)
 
-  # Check that edge (2,3) was removed
-  edge_found <- FALSE
-  for (i in seq_along(result$edges_removed)) {
-    if ((result$edges_removed[[i]][1] == 2 && result$edges_removed[[i]][2] == 3) ||
-        (result$edges_removed[[i]][1] == 3 && result$edges_removed[[i]][2] == 2)) {
-      edge_found <- TRUE
-      break
-    }
-  }
+  # Edge (2,3) must be among the removed/identified edges
+  edge_found <- any(
+    (result$critical_edges[, 1] == 2 & result$critical_edges[, 2] == 3) |
+      (result$critical_edges[, 1] == 3 & result$critical_edges[, 2] == 2)
+  )
   expect_true(edge_found)
 })
+
 
 # Test 13: HighProbVsLowProb_4x4
 test_that("identify_critical_links works with high vs low probability", {
@@ -507,150 +546,168 @@ test_that("identify_critical_links works with high vs low probability", {
   }
 })
 
-# Test 14: MissingRowColumn_6x6
+# Test 14 – Structural difference: node 1 fully connected vs isolated (6 × 6)
 test_that("identify_critical_links handles structural differences", {
-  # Create function to generate with specific pattern
-  create_node1_pattern <- function(n_nodes, node1_connected) {
-    G <- matrix(0, nrow = n_nodes, ncol = n_nodes)
+  set.seed(123)                             # reproducibility
+
+  n_nodes <- 6
+  n_rep   <- 40                            # key lever → high Fisher power
+
+  ## ----- Helper: create deterministic pattern --------------------------
+  create_node1_pattern <- function(node1_connected) {
+    G <- matrix(0, n_nodes, n_nodes)
     if (node1_connected) {
       G[1, 2:n_nodes] <- 1
-      G[2:n_nodes, 1] <- 1
+      G[2:n_nodes, 1] <- 1                # node 1 connected to all others
     }
-    # Add some random connections between other nodes
-    for (i in 2:(n_nodes-1)) {
-      for (j in (i+1):n_nodes) {
-        G[i, j] <- G[j, i] <- sample(c(0, 1), 1, prob = c(0.7, 0.3))
+    # Random edges among nodes 2…6 (same probability in both groups)
+    for (i in 2:(n_nodes - 1)) {
+      for (j in (i + 1):n_nodes) {
+        val <- rbinom(1, 1, 0.3)          # P(edge) = 0.3
+        G[i, j] <- G[j, i] <- val
       }
     }
-    return(G)
+    G
   }
 
-  # Generate population A with node 1 connected to all others
-  A1 <- create_node1_pattern(6, TRUE)
-  A2 <- create_node1_pattern(6, TRUE)
+  ## ----- Build populations ---------------------------------------------
+  A_graphs <- replicate(n_rep, create_node1_pattern(TRUE ), simplify = FALSE)
+  B_graphs <- replicate(n_rep, create_node1_pattern(FALSE), simplify = FALSE)
 
-  # Generate population B with node 1 disconnected from all others
-  B1 <- create_node1_pattern(6, FALSE)
-  B2 <- create_node1_pattern(6, FALSE)
+  populations <- list(A = A_graphs, B = B_graphs)
+  node_1_connections <- n_nodes - 1        # = 5 (original degree in A)
 
-  # Create populations
-  populations <- list(A = list(A1, A2), B = list(B1, B2))
+  ## ----- Run ------------------------------------------------------------
+  result <- suppressWarnings(
+    identify_critical_links(populations,
+                            alpha  = 0.05,
+                            method = "fisher")
+  )
 
-  # Node 1's connections
-  node_1_connections <- max(sum(A1[1, ]), sum(A2[1, ]))
+  ## ----- Checks ---------------------------------------------------------
+  expect_true(!is.null(result$critical_edges) &&
+                is.data.frame(result$critical_edges) &&
+                nrow(result$critical_edges) > 0)
 
-  # Run function
-  result <- identify_critical_links(populations, alpha = 0.05, method = "fisher")
-
-  # Check results
-  expect_true(!is.null(result$critical_edges))
-
-  # Check that node 1's connections were removed
+  # Node‑1 degree must drop strictly below 5 in *every* modified graph of A,
+  # and remain ≤ 5 in B (always true).
   for (pop in result$modified_populations) {
     for (graph in pop) {
-      # At least some Node 1's connections should removed
       expect_true(sum(graph[1, ]) < node_1_connections)
       expect_true(sum(graph[, 1]) < node_1_connections)
     }
   }
 })
 
-# Test 15: DrasticPattern_7x7
+
+# Test 15 – Ring vs star structures (7 × 7) – guaranteed significant
 test_that("identify_critical_links handles different graph structures", {
-  # Create ring structure function
+  ## ----- Helper: graph generators --------------------------------------
   create_ring_graph <- function(n_nodes) {
     G <- matrix(0, nrow = n_nodes, ncol = n_nodes)
-    for (i in 1:n_nodes) {
-      # Connect to next node (circular)
-      next_node <- if (i == n_nodes) 1 else i + 1
-      G[i, next_node] <- G[next_node, i] <- 1
-
-      # Connect to node after next (circular)
-      next_next_node <- if (i >= n_nodes - 1) (i + 2) %% n_nodes else i + 2
-      if (next_next_node == 0) next_next_node <- n_nodes
-      G[i, next_next_node] <- G[next_next_node, i] <- 1
+    for (i in seq_len(n_nodes)) {
+      nxt  <- if (i == n_nodes) 1 else i + 1
+      nxt2 <- if (i >= n_nodes - 1) (i + 2) %% n_nodes else i + 2
+      if (nxt2 == 0) nxt2 <- n_nodes
+      G[i, nxt ] <- G[nxt , i] <- 1
+      G[i, nxt2] <- G[nxt2, i] <- 1
     }
-    return(G)
+    G
   }
 
-  # Create star structure function
   create_star_graph <- function(n_nodes) {
     G <- matrix(0, nrow = n_nodes, ncol = n_nodes)
     G[1, 2:n_nodes] <- 1
     G[2:n_nodes, 1] <- 1
-    return(G)
+    G
   }
 
-  # Create ring and star graphs
-  A1 <- create_ring_graph(7)
-  A2 <- create_ring_graph(7)
-  B1 <- create_star_graph(7)
-  B2 <- create_star_graph(7)
+  ## ----- Build canonical ring/star graphs ------------------------------
+  A_proto <- create_ring_graph(7)
+  B_proto <- create_star_graph(7)
 
-  # Create populations
-  populations <- list(A = list(A1, A2), B = list(B1, B2))
+  ## ----- Replicate to raise sample size (=> Fisher power) --------------
+  n_rep <- 30                                    # key lever
+  populations <- list(
+    A = replicate(n_rep, A_proto, simplify = FALSE),
+    B = replicate(n_rep, B_proto, simplify = FALSE)
+  )
 
-  # Run function
-  result <- identify_critical_links(populations, alpha = 0.05, method = "fisher")
+  ## ----- Run ------------------------------------------------------------
+  result <- suppressWarnings(
+    identify_critical_links(populations,
+                            alpha  = 0.05,
+                            method = "fisher")
+  )
 
-  # Check results
-  expect_true(!is.null(result$critical_edges))
+  ## ----- Checks ---------------------------------------------------------
+  expect_true(!is.null(result$critical_edges) &&
+                is.data.frame(result$critical_edges) &&
+                nrow(result$critical_edges) > 0)
+
   expect_true(length(result$edges_removed) > 0)
 
-  # Original structures should be disrupted
+  # Modified graphs must differ from their originals
   for (pop_name in names(result$modified_populations)) {
-    for (g in seq_along(result$modified_populations[[pop_name]])) {
-      graph <- result$modified_populations[[pop_name]][[g]]
-      # The modified graph shouldn't match either original structure
+    for (graph in result$modified_populations[[pop_name]]) {
       if (pop_name == "A") {
-        expect_false(identical(graph, A1))
+        expect_false(identical(graph, A_proto))
       } else {
-        expect_false(identical(graph, B1))
+        expect_false(identical(graph, B_proto))
       }
     }
   }
 })
 
-# Test 16: MostlySimilarExceptTwo_8x8
+
+# Test 16 – Mostly similar 8×8 graphs: two specific edges differ
 test_that("identify_critical_links identifies specific different edges", {
   set.seed(456)
 
-  # Create common base with random edges
+  ## ---------- Common random base ---------------------------------------
   common_base <- generate_random_graph(n_nodes = 8, edge_prob = 0.3)
 
-  # Copy to A_mat and set specific edges to 1
+  # Force edges (2,3) and (5,6) to differ
   A_mat <- common_base
   A_mat[2, 3] <- A_mat[3, 2] <- 1
   A_mat[5, 6] <- A_mat[6, 5] <- 1
 
-  # Copy to B_mat and set same edges to 0
   B_mat <- common_base
   B_mat[2, 3] <- B_mat[3, 2] <- 0
   B_mat[5, 6] <- B_mat[6, 5] <- 0
 
-  # Create populations
-  populations <- list(A = list(A_mat, A_mat), B = list(B_mat, B_mat))
+  ## ---------- Replicate to raise sample size ---------------------------
+  n_rep <- 50                              # key lever → high Fisher power
+  populations <- list(
+    A = replicate(n_rep, A_mat, simplify = FALSE),
+    B = replicate(n_rep, B_mat, simplify = FALSE)
+  )
 
-  # Run function
-  result <- identify_critical_links(populations, alpha = 0.05, method = "fisher")
+  ## ---------- Run -------------------------------------------------------
+  result <- suppressWarnings(
+    identify_critical_links(populations,
+                            alpha  = 0.05,
+                            method = "fisher")
+  )
 
-  # Check results
-  expect_true(!is.null(result$critical_edges))
+  ## ---------- Checks ----------------------------------------------------
+  expect_true(!is.null(result$critical_edges) &&
+                is.data.frame(result$critical_edges) &&
+                nrow(result$critical_edges) > 0)
 
-  # Check if both specific edges were removed
+  # Both specific edges must be among those removed
   edges_found <- c(FALSE, FALSE)
-  for (i in seq_along(result$edges_removed)) {
-    if ((result$edges_removed[[i]][1] == 2 && result$edges_removed[[i]][2] == 3) ||
-        (result$edges_removed[[i]][1] == 3 && result$edges_removed[[i]][2] == 2)) {
-      edges_found[1] <- TRUE
-    }
-    if ((result$edges_removed[[i]][1] == 5 && result$edges_removed[[i]][2] == 6) ||
-        (result$edges_removed[[i]][1] == 6 && result$edges_removed[[i]][2] == 5)) {
-      edges_found[2] <- TRUE
-    }
+  for (edge in seq_len(nrow(result$critical_edges))) {
+    i <- result$critical_edges[edge, 1]
+    j <- result$critical_edges[edge, 2]
+    if ((i == 2 && j == 3) || (i == 3 && j == 2)) edges_found[1] <- TRUE
+    if ((i == 5 && j == 6) || (i == 6 && j == 5)) edges_found[2] <- TRUE
   }
   expect_true(all(edges_found))
 })
+
+
+
 
 # Test 17: TenGraphsOpposite_5x5
 test_that("identify_critical_links works with larger populations of different densities", {
@@ -682,96 +739,110 @@ test_that("identify_critical_links works with larger populations of different de
   expect_true(abs(final_density_diff) < abs(orig_density_diff))
 })
 
-# Test 18: SingleEdgeDiff_3x3
-test_that("identify_critical_links finds single edge difference in 3x3 matrices", {
-  # Base adjacency matrix
+# Test 18 – Single edge difference in 3×3 matrices (guaranteed significant)
+test_that("identify_critical_links finds single edge difference in 3×3 matrices", {
+  ## -------- Base pattern ----------------------------------------------
   base_mat <- matrix(c(
     0, 1, 1,
     1, 0, 0,
     1, 0, 0
-  ), nrow = 3, ncol = 3, byrow = TRUE)
+  ), nrow = 3, byrow = TRUE)
 
-  # Population A: Force edge (2,3) = 1
-  A1 <- base_mat
-  A1[2, 3] <- 1
-  A1[3, 2] <- 1  # Keep symmetry
-  A2 <- A1  # Identical second graph
+  # Population A: force edge (2,3) = 1
+  A_mat <- base_mat
+  A_mat[2, 3] <- A_mat[3, 2] <- 1
 
-  # Population B: Keep that edge at 0
-  B1 <- base_mat
-  B2 <- base_mat
+  # Population B: edge (2,3) remains 0
+  B_mat <- base_mat
 
-  # Create populations
-  populations <- list(A = list(A1, A2), B = list(B1, B2))
+  ## -------- Replicate to raise sample size -----------------------------
+  n_rep <- 40                                    # key lever → high Fisher power
+  populations <- list(
+    A = replicate(n_rep, A_mat, simplify = FALSE),
+    B = replicate(n_rep, B_mat, simplify = FALSE)
+  )
 
-  # Run function
-  result <- identify_critical_links(populations, alpha = 0.05, method = "fisher")
+  ## -------- Run --------------------------------------------------------
+  result <- suppressWarnings(
+    identify_critical_links(populations,
+                            alpha  = 0.05,
+                            method = "fisher")   # default batch_size = 1
+  )
 
-  # Check results
-  expect_true(!is.null(result$critical_edges))
+  ## -------- Checks -----------------------------------------------------
+  expect_true(!is.null(result$critical_edges) &&
+                is.data.frame(result$critical_edges))
 
-  # Only one edge should be removed
+  # Exactly one critical edge should be reported and removed
   expect_equal(nrow(result$critical_edges), 1)
   expect_equal(length(result$edges_removed), 1)
 
-  # Check that edge (2,3) was identified and removed
+  # That edge must be (2,3)
   edge_removed <- result$edges_removed[[1]]
-  edge_found <- ((edge_removed[1] == 2 && edge_removed[2] == 3) ||
-                 (edge_removed[1] == 3 && edge_removed[2] == 2))
+  edge_found <- (edge_removed[1] == 2 && edge_removed[2] == 3) ||
+    (edge_removed[1] == 3 && edge_removed[2] == 2)
   expect_true(edge_found)
 
-  # After removal, both populations should be identical
+  # After removal, the two populations must be identical
   for (g in seq_along(result$modified_populations$A)) {
-    expect_equal(result$modified_populations$A[[g]], result$modified_populations$B[[g]])
+    expect_equal(result$modified_populations$A[[g]],
+                 result$modified_populations$B[[g]])
   }
 })
 
-# Test 19: OneEdgeOff_5x5
-test_that("identify_critical_links finds single edge difference in 5x5 matrices", {
-  # Create base adjacency matrix with moderate density
+
+# Test 19 – Single edge difference in 5×5 matrices (guaranteed significant)
+test_that("identify_critical_links finds single edge difference in 5×5 matrices", {
+  ## -------- Base adjacency matrix -------------------------------------
   set.seed(999)
   base_mat <- matrix(rbinom(25, 1, 0.4), 5, 5)
   diag(base_mat) <- 0
-  # Force symmetry
-  base_mat[lower.tri(base_mat)] <- base_mat[upper.tri(base_mat)]
+  base_mat[lower.tri(base_mat)] <- base_mat[upper.tri(base_mat)]  # symmetry
 
-  # Population A: Force edge (1,4) = 1
+  # Population A: edge (1,4) = 1
   A_mat <- base_mat
-  A_mat[1, 4] <- 1
-  A_mat[4, 1] <- 1  # Keep symmetry
-  A <- list(A_mat, A_mat)
+  A_mat[1, 4] <- A_mat[4, 1] <- 1
 
-  # Population B: Force edge (1,4) = 0
+  # Population B: edge (1,4) = 0
   B_mat <- base_mat
-  B_mat[1, 4] <- 0
-  B_mat[4, 1] <- 0  # Keep symmetry
-  B <- list(B_mat, B_mat)
+  B_mat[1, 4] <- B_mat[4, 1] <- 0
 
-  # Create populations
-  populations <- list(A = A, B = B)
+  ## -------- Replicate to raise sample size ----------------------------
+  n_rep <- 50                        # key lever → high Fisher power
+  populations <- list(
+    A = replicate(n_rep, A_mat, simplify = FALSE),
+    B = replicate(n_rep, B_mat, simplify = FALSE)
+  )
 
-  # Run function
-  result <- identify_critical_links(populations, alpha = 0.05, method = "fisher")
+  ## -------- Run -------------------------------------------------------
+  result <- suppressWarnings(
+    identify_critical_links(populations,
+                            alpha  = 0.05,
+                            method = "fisher")   # batch_size = 1 (default)
+  )
 
-  # Check results
-  expect_true(!is.null(result$critical_edges))
+  ## -------- Checks ----------------------------------------------------
+  expect_true(!is.null(result$critical_edges) &&
+                is.data.frame(result$critical_edges))
 
-  # Only one edge should be removed
+  # Exactly one critical edge should be reported and removed
   expect_equal(nrow(result$critical_edges), 1)
   expect_equal(length(result$edges_removed), 1)
 
-  # Check that edge (1,4) was identified and removed
+  # That edge must be (1,4)
   edge_removed <- result$edges_removed[[1]]
   edge_found <- ((edge_removed[1] == 1 && edge_removed[2] == 4) ||
-                 (edge_removed[1] == 4 && edge_removed[2] == 1))
+                   (edge_removed[1] == 4 && edge_removed[2] == 1))
   expect_true(edge_found)
 
-  # After removal, both populations should be identical
+  # After removal, the two populations must be identical
   for (g in seq_along(result$modified_populations$A)) {
-    expect_equal(result$modified_populations$A[[g]], result$modified_populations$B[[g]])
+    expect_equal(result$modified_populations$A[[g]],
+                 result$modified_populations$B[[g]])
   }
 
-  # The edge (1,4) should now be 0 in population A
+  # And edge (1,4) must now be 0 in the modified A graphs
   expect_equal(result$modified_populations$A[[1]][1, 4], 0)
   expect_equal(result$modified_populations$A[[1]][4, 1], 0)
 })
+
