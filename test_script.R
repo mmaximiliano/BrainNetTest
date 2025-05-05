@@ -677,7 +677,7 @@ test_that("identify_critical_links identifies specific different edges", {
   B_mat[5, 6] <- B_mat[6, 5] <- 0
 
   ## ---------- Replicate to raise sample size ---------------------------
-  n_rep <- 50                              # key lever → high Fisher power
+  n_rep <- 50                              # high Fisher power
   populations <- list(
     A = replicate(n_rep, A_mat, simplify = FALSE),
     B = replicate(n_rep, B_mat, simplify = FALSE)
@@ -685,26 +685,28 @@ test_that("identify_critical_links identifies specific different edges", {
 
   ## ---------- Run -------------------------------------------------------
   result <- suppressWarnings(
-    identify_critical_links(populations,
-                            alpha  = 0.05,
-                            method = "fisher")
+    identify_critical_links(
+      populations,
+      alpha      = 0.05,
+      method     = "fisher",
+      batch_size = 2          # remove both top‑ranked edges together
+    )
   )
 
   ## ---------- Checks ----------------------------------------------------
-  expect_true(!is.null(result$critical_edges) &&
-                is.data.frame(result$critical_edges) &&
-                nrow(result$critical_edges) > 0)
+  # At least two edges must have been removed
+  expect_true(length(result$edges_removed) >= 2)
 
   # Both specific edges must be among those removed
   edges_found <- c(FALSE, FALSE)
-  for (edge in seq_len(nrow(result$critical_edges))) {
-    i <- result$critical_edges[edge, 1]
-    j <- result$critical_edges[edge, 2]
-    if ((i == 2 && j == 3) || (i == 3 && j == 2)) edges_found[1] <- TRUE
-    if ((i == 5 && j == 6) || (i == 6 && j == 5)) edges_found[2] <- TRUE
+  for (edge in result$edges_removed) {
+    if ((edge[1] == 2 && edge[2] == 3) || (edge[1] == 3 && edge[2] == 2)) edges_found[1] <- TRUE
+    if ((edge[1] == 5 && edge[2] == 6) || (edge[1] == 6 && edge[2] == 5)) edges_found[2] <- TRUE
   }
   expect_true(all(edges_found))
 })
+
+
 
 
 
