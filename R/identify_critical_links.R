@@ -144,7 +144,7 @@ identify_critical_links <- function(populations, alpha = 0.05, method = "fisher"
     # Recompute test statistic
     T_value <- compute_test_statistic(modified_populations)
     
-    # Compute p-value from T_value using bootstrap
+    # Compute p-value from T_value using bootstrap # VER FORMA De CALCULAR MAS RAPIDO
     p_value <- compute_p_value_from_T(T_value, modified_populations, n_bootstrap)
     
     # Check if test is no longer significant
