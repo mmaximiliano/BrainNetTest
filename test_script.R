@@ -188,7 +188,7 @@ test_that("identify_critical_links works with minimal 2‑node graphs", {
   }
 })
 
-# Test 6: Larger graphs – stress / scalability with a truly significant difference
+# Test 6: Larger graphs – stress / scalability with a truly significant difference
 test_that("identify_critical_links handles larger graphs and finds significant edges", {
   skip_on_cran()                 # avoid long tests on CRAN
 
