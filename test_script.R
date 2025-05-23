@@ -193,7 +193,7 @@ test_that("identify_critical_links handles larger graphs and finds significant e
   skip_on_cran()                 # avoid long tests on CRAN
 
   ## -------- Generate two clearly different 20‑node populations ----------
-  n_graphs <- 12                 # more samples -> more power
+  n_graphs <- 24                 # more samples -> more power
   n_nodes  <- 20
   n_comms  <- 2
 
