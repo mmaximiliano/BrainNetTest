@@ -417,7 +417,7 @@ check_acceptance_criteria <- function(metrics) {
 
   # Define runtime limits (in seconds) - adjusted for increased sample sizes
   runtime_limits <- c("10" = 3, "100" = 25, "1000" = 120, "10000" = 1200)
-  
+
   # Tolerance for floating point comparisons
   tolerance <- 1e-6
 
@@ -514,7 +514,7 @@ print_validation_results <- function(acceptance_results) {
 #' @param output_csv If TRUE, save results to CSV files (default: TRUE)
 #' @param output_dir Directory to save CSV files (default: current directory)
 #' @param ... Additional arguments passed to run_ring_experiment
-main_validation <- function(quick_test = FALSE, nodes = 10000, master_seed = 42, 
+main_validation <- function(quick_test = FALSE, nodes = 10000, master_seed = 42,
                            output_csv = TRUE, output_dir = ".", ...) {
 
   # Set master seed for reproducibility
@@ -527,7 +527,7 @@ main_validation <- function(quick_test = FALSE, nodes = 10000, master_seed = 42,
     } else if (nodes == 100) {
         N_values <- c(10, 100)
     } else if (nodes == 1000) {
-        N_values <- c(10, 100, 1000)
+        N_values <- c(1000)
     }
 
     cat("Running quick test...\n")
@@ -572,45 +572,45 @@ main_validation <- function(quick_test = FALSE, nodes = 10000, master_seed = 42,
 #' @param output_dir Directory to save files
 #' @param master_seed Master seed used
 #' @param quick_test Whether this was a quick test
-save_results_to_csv <- function(results, metrics, acceptance, output_dir = ".", 
+save_results_to_csv <- function(results, metrics, acceptance, output_dir = ".",
                                master_seed = 42, quick_test = FALSE) {
-  
+
   # Create timestamp for unique filenames
   timestamp <- format(Sys.time(), "%Y%m%d_%H%M%S")
   test_type <- if (quick_test) "quick" else "full"
-  
+
   # Create output directory if it doesn't exist
   if (!dir.exists(output_dir)) {
     dir.create(output_dir, recursive = TRUE)
   }
-  
+
   # Save detailed results
-  results_file <- file.path(output_dir, 
-                           sprintf("ring_experiment_results_%s_%s_seed%d.csv", 
+  results_file <- file.path(output_dir,
+                           sprintf("ring_experiment_results_%s_%s_seed%d.csv",
                                    test_type, timestamp, master_seed))
-  
+
   # Add computed metrics to results for the detailed file
   results_with_metrics <- results
   results_with_metrics$recall <- with(results, ifelse(TP + FN > 0, TP / (TP + FN), 0))
   results_with_metrics$precision <- with(results, ifelse(TP + FP > 0, TP / (TP + FP), 1))
   results_with_metrics$power <- results$global_significant
   results_with_metrics$no_residual <- ifelse(is.na(results$residual_p), 0, results$residual_p > 0.05)
-  
+
   write.csv(results_with_metrics, results_file, row.names = FALSE)
   cat(sprintf("  Detailed results saved to: %s\n", results_file))
-  
+
   # Save aggregated metrics
-  metrics_file <- file.path(output_dir, 
-                           sprintf("ring_experiment_metrics_%s_%s_seed%d.csv", 
+  metrics_file <- file.path(output_dir,
+                           sprintf("ring_experiment_metrics_%s_%s_seed%d.csv",
                                    test_type, timestamp, master_seed))
   write.csv(metrics, metrics_file, row.names = FALSE)
   cat(sprintf("  Aggregated metrics saved to: %s\n", metrics_file))
-  
+
   # Save acceptance criteria summary
-  acceptance_file <- file.path(output_dir, 
-                              sprintf("ring_experiment_acceptance_%s_%s_seed%d.csv", 
+  acceptance_file <- file.path(output_dir,
+                              sprintf("ring_experiment_acceptance_%s_%s_seed%d.csv",
                                       test_type, timestamp, master_seed))
-  
+
   # Convert acceptance results to data frame
   acceptance_df <- do.call(rbind, lapply(acceptance$conditions, function(x) {
     data.frame(
@@ -631,21 +631,21 @@ save_results_to_csv <- function(results, metrics, acceptance, output_dir = ".",
       stringsAsFactors = FALSE
     )
   }))
-  
+
   # Add overall summary
   acceptance_df$experiment_timestamp <- timestamp
   acceptance_df$master_seed <- master_seed
   acceptance_df$test_type <- test_type
   acceptance_df$overall_experiment_pass <- acceptance$overall_pass
-  
+
   write.csv(acceptance_df, acceptance_file, row.names = FALSE)
   cat(sprintf("  Acceptance criteria saved to: %s\n", acceptance_file))
-  
+
   # Create a summary report
-  summary_file <- file.path(output_dir, 
-                           sprintf("ring_experiment_summary_%s_%s_seed%d.txt", 
+  summary_file <- file.path(output_dir,
+                           sprintf("ring_experiment_summary_%s_%s_seed%d.txt",
                                    test_type, timestamp, master_seed))
-  
+
   sink(summary_file)
   cat("=== RING EXPERIMENT VALIDATION SUMMARY ===\n")
   cat(sprintf("Timestamp: %s\n", Sys.time()))
@@ -655,7 +655,7 @@ save_results_to_csv <- function(results, metrics, acceptance, output_dir = ".",
   cat("\n")
   print_validation_results(acceptance)
   sink()
-  
+
   cat(sprintf("  Summary report saved to: %s\n", summary_file))
 }
 
