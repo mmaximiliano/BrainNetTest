@@ -72,39 +72,47 @@ generate_ring_graph <- function(N, lambda, perturbed_nodes = c(),
                                 perturbation_type = "none",
                                 lambda_alt = NULL, p_const = NULL) {
 
-  # Initialize adjacency matrix
-  adj <- matrix(0, nrow = N, ncol = N)
-
-  # Generate edges
-  for (i in 1:(N-1)) {
-    for (j in (i+1):N) {
-      # Check if this edge involves a perturbed node
-      is_perturbed <- (i %in% perturbed_nodes) || (j %in% perturbed_nodes)
-
-      if (is_perturbed && perturbation_type != "none") {
-        # Use perturbed probability
-        if (perturbation_type == "lambda_half") {
-          prob <- exp(-lambda_alt * ring_distance(i, j, N))
-        } else if (perturbation_type == "lambda_double") {
-          prob <- exp(-lambda_alt * ring_distance(i, j, N))
-        } else if (perturbation_type %in% c("const_high", "const_low")) {
-          prob <- p_const
-        } else {
-          prob <- exp(-lambda * ring_distance(i, j, N))
-        }
-      } else {
-        # Use baseline probability
-        prob <- exp(-lambda * ring_distance(i, j, N))
-      }
-
-      # Generate edge
-      if (runif(1) < prob) {
-        adj[i, j] <- 1
-        adj[j, i] <- 1
-      }
+  # Compute distance matrix using vectorized operation
+  D <- outer(1:N, 1:N, ring_distance, N)
+  
+  # Compute baseline probability matrix
+  P <- exp(-lambda * D)
+  
+  # Handle perturbations if any
+  if (length(perturbed_nodes) > 0 && perturbation_type != "none") {
+    # Create perturbation mask - edges involving perturbed nodes
+    perturb_mask <- outer(1:N, 1:N, function(i, j) {
+      (i %in% perturbed_nodes) | (j %in% perturbed_nodes)
+    })
+    
+    if (perturbation_type == "lambda_half") {
+      P_perturbed <- exp(-lambda_alt * D)
+      P[perturb_mask] <- P_perturbed[perturb_mask]
+    } else if (perturbation_type == "lambda_double") {
+      P_perturbed <- exp(-lambda_alt * D)
+      P[perturb_mask] <- P_perturbed[perturb_mask]
+    } else if (perturbation_type %in% c("const_high", "const_low")) {
+      P[perturb_mask] <- p_const
     }
   }
-
+  
+  # Get upper triangular indices (avoid diagonal and lower triangle)
+  upper_tri_idx <- which(upper.tri(P, diag = FALSE))
+  
+  # Generate edges only for upper triangle
+  n_edges <- length(upper_tri_idx)
+  edge_probs <- P[upper_tri_idx]
+  edges <- rbinom(n_edges, 1, edge_probs)
+  
+  # Initialize adjacency matrix
+  adj <- matrix(0, nrow = N, ncol = N)
+  
+  # Set edges in upper triangle
+  adj[upper_tri_idx] <- edges
+  
+  # Make symmetric (copy upper triangle to lower triangle)
+  adj <- adj + t(adj)
+  
   return(adj)
 }
 
