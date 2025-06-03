@@ -1,6 +1,7 @@
 # Ring Experiment for Validation of identify_critical_links()
 # ──────────────────────────────────────────────────────────────────────────────
-
+library(pbapply)
+library(parallel)
 library(Matrix)
 library(igraph)
 
@@ -300,6 +301,7 @@ run_single_experiment <- function(N, n_graphs, perturbation_type, rho = 0.03,  #
 #' @param alpha Significance level
 #' @param n_bootstrap Number of bootstrap samples
 #' @param verbose Whether to print progress
+#' @param n_cores Number of cores to use for parallel processing
 #' @return Data frame with all results
 run_ring_experiment <- function(N_values = c(10, 100, 1000, 10000),
                                perturbation_types = c("lambda_half", "lambda_double",
@@ -308,10 +310,12 @@ run_ring_experiment <- function(N_values = c(10, 100, 1000, 10000),
                                rho = 0.02,  # Increased from 0.01
                                alpha = 0.05,
                                n_bootstrap = 1000,
-                               verbose = TRUE) {
+                               verbose = TRUE,
+                               n_cores = parallel::detectCores() - 1) {
 
-  results <- list()
-  result_idx <- 1
+  # Build a parameter grid instead of nested loops
+  param_grid <- list()
+  idx <- 1
 
   for (N in N_values) {
     # Significantly increase number of graphs based on N for better statistical power
@@ -326,22 +330,13 @@ run_ring_experiment <- function(N_values = c(10, 100, 1000, 10000),
     }
 
     if (verbose) {
-      cat(sprintf("Testing N = %d with %d graphs per population\n", N, n_graphs))
+      cat(sprintf("Preparing N = %d with %d graphs per population\n", N, n_graphs))
     }
 
     for (pert_type in perturbation_types) {
-      if (verbose) {
-        cat(sprintf("  Perturbation type: %s\n", pert_type))
-      }
-
       for (rep in 1:n_repetitions) {
-        if (verbose && rep %% 50 == 0) {
-          cat(sprintf("    Repetition %d/%d\n", rep, n_repetitions))
-        }
-
-        seed <- 1000 * result_idx + rep
-
-        result <- run_single_experiment(
+        seed <- 1000 * idx + rep
+        param_grid[[idx]] <- list(
           N = N,
           n_graphs = n_graphs,
           perturbation_type = pert_type,
@@ -350,12 +345,52 @@ run_ring_experiment <- function(N_values = c(10, 100, 1000, 10000),
           n_bootstrap = n_bootstrap,
           seed = seed
         )
-
-        results[[result_idx]] <- result
-        result_idx <- result_idx + 1
+        idx <- idx + 1
       }
     }
   }
+
+  # Set up PSOCK cluster (works on Windows & Unix)
+  cl <- parallel::makeCluster(n_cores, type = "PSOCK")
+  on.exit(parallel::stopCluster(cl), add = TRUE)
+
+  # Export functions and variables to workers
+  parallel::clusterExport(cl, c(
+    "run_single_experiment",
+    "generate_population", 
+    "generate_ring_graph",
+    "find_lambda",
+    "expected_edges",
+    "ring_distance",
+    "compute_confusion_matrix",
+    "identify_critical_links"  # Make sure this function is exported
+  ), envir = environment())
+  
+  # Load required libraries on each worker
+  parallel::clusterEvalQ(cl, {
+    library(Matrix)
+    library(igraph)
+    library(BrainNetTest)  # if identify_critical_links is in a package
+  })
+  
+  # If identify_critical_links is defined in another file, source it on each worker
+  parallel::clusterEvalQ(cl, {
+    source("./R/identify_critical_links.R")
+  })
+
+  # Set reproducible parallel RNG
+  parallel::clusterSetRNGStream(cl, iseed = 42)
+
+  # Parallel execution
+  if (verbose) {
+    cat(sprintf("\nRunning %d experiments on %d cores...\n",
+                length(param_grid), n_cores))
+  }
+
+  results <- parallel::parLapply(
+    cl, param_grid,
+    function(pars) do.call(run_single_experiment, pars)
+  )
 
   # Convert to data frame
   df <- do.call(rbind, lapply(results, function(x) {
@@ -660,6 +695,6 @@ save_results_to_csv <- function(results, metrics, acceptance, output_dir = ".",
 }
 
 # Example usage:
-#validation_results <- main_validation(quick_test = TRUE, nodes = 100, master_seed = 42)
-validation_results <- main_validation(quick_test = TRUE, nodes = 1000, master_seed = 42)
+validation_results <- main_validation(quick_test = TRUE, nodes = 100, master_seed = 42)
+#validation_results <- main_validation(quick_test = TRUE, nodes = 1000, master_seed = 42)
 # validation_results <- main_validation(master_seed = 42)  # Full validation
