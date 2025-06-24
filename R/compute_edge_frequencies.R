@@ -45,13 +45,34 @@ compute_edge_frequencies <- function(populations) {
   # Assuming all graphs have the same dimensions
   n_nodes <- nrow(populations[[1]][[1]])
   
-  # Initialize arrays to store edge counts and frequencies
-  edge_counts <- array(0, dim = c(n_nodes, n_nodes, num_populations))
+  # Check if we can use GPU acceleration
+  device <- get_torch_device()
+  use_gpu <- !is.null(device) && n_nodes >= 100
   
-  # For each population
-  for (k in seq_along(populations)) {
-    # Sum adjacency matrices across all graphs in the population
-    edge_counts[,,k] <- Reduce("+", populations[[k]])
+  if (use_gpu && requireNamespace("torch", quietly = TRUE)) {
+    # GPU-accelerated version
+    edge_counts <- array(0, dim = c(n_nodes, n_nodes, num_populations))
+    
+    for (k in seq_along(populations)) {
+      # Convert all graphs to torch tensors at once
+      pop_tensors <- lapply(populations[[k]], function(g) {
+        torch::torch_tensor(g, device = device)
+      })
+      
+      # Stack and sum in one operation
+      stacked <- torch::torch_stack(pop_tensors)
+      sum_tensor <- torch::torch_sum(stacked, dim = 1)
+      
+      # Convert back to R
+      edge_counts[,,k] <- sum_tensor$cpu()$numpy()
+    }
+  } else {
+    # Original CPU implementation
+    edge_counts <- array(0, dim = c(n_nodes, n_nodes, num_populations))
+    
+    for (k in seq_along(populations)) {
+      edge_counts[,,k] <- Reduce("+", populations[[k]])
+    }
   }
   
   # Calculate edge presence proportions

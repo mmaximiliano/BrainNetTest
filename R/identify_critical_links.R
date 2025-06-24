@@ -89,16 +89,90 @@ identify_critical_links <- function(populations,
   T0         <- sum(obs_delta_info$deltas)
 
   ## 3 ── bootstrap -----------------------------------------------------------
-  all_graphs  <- unlist(populations, recursive = FALSE)
-  boot_deltas <- matrix(0, nrow = n_bootstrap, ncol = n_edges)
-
-  for (b in seq_len(n_bootstrap)) {
-    boot_pops <- lapply(Npop, function(sz)
-      all_graphs[sample.int(n, sz, TRUE)])
-
-    boot_counts       <- compute_edge_frequencies(boot_pops)$edge_counts
-    boot_deltas[b, ]  <- .edge_deltas(boot_counts)$deltas[map_idx]
+  all_graphs <- unlist(populations, recursive = FALSE)
+  
+  # Load utility functions if not already loaded
+  if (!exists("%||%", mode = "function")) {
+    `%||%` <- function(x, y) if (is.null(x)) y else x
   }
+  
+  # Check if we can use parallel processing
+  n_cores <- parallel::detectCores() - 1
+  use_parallel <- n_bootstrap >= 100 && n_cores > 1
+  
+  # Check if GPU acceleration is available
+  use_gpu <- FALSE
+  if (requireNamespace("torch", quietly = TRUE)) {
+    tryCatch({
+      use_gpu <- torch::cuda_is_available() && n_nodes >= 100
+      if (use_gpu) {
+        device <- torch::torch_device("cuda")
+        message("Using GPU acceleration for bootstrapping")
+      }
+    }, error = function(e) {
+      use_gpu <- FALSE
+    })
+  }
+  
+  if (use_gpu) {
+    # GPU-accelerated bootstrap
+    boot_deltas <- matrix(0, nrow = n_bootstrap, ncol = n_edges)
+    
+    # Convert graph data to torch tensors in batches
+    graph_tensors <- lapply(all_graphs, function(g) {
+      torch::torch_tensor(g, device = device)
+    })
+    
+    # Main bootstrap loop with GPU acceleration
+    for (b in seq_len(n_bootstrap)) {
+      # Sample with replacement using GPU
+      indices <- sample.int(n, sum(Npop), replace = TRUE)
+      boot_indices <- split(indices, rep(seq_along(Npop), Npop))
+      
+      boot_pops <- lapply(seq_along(Npop), function(i) {
+        all_graphs[boot_indices[[i]]]
+      })
+      
+      boot_counts <- compute_edge_frequencies(boot_pops)$edge_counts
+      boot_deltas[b, ] <- .edge_deltas(boot_counts)$deltas[map_idx]
+    }
+    
+  } else if (use_parallel) {
+    # Parallel CPU bootstrap
+    cl <- parallel::makeCluster(min(n_cores, 8))  # Limit to 8 cores
+    on.exit(parallel::stopCluster(cl), add = TRUE)
+    
+    # Export necessary objects
+    parallel::clusterExport(cl, c("all_graphs", "Npop", "n", "map_idx", 
+                                  ".edge_deltas", "compute_edge_frequencies"),
+                            envir = environment())
+    
+    # Set seed for reproducibility
+    parallel::clusterSetRNGStream(cl, iseed = seed %||% 123)
+    
+    # Parallel bootstrap computation
+    boot_deltas_list <- parallel::parLapply(cl, 1:n_bootstrap, function(b) {
+      boot_pops <- lapply(Npop, function(sz)
+        all_graphs[sample.int(n, sz, TRUE)])
+      
+      boot_counts <- compute_edge_frequencies(boot_pops)$edge_counts
+      .edge_deltas(boot_counts)$deltas[map_idx]
+    })
+    
+    boot_deltas <- do.call(rbind, boot_deltas_list)
+  } else {
+    # Original sequential implementation
+    boot_deltas <- matrix(0, nrow = n_bootstrap, ncol = n_edges)
+    
+    for (b in seq_len(n_bootstrap)) {
+      boot_pops <- lapply(Npop, function(sz)
+        all_graphs[sample.int(n, sz, TRUE)])
+      
+      boot_counts <- compute_edge_frequencies(boot_pops)$edge_counts
+      boot_deltas[b, ] <- .edge_deltas(boot_counts)$deltas[map_idx]
+    }
+  }
+  
   T_boot0     <- rowSums(boot_deltas)
   prefix_boot <- t(apply(boot_deltas, 1, cumsum))   # B × n_edges
 

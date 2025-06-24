@@ -129,6 +129,21 @@ generate_population <- function(n_graphs, N, lambda, perturbed_nodes = c(),
                                perturbation_type = "none",
                                lambda_mult = NULL, p_const_value = NULL) {
 
+  # Try to use GPU if available and beneficial
+  use_gpu <- FALSE
+  if (n_graphs >= 50 && N >= 100) {  # Only use GPU for larger problems
+    tryCatch({
+      # Check if GPU functions exist
+      if (exists("get_torch_device") && exists("batch_generate_ring_graphs_gpu")) {
+        device <- get_torch_device()
+        use_gpu <- !is.null(device)
+      }
+    }, error = function(e) {
+      # GPU not available, fall back to CPU
+      use_gpu <- FALSE
+    })
+  }
+  
   # Define available parameter values (used if not explicitly provided)
   lambda_multipliers <- switch(perturbation_type,
                       "lambda_half" = c(0.5, 0.33, 0.25),  # Various reduction levels
@@ -158,12 +173,26 @@ generate_population <- function(n_graphs, N, lambda, perturbed_nodes = c(),
   } else {
     p_const <- NULL  # Default for other perturbation types
   }
-
+  
+  if (use_gpu) {
+    # Generate graphs on GPU
+    graphs <- batch_generate_ring_graphs_gpu(
+      n_graphs, N, lambda, perturbed_nodes,
+      perturbation_type, lambda_alt, p_const, device
+    )
+    
+    # Add attributes
+    attr(graphs, "lambda_alt") <- lambda_alt
+    attr(graphs, "p_const") <- p_const
+    
+    return(graphs)
+  }
+  
+  # Fall back to CPU implementation
   # Generate graphs
   graphs <- vector("list", n_graphs)
 
   # Use a fixed parameter value for all graphs in this population
-  # (lambda_alt and p_const are now passed directly to generate_population)
   for (i in 1:n_graphs) {
     graphs[[i]] <- generate_ring_graph(N, lambda, perturbed_nodes,
                                       perturbation_type, lambda_alt, p_const)
@@ -625,7 +654,7 @@ run_ring_experiment <- function(N_values = c(10, 100, 1000, 10000),
     on.exit(parallel::stopCluster(cl), add = TRUE)
 
     # Export functions and variables to workers
-    parallel::clusterExport(cl, c(
+    functions_to_export <- c(
       "run_single_experiment",
       "generate_population",
       "generate_ring_graph",
@@ -634,160 +663,168 @@ run_ring_experiment <- function(N_values = c(10, 100, 1000, 10000),
       "ring_distance",
       "compute_confusion_matrix",
       "identify_critical_links"
-    ), envir = environment())
+    )
+    
+    # Add GPU functions if they exist
+    if (exists("get_torch_device")) {
+      functions_to_export <- c(functions_to_export, "get_torch_device")
+    }
+    if (exists("batch_generate_ring_graphs_gpu")) {
+      functions_to_export <- c(functions_to_export, "batch_generate_ring_graphs_gpu")
+    }
+    if (exists("setup_gpu_acceleration")) {
+      functions_to_export <- c(functions_to_export, "setup_gpu_acceleration")
+    }
+    if (exists("compute_ring_distances_gpu")) {
+      functions_to_export <- c(functions_to_export, "compute_ring_distances_gpu")
+    }
+    if (exists("compute_probabilities_gpu")) {
+      functions_to_export <- c(functions_to_export, "compute_probabilities_gpu")
+    }
+    
+    parallel::clusterExport(cl, functions_to_export, envir = environment())
 
     # Load required libraries on each worker
     parallel::clusterEvalQ(cl, {
       library(Matrix)
       library(igraph)
-      suppressPackageStartupMessages(library(BrainNetTest))
-    })
-
-    # If identify_critical_links is defined in another file, source it on each worker
-    parallel::clusterEvalQ(cl, {
-      if (!requireNamespace("BrainNetTest", quietly = TRUE)) {
-        source("./R/identify_critical_links.R")
-      }
-    })
-
-    # Set reproducible parallel RNG
-    parallel::clusterSetRNGStream(cl, iseed = 42)
-
-    # Parallel execution
-    if (verbose) {
-      cat(sprintf("\nRunning %d experiments across %d cores...\n\n",
-                  length(param_grid), n_cores))
-    }
-
-    # Process parameters in batches for real-time results
-    batch_size <- min(100, length(param_grid))
-    n_batches <- ceiling(length(param_grid) / batch_size)
-
-    all_results <- list()
-
-    for (batch in 1:n_batches) {
-      start_idx <- (batch - 1) * batch_size + 1
-      end_idx <- min(batch * batch_size, length(param_grid))
-
-      if (verbose && n_batches > 1) {
-        cat(sprintf("Processing batch %d/%d (experiments %d-%d)...\n",
-                    batch, n_batches, start_idx, end_idx))
-      }
-
-      # Extract current batch of parameters
-      current_batch <- param_grid[start_idx:end_idx]
-      
-      # Store tracking parameters separately but don't pass them to run_single_experiment
-      tracking_info <- lapply(current_batch, function(params) {
-        list(
-          experiment_id = params$experiment_id,
-          run_id = params$run_id,
-          rep_id = params$rep_id
-        )
+      # Try to load BrainNetTest, but don't fail if it's not available
+      tryCatch({
+        suppressPackageStartupMessages(library(BrainNetTest))
+      }, error = function(e) {
+        # If BrainNetTest is not available, that's OK
       })
       
-      # Remove tracking parameters before passing to run_single_experiment
-      execution_params <- lapply(current_batch, function(params) {
-        params$experiment_id <- NULL
-        params$run_id <- NULL
-        params$rep_id <- NULL
-        params
-      })
-
-      # Run current batch in parallel with clean parameters
-      batch_results <- parallel::parLapply(
-        cl, execution_params,
-        function(pars) do.call(run_single_experiment, pars)
-      )
-
-      # Process and save results from this batch
-      for (i in seq_along(batch_results)) {
-        result <- batch_results[[i]]
-        # Get tracking info from our saved list instead of from parameters
-        run_id <- tracking_info[[i]]$run_id
-
-        # Save detailed result to RDS file
-        result_file <- file.path(output_dir,
-                                sprintf("%s_run_%04d.rds", experiment_id, run_id))
-        saveRDS(result, result_file)
-
-        # Extract summary for the tracking data frame
-        if (result$success) {
-          summary_row <- data.frame(
-            experiment_id = experiment_id,
-            run_id = run_id,
-            N = result$parameters$N,
-            perturbation_type = result$parameters$perturbation_type,
-            lambda_base = result$parameters$lambda_base,
-            lambda_mult = ifelse(is.null(result$parameters$lambda_mult),
-                                NA, result$parameters$lambda_mult),
-            p_const = ifelse(is.null(result$parameters$p_const_value),
-                            NA, result$parameters$p_const_value),
-            global_significant = result$algorithm_execution$global_significant,
-            TP = result$confusion_matrix$TP,
-            FP = result$confusion_matrix$FP,
-            FN = result$confusion_matrix$FN,
-            TN = result$confusion_matrix$TN,
-            recall = result$evaluation$recall,
-            precision = result$evaluation$precision,
-            f1 = result$evaluation$f1,
-            mcc = result$evaluation$mcc,
-            n_predicted = result$algorithm_execution$n_predicted_edges,
-            n_true = result$parameters$n_true_critical_links,
-            runtime = result$timing$runtime,
-            no_residual = ifelse(is.null(result$evaluation$no_residual),
-                                NA, result$evaluation$no_residual),
-            error = NA
-          )
-        } else {
-          # For failed runs, create a basic summary row
-          summary_row <- data.frame(
-            experiment_id = experiment_id,
-            run_id = run_id,
-            N = result$parameters$N,
-            perturbation_type = result$parameters$perturbation_type,
-            lambda_base = ifelse(is.null(result$parameters$lambda_base),
-                                NA, result$parameters$lambda_base),
-            lambda_mult = ifelse(is.null(result$parameters$lambda_mult),
-                                NA, result$parameters$lambda_mult),
-            p_const = ifelse(is.null(result$parameters$p_const_value),
-                            NA, result$parameters$p_const_value),
-            global_significant = FALSE,
-            TP = NA, FP = NA, FN = NA, TN = NA,
-            recall = NA, precision = NA, f1 = NA, mcc = NA,
-            n_predicted = 0,
-            n_true = ifelse(is.null(result$parameters$n_true_critical_links),
-                            NA, result$parameters$n_true_critical_links),
-            runtime = result$timing$runtime,
-            no_residual = NA,
-            error = ifelse(is.null(result$error), NA, result$error)
-          )
+      # Try to setup GPU on each worker
+      if (exists("setup_gpu_acceleration")) {
+        tryCatch({
+          setup_gpu_acceleration()
+        }, error = function(e) {
+          # GPU setup failed on this worker, will use CPU
+        })
+      }
+      
+      # Source GPU functions if available
+      gpu_script_paths <- c("./R/gpu_accelerated_ring.R",
+                           "R/gpu_accelerated_ring.R",
+                           "../R/gpu_accelerated_ring.R")
+      
+      for (path in gpu_script_paths) {
+        if (file.exists(path)) {
+          tryCatch({
+            source(path)
+          }, error = function(e) {
+            # Failed to source GPU script
+          })
+          break
         }
-
-        # Append to the results summary data frame
-        results_summary <- rbind(results_summary, summary_row)
       }
-
-      # Save intermediate summary results
-      summary_file <- file.path(output_dir, paste0(experiment_id, "_summary.csv"))
-      write.csv(results_summary, summary_file, row.names = FALSE)
-
-      if (verbose && n_batches > 1) {
-        # Print batch progress summary
-        successful <- sum(!is.na(results_summary$global_significant))
-        significant <- sum(results_summary$global_significant, na.rm = TRUE)
-        avg_recall <- mean(results_summary$recall, na.rm = TRUE)
-        avg_precision <- mean(results_summary$precision, na.rm = TRUE)
-
-        cat(sprintf("  Batch complete: %.1f%% success, %.1f%% power, Avg recall=%.3f, Avg precision=%.3f\n",
-                    100 * successful / nrow(results_summary),
-                    100 * significant / successful,
-                    avg_recall, avg_precision))
-      }
-
-      # Store batch results
-      all_results <- c(all_results, batch_results)
+    })
+    
+    # Run experiments in parallel
+    if (verbose) {
+      cat(sprintf("\nRunning %d experiments in parallel...\n\n", length(param_grid)))
     }
+    
+    # Use pblapply for progress bar with parallel execution
+    all_results <- pbapply::pblapply(param_grid, function(params) {
+      # Store tracking info separately
+      tracking_info <- list(
+        experiment_id = params$experiment_id,
+        run_id = params$run_id,
+        rep_id = params$rep_id
+      )
+      
+      # Remove tracking params
+      execution_params <- params
+      execution_params$experiment_id <- NULL
+      execution_params$run_id <- NULL
+      execution_params$rep_id <- NULL
+      
+      # Execute with clean parameters
+      result <- do.call(run_single_experiment, execution_params)
+      result$tracking_info <- tracking_info
+      
+      return(result)
+    }, cl = cl)
+    
+    # Process results after parallel execution
+    if (verbose) {
+      cat("\nProcessing results...\n")
+    }
+    
+    for (i in seq_along(all_results)) {
+      result <- all_results[[i]]
+      tracking_info <- result$tracking_info
+      
+      # Save detailed result
+      run_id <- tracking_info$run_id
+      result_file <- file.path(output_dir,
+                              sprintf("%s_run_%04d.rds", experiment_id, run_id))
+      saveRDS(result, result_file)
+      
+      # Extract and save summary info
+      if (result$success) {
+        summary_row <- data.frame(
+          experiment_id = experiment_id,
+          run_id = run_id,
+          N = result$parameters$N,
+          perturbation_type = result$parameters$perturbation_type,
+          lambda_base = result$parameters$lambda_base,
+          lambda_mult = ifelse(is.null(result$parameters$lambda_mult),
+                              NA, result$parameters$lambda_mult),
+          p_const = ifelse(is.null(result$parameters$p_const_value),
+                          NA, result$parameters$p_const_value),
+          global_significant = result$algorithm_execution$global_significant,
+          TP = result$confusion_matrix$TP,
+          FP = result$confusion_matrix$FP,
+          FN = result$confusion_matrix$FN,
+          TN = result$confusion_matrix$TN,
+          recall = result$evaluation$recall,
+          precision = result$evaluation$precision,
+          f1 = result$evaluation$f1,
+          mcc = result$evaluation$mcc,
+          n_predicted = result$algorithm_execution$n_predicted_edges,
+          n_true = result$parameters$n_true_critical_links,
+          runtime = result$timing$runtime,
+          no_residual = ifelse(is.null(result$evaluation$no_residual),
+                              NA, result$evaluation$no_residual),
+          error = NA,
+          stringsAsFactors = FALSE
+        )
+      } else {
+        summary_row <- data.frame(
+          experiment_id = experiment_id,
+          run_id = run_id,
+          N = result$parameters$N,
+          perturbation_type = result$parameters$perturbation_type,
+          lambda_base = ifelse(is.null(result$parameters$lambda_base),
+                              NA, result$parameters$lambda_base),
+          lambda_mult = ifelse(is.null(result$parameters$lambda_mult),
+                              NA, result$parameters$lambda_mult),
+          p_const = ifelse(is.null(result$parameters$p_const_value),
+                          NA, result$parameters$p_const_value),
+          global_significant = FALSE,
+          TP = NA, FP = NA, FN = NA, TN = NA,
+          recall = NA, precision = NA, f1 = NA, mcc = NA,
+          n_predicted = 0,
+          n_true = ifelse(is.null(result$parameters$n_true_critical_links),
+                          NA, result$parameters$n_true_critical_links),
+          runtime = result$timing$runtime,
+          no_residual = NA,
+          error = ifelse(is.null(result$error), NA, result$error),
+          stringsAsFactors = FALSE
+        )
+      }
+      
+      # Append to results summary
+      results_summary <- rbind(results_summary, summary_row)
+    }
+    
+    # Save intermediate summary results
+    summary_file <- file.path(output_dir, paste0(experiment_id, "_summary.csv"))
+    write.csv(results_summary, summary_file, row.names = FALSE)
+    
   } else {
     # Sequential execution (for debugging or single-core machines)
     if (verbose) {
@@ -1002,6 +1039,7 @@ run_ring_experiment <- function(N_values = c(10, 100, 1000, 10000),
 #' @param perturbation_types Perturbation types to test
 #' @param lambda_multipliers Custom lambda multipliers for lambda-based perturbations
 #' @param p_const_values Custom probability values for constant perturbations
+#' @param use_gpu If TRUE, enable GPU acceleration if available (default: "auto")
 #' @param ... Additional arguments passed to run_ring_experiment
 #' @return List with experiment results
 main_validation <- function(quick_test = FALSE, nodes = 10000, master_seed = 42,
@@ -1009,11 +1047,54 @@ main_validation <- function(quick_test = FALSE, nodes = 10000, master_seed = 42,
                            perturbation_types = NULL,
                            lambda_multipliers = NULL,
                            p_const_values = NULL,
+                           use_gpu = "auto",
                            ...) {
   
   # Set master seed for reproducibility
   set.seed(master_seed)
   cat(sprintf("Using master seed: %d\n", master_seed))
+  
+  # Setup GPU if requested
+  if (use_gpu == "auto" || use_gpu == TRUE) {
+    # First try to source GPU acceleration script
+    gpu_script_paths <- c("./R/gpu_accelerated_ring.R",
+                         "R/gpu_accelerated_ring.R",
+                         "../R/gpu_accelerated_ring.R")
+    
+    gpu_sourced <- FALSE
+    for (path in gpu_script_paths) {
+      if (file.exists(path)) {
+        tryCatch({
+          source(path)
+          gpu_sourced <- TRUE
+          cat(sprintf("Loaded GPU acceleration from: %s\n", path))
+          break
+        }, error = function(e) {
+          # Continue to next path
+        })
+      }
+    }
+    
+    # Now try to setup GPU
+    if (gpu_sourced && exists("setup_gpu_acceleration")) {
+      tryCatch({
+        gpu_available <- setup_gpu_acceleration()
+        if (gpu_available) {
+          cat("GPU acceleration enabled\n")
+          device <- get_torch_device()
+          if (!is.null(device)) {
+            cat(sprintf("Using device: %s\n", device$type))
+          }
+        } else {
+          cat("GPU acceleration not available, using CPU\n")
+        }
+      }, error = function(e) {
+        cat("Failed to setup GPU acceleration, using CPU\n")
+      })
+    } else {
+      cat("GPU acceleration functions not found, using CPU\n")
+    }
+  }
   
   # Configure N_values based on the nodes parameter
   if (quick_test) {
