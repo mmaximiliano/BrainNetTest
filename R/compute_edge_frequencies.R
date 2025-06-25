@@ -56,7 +56,7 @@ compute_edge_frequencies <- function(populations) {
     for (k in seq_along(populations)) {
       # Convert all graphs to torch tensors at once
       pop_tensors <- lapply(populations[[k]], function(g) {
-        torch::torch_tensor(g, device = device)
+        torch::torch_tensor(g, device = device, dtype = torch::torch_float32())
       })
       
       # Stack and sum in one operation
@@ -64,7 +64,7 @@ compute_edge_frequencies <- function(populations) {
       sum_tensor <- torch::torch_sum(stacked, dim = 1)
       
       # Convert back to R
-      edge_counts[,,k] <- sum_tensor$cpu()$numpy()
+      edge_counts[,,k] <- as.matrix(sum_tensor$cpu())
     }
   } else {
     # Original CPU implementation

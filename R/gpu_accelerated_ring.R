@@ -4,6 +4,15 @@
 #' Check if GPU is available and return device
 #' @return torch device (cuda or cpu)
 get_torch_device <- function() {
+  # First check if .gpu_env exists and is enabled
+  if (exists(".gpu_env", mode = "environment") && 
+      !is.null(.gpu_env$enabled) && 
+      .gpu_env$enabled &&
+      !is.null(.gpu_env$device)) {
+    return(.gpu_env$device)
+  }
+  
+  # Otherwise check if torch is available and CUDA is available
   if (requireNamespace("torch", quietly = TRUE)) {
     if (torch::cuda_is_available()) {
       return(torch::torch_device("cuda"))

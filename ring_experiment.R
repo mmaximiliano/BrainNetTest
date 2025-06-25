@@ -666,20 +666,15 @@ run_ring_experiment <- function(N_values = c(10, 100, 1000, 10000),
     )
     
     # Add GPU functions if they exist
-    if (exists("get_torch_device")) {
-      functions_to_export <- c(functions_to_export, "get_torch_device")
-    }
-    if (exists("batch_generate_ring_graphs_gpu")) {
-      functions_to_export <- c(functions_to_export, "batch_generate_ring_graphs_gpu")
-    }
-    if (exists("setup_gpu_acceleration")) {
-      functions_to_export <- c(functions_to_export, "setup_gpu_acceleration")
-    }
-    if (exists("compute_ring_distances_gpu")) {
-      functions_to_export <- c(functions_to_export, "compute_ring_distances_gpu")
-    }
-    if (exists("compute_probabilities_gpu")) {
-      functions_to_export <- c(functions_to_export, "compute_probabilities_gpu")
+    gpu_functions <- c("get_torch_device", "batch_generate_ring_graphs_gpu", 
+                      "setup_gpu_acceleration", "compute_ring_distances_gpu",
+                      "compute_probabilities_gpu", "check_cuda_compatibility",
+                      "benchmark_gpu_performance")
+    
+    for (func in gpu_functions) {
+      if (exists(func)) {
+        functions_to_export <- c(functions_to_export, func)
+      }
     }
     
     parallel::clusterExport(cl, functions_to_export, envir = environment())
@@ -695,29 +690,51 @@ run_ring_experiment <- function(N_values = c(10, 100, 1000, 10000),
         # If BrainNetTest is not available, that's OK
       })
       
+      # Source GPU setup functions if available
+      gpu_setup_paths <- c("./R/setup_gpu.R",
+                          "R/setup_gpu.R",
+                          "../R/setup_gpu.R",
+                          "/home/maxi/Desktop/repos/BrainNetTest/R/setup_gpu.R")
+      
+      setup_sourced <- FALSE
+      for (path in gpu_setup_paths) {
+        if (file.exists(path)) {
+          tryCatch({
+            source(path)
+            setup_sourced <- TRUE
+            break
+          }, error = function(e) {
+            # Continue
+          })
+        }
+      }
+      
+      # Source GPU acceleration functions if available
+      gpu_script_paths <- c("./R/gpu_accelerated_ring.R",
+                           "R/gpu_accelerated_ring.R",
+                           "../R/gpu_accelerated_ring.R",
+                           "/home/maxi/Desktop/repos/BrainNetTest/R/gpu_accelerated_ring.R")
+      
+      gpu_sourced <- FALSE
+      for (path in gpu_script_paths) {
+        if (file.exists(path)) {
+          tryCatch({
+            source(path)
+            gpu_sourced <- TRUE
+            break
+          }, error = function(e) {
+            # Continue
+          })
+        }
+      }
+      
       # Try to setup GPU on each worker
-      if (exists("setup_gpu_acceleration")) {
+      if (setup_sourced && gpu_sourced && exists("setup_gpu_acceleration")) {
         tryCatch({
           setup_gpu_acceleration()
         }, error = function(e) {
           # GPU setup failed on this worker, will use CPU
         })
-      }
-      
-      # Source GPU functions if available
-      gpu_script_paths <- c("./R/gpu_accelerated_ring.R",
-                           "R/gpu_accelerated_ring.R",
-                           "../R/gpu_accelerated_ring.R")
-      
-      for (path in gpu_script_paths) {
-        if (file.exists(path)) {
-          tryCatch({
-            source(path)
-          }, error = function(e) {
-            # Failed to source GPU script
-          })
-          break
-        }
       }
     })
     
@@ -1056,7 +1073,26 @@ main_validation <- function(quick_test = FALSE, nodes = 10000, master_seed = 42,
   
   # Setup GPU if requested
   if (use_gpu == "auto" || use_gpu == TRUE) {
-    # First try to source GPU acceleration script
+    # First try to source GPU setup script
+    gpu_setup_paths <- c("./R/setup_gpu.R",
+                        "R/setup_gpu.R",
+                        "../R/setup_gpu.R")
+    
+    gpu_setup_sourced <- FALSE
+    for (path in gpu_setup_paths) {
+      if (file.exists(path)) {
+        tryCatch({
+          source(path)
+          gpu_setup_sourced <- TRUE
+          cat(sprintf("Loaded GPU setup from: %s\n", path))
+          break
+        }, error = function(e) {
+          # Continue to next path
+        })
+      }
+    }
+    
+    # Then try to source GPU acceleration script
     gpu_script_paths <- c("./R/gpu_accelerated_ring.R",
                          "R/gpu_accelerated_ring.R",
                          "../R/gpu_accelerated_ring.R")
@@ -1076,7 +1112,7 @@ main_validation <- function(quick_test = FALSE, nodes = 10000, master_seed = 42,
     }
     
     # Now try to setup GPU
-    if (gpu_sourced && exists("setup_gpu_acceleration")) {
+    if (gpu_setup_sourced && gpu_sourced && exists("setup_gpu_acceleration")) {
       tryCatch({
         gpu_available <- setup_gpu_acceleration()
         if (gpu_available) {
@@ -1089,10 +1125,17 @@ main_validation <- function(quick_test = FALSE, nodes = 10000, master_seed = 42,
           cat("GPU acceleration not available, using CPU\n")
         }
       }, error = function(e) {
-        cat("Failed to setup GPU acceleration, using CPU\n")
+        cat(sprintf("Failed to setup GPU acceleration: %s\n", e$message))
+        cat("Using CPU\n")
       })
     } else {
-      cat("GPU acceleration functions not found, using CPU\n")
+      if (!gpu_setup_sourced) {
+        cat("GPU setup functions not found\n")
+      }
+      if (!gpu_sourced) {
+        cat("GPU acceleration functions not found\n")
+      }
+      cat("Using CPU\n")
     }
   }
   

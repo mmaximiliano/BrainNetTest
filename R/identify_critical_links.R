@@ -102,6 +102,7 @@ identify_critical_links <- function(populations,
   
   # Check if GPU acceleration is available
   use_gpu <- FALSE
+  n_nodes <- nrow(all_graphs[[1]])  # Get n_nodes from first graph
   if (requireNamespace("torch", quietly = TRUE)) {
     tryCatch({
       use_gpu <- torch::cuda_is_available() && n_nodes >= 100
