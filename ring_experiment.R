@@ -5,6 +5,11 @@ library(parallel)
 library(Matrix)
 library(igraph)
 
+# Explicitly source GPU scripts at the top
+source("/home/maxi/Desktop/repos/BrainNetTest/R/setup_gpu.R")
+source("/home/maxi/Desktop/repos/BrainNetTest/R/gpu_accelerated_ring.R")
+source("/home/maxi/Desktop/repos/BrainNetTest/R/identify_critical_links.R")
+
 #' Compute ring distance between nodes on a cycle
 #' @param i,j Node indices (1-based)
 #' @param N Total number of nodes
@@ -186,34 +191,30 @@ generate_population <- function(n_graphs, N, lambda, perturbed_nodes = c(),
   }
 
   if (use_gpu) {
-    # Generate graphs on GPU with better error handling
-    tryCatch({
-      # Clear GPU cache before batch generation
-      if (exists("torch", mode = "environment") && !is.null(torch$cuda$empty_cache)) {
-        torch$cuda$empty_cache()
-      }
+    # Check explicitly if GPU functions exist
+    if (!exists("batch_generate_ring_graphs_gpu", mode = "function") ||
+        !exists("get_torch_device", mode = "function")) {
+      warning("GPU functions not found. Falling back to CPU.")
+      use_gpu <- FALSE
+    } else {
+      # Generate graphs on GPU with better error handling
+      tryCatch({
+        torch::cuda_empty_cache()
 
-      # Make sure the GPU function is available in current environment
-      if (!exists("batch_generate_ring_graphs_gpu", mode = "function")) {
-        warning("GPU function not found in current environment, falling back to CPU")
-        use_gpu <- FALSE
-      } else {
         graphs <- batch_generate_ring_graphs_gpu(
           n_graphs, N, lambda, perturbed_nodes,
           perturbation_type, lambda_alt, p_const, device
         )
 
-        # Add attributes
         attr(graphs, "lambda_alt") <- lambda_alt
         attr(graphs, "p_const") <- p_const
 
         return(graphs)
-      }
-    }, error = function(e) {
-      # If GPU generation fails, fall back to CPU
-      warning(sprintf("GPU generation failed: %s. Falling back to CPU.", e$message))
-      use_gpu <- FALSE
-    })
+      }, error = function(e) {
+        warning(sprintf("GPU generation failed: %s. Falling back to CPU.", e$message))
+        use_gpu <- FALSE
+      })
+    }
   }
 
   # Fall back to CPU implementation
@@ -270,7 +271,7 @@ compute_confusion_matrix <- function(detected_edges, perturbed_nodes, N) {
   TP <- sum(true_critical & predicted_critical)
   FP <- sum(!true_critical & predicted_critical)
   FN <- sum(true_critical & !predicted_critical)
-  TN <- sum(!true_critical & !true_critical)
+  TN <- sum(!true_critical & !predicted_critical)  # Fixed: was !true_critical & !true_critical
 
   list(TP = TP, FP = FP, FN = FN, TN = TN)
 }
@@ -450,10 +451,23 @@ run_single_experiment <- function(N, n_graphs, perturbation_type, rho = 0.03,
     result_data$evaluation$accuracy <- (conf_matrix$TP + conf_matrix$TN) /
                                       (conf_matrix$TP + conf_matrix$TN + conf_matrix$FP + conf_matrix$FN)
 
-    # Compute Matthews Correlation Coefficient
-    denom <- sqrt((conf_matrix$TP + conf_matrix$FP) * (conf_matrix$TP + conf_matrix$FN) *
-                  (conf_matrix$TN + conf_matrix$FP) * (conf_matrix$TN + conf_matrix$FN))
-    result_data$evaluation$mcc <- if (denom > 0) (conf_matrix$TP * conf_matrix$TN - conf_matrix$FP * conf_matrix$FN) / denom else 0
+    # Compute Matthews Correlation Coefficient with proper error handling
+    TP <- conf_matrix$TP
+    FP <- conf_matrix$FP
+    TN <- conf_matrix$TN
+    FN <- conf_matrix$FN
+    
+    # Check for edge cases where MCC is undefined
+    if ((TP + FP) == 0 || (TP + FN) == 0 || (TN + FP) == 0 || (TN + FN) == 0) {
+      result_data$evaluation$mcc <- 0
+    } else {
+      denom <- sqrt((TP + FP) * (TP + FN) * (TN + FP) * (TN + FN))
+      if (is.na(denom) || denom == 0) {
+        result_data$evaluation$mcc <- 0
+      } else {
+        result_data$evaluation$mcc <- (TP * TN - FP * FN) / denom
+      }
+    }
 
     # Store links correctly and incorrectly identified
     true_keys <- sapply(true_critical_links, function(e) paste(sort(e), collapse="-"))
@@ -1387,7 +1401,7 @@ main_validation <- function(quick_test = FALSE, nodes = 10000, master_seed = 42,
     if (nodes == 10) {
       N_values <- c(10)
     } else if (nodes == 100) {
-      N_values <- c(10, 100)
+      N_values <- c(100)
     } else if (nodes == 1000) {
       N_values <- c(1000)
     } else {
@@ -1469,7 +1483,7 @@ main_validation <- function(quick_test = FALSE, nodes = 10000, master_seed = 42,
 
 # Example usage:
 # Basic quick test with default parameters (nodes=100)
-validation_results <- main_validation(quick_test = TRUE, nodes = 100, master_seed = 42)
+validation_results <- main_validation(quick_test = TRUE, nodes = 100, master_seed = 42, use_gpu = FALSE)
 
 # Quick test with custom lambda multipliers for lambda_half perturbation
 #custom_lambda_test <- main_validation(
