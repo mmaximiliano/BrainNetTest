@@ -131,20 +131,20 @@ generate_population <- function(n_graphs, N, lambda, perturbed_nodes = c(),
 
   # Try to use GPU if available and beneficial
   use_gpu <- FALSE
-  
+
   # Check if we're in a parallel worker context
   in_parallel <- !is.null(getOption("BrainNetTest.worker_id"))
-  
+
   # Only use GPU for larger problems where it's actually beneficial
   # GPU has overhead, so it's only worth it for larger N or many graphs
   if (!in_parallel && (N >= 100 || (N >= 50 && n_graphs >= 100))) {
     tryCatch({
       # Check if GPU functions exist in the current environment
-      if (exists("get_torch_device", mode = "function") && 
+      if (exists("get_torch_device", mode = "function") &&
           exists("batch_generate_ring_graphs_gpu", mode = "function")) {
         device <- get_torch_device()
         use_gpu <- !is.null(device)
-        
+
         if (use_gpu && verbose && N < 100) {
           message(sprintf("Using GPU for N=%d with %d graphs", N, n_graphs))
         }
@@ -154,7 +154,7 @@ generate_population <- function(n_graphs, N, lambda, perturbed_nodes = c(),
       use_gpu <- FALSE
     })
   }
-  
+
   # Define available parameter values (used if not explicitly provided)
   lambda_multipliers <- switch(perturbation_type,
                       "lambda_half" = c(0.5, 0.33, 0.25),  # Various reduction levels
@@ -184,7 +184,7 @@ generate_population <- function(n_graphs, N, lambda, perturbed_nodes = c(),
   } else {
     p_const <- NULL  # Default for other perturbation types
   }
-  
+
   if (use_gpu) {
     # Generate graphs on GPU with better error handling
     tryCatch({
@@ -192,7 +192,7 @@ generate_population <- function(n_graphs, N, lambda, perturbed_nodes = c(),
       if (exists("torch", mode = "environment") && !is.null(torch$cuda$empty_cache)) {
         torch$cuda$empty_cache()
       }
-      
+
       # Make sure the GPU function is available in current environment
       if (!exists("batch_generate_ring_graphs_gpu", mode = "function")) {
         warning("GPU function not found in current environment, falling back to CPU")
@@ -202,11 +202,11 @@ generate_population <- function(n_graphs, N, lambda, perturbed_nodes = c(),
           n_graphs, N, lambda, perturbed_nodes,
           perturbation_type, lambda_alt, p_const, device
         )
-        
+
         # Add attributes
         attr(graphs, "lambda_alt") <- lambda_alt
         attr(graphs, "p_const") <- p_const
-        
+
         return(graphs)
       }
     }, error = function(e) {
@@ -215,7 +215,7 @@ generate_population <- function(n_graphs, N, lambda, perturbed_nodes = c(),
       use_gpu <- FALSE
     })
   }
-  
+
   # Fall back to CPU implementation
   # Generate graphs
   graphs <- vector("list", n_graphs)
@@ -558,31 +558,79 @@ run_ring_experiment <- function(N_values = c(10, 100, 1000, 10000),
     )
   }
 
-  # Create output directory if it doesn't exist
-  if (!dir.exists(output_dir)) {
-    dir.create(output_dir, recursive = TRUE)
-  }
-
-  # Create timestamp for this experiment run
+  # Create structured output directory hierarchy
   experiment_timestamp <- format(Sys.time(), "%Y%m%d_%H%M%S")
   experiment_id <- paste0("ring_exp_", experiment_timestamp)
+
+  # Create main experiment directory
+  exp_dir <- file.path(output_dir, experiment_id)
+  if (!dir.exists(exp_dir)) {
+    dir.create(exp_dir, recursive = TRUE)
+  }
+
+  # Create subdirectories for organization
+  dirs <- list(
+    metadata = file.path(exp_dir, "metadata"),
+    summary = file.path(exp_dir, "summary"),
+    raw_results = file.path(exp_dir, "raw_results"),
+    by_n = file.path(exp_dir, "results_by_n"),
+    by_perturbation = file.path(exp_dir, "results_by_perturbation"),
+    reports = file.path(exp_dir, "reports"),
+    plots = file.path(exp_dir, "plots")
+  )
+
+  # Create all directories
+  for (dir_path in dirs) {
+    if (!dir.exists(dir_path)) {
+      dir.create(dir_path, recursive = TRUE)
+    }
+  }
+
+  # Create subdirectories for each N value
+  for (N in N_values) {
+    n_dir <- file.path(dirs$by_n, sprintf("N_%05d", N))
+    if (!dir.exists(n_dir)) {
+      dir.create(n_dir, recursive = TRUE)
+    }
+  }
+
+  # Create subdirectories for each perturbation type
+  for (pert in perturbation_types) {
+    pert_dir <- file.path(dirs$by_perturbation, pert)
+    if (!dir.exists(pert_dir)) {
+      dir.create(pert_dir, recursive = TRUE)
+    }
+  }
 
   # Create experiment metadata
   experiment_metadata <- list(
     experiment_id = experiment_id,
     timestamp = experiment_timestamp,
+    start_time = Sys.time(),
     N_values = N_values,
     perturbation_types = perturbation_types,
     n_repetitions = n_repetitions,
     rho = rho,
     alpha = alpha,
     n_bootstrap = n_bootstrap,
-    n_cores = n_cores
+    n_cores = n_cores,
+    lambda_multipliers = lambda_multipliers,
+    p_const_values = p_const_values,
+    R_version = R.version.string,
+    system_info = Sys.info(),
+    package_versions = utils::sessionInfo()$otherPkgs
   )
 
   # Save experiment metadata
-  metadata_file <- file.path(output_dir, paste0(experiment_id, "_metadata.rds"))
+  metadata_file <- file.path(dirs$metadata, "experiment_config.rds")
   saveRDS(experiment_metadata, metadata_file)
+
+  # Also save as JSON for easier inspection
+  metadata_json <- file.path(dirs$metadata, "experiment_config.json")
+  jsonlite::write_json(experiment_metadata[c("experiment_id", "timestamp", "N_values",
+                                             "perturbation_types", "n_repetitions",
+                                             "rho", "alpha", "n_bootstrap")],
+                       metadata_json, pretty = TRUE)
 
   # Create results tracking data frame
   results_summary <- data.frame()
@@ -593,6 +641,7 @@ run_ring_experiment <- function(N_values = c(10, 100, 1000, 10000),
     cat("RING EXPERIMENT FOR identify_critical_links() VALIDATION\n")
     cat("========================================================\n")
     cat(sprintf("Experiment ID: %s\n", experiment_id))
+    cat(sprintf("Output Directory: %s\n", exp_dir))
     cat(sprintf("Started: %s\n", format(Sys.time(), "%Y-%m-%d %H:%M:%S")))
     cat(sprintf("Parameters: N=%s, Perturbations=%s, Repetitions=%d\n",
                 paste(N_values, collapse=","),
@@ -685,15 +734,67 @@ run_ring_experiment <- function(N_values = c(10, 100, 1000, 10000),
     device <- tryCatch(get_torch_device(), error = function(e) NULL)
     gpu_available <- !is.null(device)
   }
-  
+
   if (force_gpu && !gpu_available) {
     stop("GPU acceleration is required but not available. Please ensure CUDA and torch are properly installed.")
   }
-  
+
   # Check if we have large N values that would benefit from GPU
   max_N <- max(N_values)
   use_gpu_execution <- gpu_available && max_N >= 100
-  
+
+  # Helper function to save results with proper organization
+  save_organized_result <- function(result, tracking_info) {
+    run_id <- tracking_info$run_id
+    N <- result$parameters$N
+    pert_type <- result$parameters$perturbation_type
+
+    # Save to raw results directory
+    raw_file <- file.path(dirs$raw_results, sprintf("run_%06d.rds", run_id))
+    saveRDS(result, raw_file)
+
+    # Save to N-specific directory
+    n_file <- file.path(dirs$by_n, sprintf("N_%05d", N), sprintf("run_%06d.rds", run_id))
+    saveRDS(result, n_file)
+
+    # Save to perturbation-specific directory
+    pert_file <- file.path(dirs$by_perturbation, pert_type, sprintf("N_%05d_run_%06d.rds", N, run_id))
+    saveRDS(result, pert_file)
+  }
+
+  # Helper function to create and update summary CSVs
+  update_summary_files <- function(summary_row, N, pert_type) {
+    # Save to main summary
+    main_summary <- file.path(dirs$summary, "all_results.csv")
+    if (file.exists(main_summary)) {
+      existing <- read.csv(main_summary, stringsAsFactors = FALSE)
+      updated <- rbind(existing, summary_row)
+      write.csv(updated, main_summary, row.names = FALSE)
+    } else {
+      write.csv(summary_row, main_summary, row.names = FALSE)
+    }
+
+    # Save to N-specific summary
+    n_summary <- file.path(dirs$by_n, sprintf("N_%05d", N), "summary.csv")
+    if (file.exists(n_summary)) {
+      existing <- read.csv(n_summary, stringsAsFactors = FALSE)
+      updated <- rbind(existing, summary_row)
+      write.csv(updated, n_summary, row.names = FALSE)
+    } else {
+      write.csv(summary_row, n_summary, row.names = FALSE)
+    }
+
+    # Save to perturbation-specific summary
+    pert_summary <- file.path(dirs$by_perturbation, pert_type, "summary.csv")
+    if (file.exists(pert_summary)) {
+      existing <- read.csv(pert_summary, stringsAsFactors = FALSE)
+      updated <- rbind(existing, summary_row)
+      write.csv(updated, pert_summary, row.names = FALSE)
+    } else {
+      write.csv(summary_row, pert_summary, row.names = FALSE)
+    }
+  }
+
   # Decide execution strategy based on GPU availability and problem size
   if (use_gpu_execution) {
     # GPU is available and we have large enough problems - use sequential execution
@@ -701,11 +802,11 @@ run_ring_experiment <- function(N_values = c(10, 100, 1000, 10000),
       cat("\nUsing GPU-accelerated sequential execution for optimal performance\n")
       cat(sprintf("Processing %d experiments on GPU...\n\n", length(param_grid)))
     }
-    
+
     # Sequential GPU execution with progress tracking
     all_results <- list()
     pb <- txtProgressBar(min = 0, max = length(param_grid), style = 3)
-    
+
     for (i in seq_along(param_grid)) {
       # Store tracking info separately
       tracking_info <- list(
@@ -713,37 +814,34 @@ run_ring_experiment <- function(N_values = c(10, 100, 1000, 10000),
         run_id = param_grid[[i]]$run_id,
         rep_id = param_grid[[i]]$rep_id
       )
-      
+
       # Remove tracking params
       execution_params <- param_grid[[i]]
       execution_params$experiment_id <- NULL
       execution_params$run_id <- NULL
       execution_params$rep_id <- NULL
-      
+
       # Clear GPU cache periodically
       if (i %% 10 == 0 && exists("torch") && !is.null(torch$cuda$empty_cache)) {
         torch$cuda$empty_cache()
       }
-      
+
       # Execute with clean parameters
       result <- do.call(run_single_experiment, execution_params)
       result$tracking_info <- tracking_info
       all_results[[i]] <- result
-      
+
       # Update progress bar
       setTxtProgressBar(pb, i)
-      
-      # Save detailed result
-      run_id <- tracking_info$run_id
-      result_file <- file.path(output_dir,
-                              sprintf("%s_run_%04d.rds", experiment_id, run_id))
-      saveRDS(result, result_file)
-      
-      # Extract and save summary info (same as existing code)
+
+      # Save detailed result with organization
+      save_organized_result(result, tracking_info)
+
+      # Extract and save summary info
       if (result$success) {
         summary_row <- data.frame(
           experiment_id = experiment_id,
-          run_id = run_id,
+          run_id = tracking_info$run_id,
           N = result$parameters$N,
           perturbation_type = result$parameters$perturbation_type,
           lambda_base = result$parameters$lambda_base,
@@ -771,7 +869,7 @@ run_ring_experiment <- function(N_values = c(10, 100, 1000, 10000),
       } else {
         summary_row <- data.frame(
           experiment_id = experiment_id,
-          run_id = run_id,
+          run_id = tracking_info$run_id,
           N = result$parameters$N,
           perturbation_type = result$parameters$perturbation_type,
           lambda_base = ifelse(is.null(result$parameters$lambda_base),
@@ -792,19 +890,16 @@ run_ring_experiment <- function(N_values = c(10, 100, 1000, 10000),
           stringsAsFactors = FALSE
         )
       }
-      
+
+      # Update all summary files
+      update_summary_files(summary_row, result$parameters$N, result$parameters$perturbation_type)
+
       # Append to results summary
       results_summary <- rbind(results_summary, summary_row)
-      
-      # Save intermediate summary results periodically
-      if (i %% 10 == 0) {
-        summary_file <- file.path(output_dir, paste0(experiment_id, "_summary.csv"))
-        write.csv(results_summary, summary_file, row.names = FALSE)
-      }
     }
-    
+
     close(pb)
-    
+
   } else if (n_cores > 1) {
     # GPU not available - use parallel CPU execution
     if (verbose) {
@@ -827,34 +922,34 @@ run_ring_experiment <- function(N_values = c(10, 100, 1000, 10000),
       "compute_confusion_matrix",
       "identify_critical_links"
     )
-    
+
     parallel::clusterExport(cl, functions_to_export, envir = environment())
 
     # Load required libraries on each worker with proper initialization
     parallel::clusterEvalQ(cl, {
       library(Matrix)
       library(igraph)
-      
+
       # Set worker ID to indicate we're in a parallel context
       options(BrainNetTest.worker_id = Sys.getpid())
-      
+
       # Try to load BrainNetTest, but don't fail if it's not available
       tryCatch({
         suppressPackageStartupMessages(library(BrainNetTest))
       }, error = function(e) {
         # If BrainNetTest is not available, that's OK
       })
-      
+
       # Don't initialize GPU in parallel workers - use CPU only
       # This avoids CUDA context conflicts across processes
       options(BrainNetTest.use_gpu = FALSE)
     })
-    
+
     # Run experiments in parallel
     if (verbose) {
       cat(sprintf("\nRunning %d experiments in parallel...\n\n", length(param_grid)))
     }
-    
+
     # Use pblapply for progress bar with parallel execution
     all_results <- pbapply::pblapply(param_grid, function(params) {
       # Store tracking info separately
@@ -863,40 +958,37 @@ run_ring_experiment <- function(N_values = c(10, 100, 1000, 10000),
         run_id = params$run_id,
         rep_id = params$rep_id
       )
-      
+
       # Remove tracking params
       execution_params <- params
       execution_params$experiment_id <- NULL
       execution_params$run_id <- NULL
       execution_params$rep_id <- NULL
-      
+
       # Execute with clean parameters
       result <- do.call(run_single_experiment, execution_params)
       result$tracking_info <- tracking_info
-      
+
       return(result)
     }, cl = cl)
-    
+
     # Process results after parallel execution
     if (verbose) {
       cat("\nProcessing results...\n")
     }
-    
+
     for (i in seq_along(all_results)) {
       result <- all_results[[i]]
       tracking_info <- result$tracking_info
-      
-      # Save detailed result
-      run_id <- tracking_info$run_id
-      result_file <- file.path(output_dir,
-                              sprintf("%s_run_%04d.rds", experiment_id, run_id))
-      saveRDS(result, result_file)
-      
+
+      # Save detailed result with organization
+      save_organized_result(result, tracking_info)
+
       # Extract and save summary info
       if (result$success) {
         summary_row <- data.frame(
           experiment_id = experiment_id,
-          run_id = run_id,
+          run_id = tracking_info$run_id,
           N = result$parameters$N,
           perturbation_type = result$parameters$perturbation_type,
           lambda_base = result$parameters$lambda_base,
@@ -924,7 +1016,7 @@ run_ring_experiment <- function(N_values = c(10, 100, 1000, 10000),
       } else {
         summary_row <- data.frame(
           experiment_id = experiment_id,
-          run_id = run_id,
+          run_id = tracking_info$run_id,
           N = result$parameters$N,
           perturbation_type = result$parameters$perturbation_type,
           lambda_base = ifelse(is.null(result$parameters$lambda_base),
@@ -945,15 +1037,14 @@ run_ring_experiment <- function(N_values = c(10, 100, 1000, 10000),
           stringsAsFactors = FALSE
         )
       }
-      
+
+      # Update all summary files
+      update_summary_files(summary_row, result$parameters$N, result$parameters$perturbation_type)
+
       # Append to results summary
       results_summary <- rbind(results_summary, summary_row)
     }
-    
-    # Save intermediate summary results
-    summary_file <- file.path(output_dir, paste0(experiment_id, "_summary.csv"))
-    write.csv(results_summary, summary_file, row.names = FALSE)
-    
+
   } else {
     # Sequential execution (for debugging or single-core machines)
     if (verbose) {
@@ -968,28 +1059,25 @@ run_ring_experiment <- function(N_values = c(10, 100, 1000, 10000),
         run_id = param_grid[[i]]$run_id,
         rep_id = param_grid[[i]]$rep_id
       )
-      
+
       # Remove tracking params
       execution_params <- param_grid[[i]]
       execution_params$experiment_id <- NULL
       execution_params$run_id <- NULL
       execution_params$rep_id <- NULL
-      
+
       # Execute with clean parameters
       result <- do.call(run_single_experiment, execution_params)
       all_results[[i]] <- result
 
-      # Save detailed result using tracking info
-      run_id <- tracking_info$run_id
-      result_file <- file.path(output_dir,
-                              sprintf("%s_run_%04d.rds", experiment_id, run_id))
-      saveRDS(result, result_file)
+      # Save detailed result with organization
+      save_organized_result(result, tracking_info)
 
       # Extract and save summary info
       if (result$success) {
         summary_row <- data.frame(
           experiment_id = experiment_id,
-          run_id = run_id,
+          run_id = tracking_info$run_id,
           N = result$parameters$N,
           perturbation_type = result$parameters$perturbation_type,
           lambda_base = result$parameters$lambda_base,
@@ -1017,7 +1105,7 @@ run_ring_experiment <- function(N_values = c(10, 100, 1000, 10000),
       } else {
         summary_row <- data.frame(
           experiment_id = experiment_id,
-          run_id = run_id,
+          run_id = tracking_info$run_id,
           N = result$parameters$N,
           perturbation_type = result$parameters$perturbation_type,
           lambda_base = ifelse(is.null(result$parameters$lambda_base),
@@ -1038,12 +1126,11 @@ run_ring_experiment <- function(N_values = c(10, 100, 1000, 10000),
         )
       }
 
+      # Update all summary files
+      update_summary_files(summary_row, result$parameters$N, result$parameters$perturbation_type)
+
       # Append to results summary
       results_summary <- rbind(results_summary, summary_row)
-
-      # Save intermediate summary results
-      summary_file <- file.path(output_dir, paste0(experiment_id, "_summary.csv"))
-      write.csv(results_summary, summary_file, row.names = FALSE)
     }
   }
 
@@ -1052,20 +1139,25 @@ run_ring_experiment <- function(N_values = c(10, 100, 1000, 10000),
     cat("\nExperiment completed! Finalizing results...\n")
   }
 
-  # Save complete summary
-  final_summary_file <- file.path(output_dir, paste0(experiment_id, "_final_summary.csv"))
-  write.csv(results_summary, final_summary_file, row.names = FALSE)
+  # Update metadata with completion time
+  experiment_metadata$end_time <- Sys.time()
+  experiment_metadata$total_runtime <- as.numeric(difftime(experiment_metadata$end_time,
+                                                          experiment_metadata$start_time,
+                                                          units = "hours"))
+  saveRDS(experiment_metadata, metadata_file)
 
   # Create experiment report
-  report_file <- file.path(output_dir, paste0(experiment_id, "_report.txt"))
+  report_file <- file.path(dirs$reports, "experiment_report.txt")
   sink(report_file)
 
   cat("=================================================================\n")
   cat("RING EXPERIMENT SUMMARY REPORT\n")
   cat("=================================================================\n")
   cat(sprintf("Experiment ID: %s\n", experiment_id))
-  cat(sprintf("Started: %s\n", format(as.POSIXct(experiment_timestamp, format="%Y%m%d_%H%M%S"), "%Y-%m-%d %H:%M:%S")))
-  cat(sprintf("Completed: %s\n", format(Sys.time(), "%Y-%m-%d %H:%M:%S")))
+  cat(sprintf("Output Directory: %s\n", exp_dir))
+  cat(sprintf("Started: %s\n", format(experiment_metadata$start_time, "%Y-%m-%d %H:%M:%S")))
+  cat(sprintf("Completed: %s\n", format(experiment_metadata$end_time, "%Y-%m-%d %H:%M:%S")))
+  cat(sprintf("Total Runtime: %.2f hours\n", experiment_metadata$total_runtime))
   cat("=================================================================\n\n")
 
   # Summarize by N and perturbation type
@@ -1151,9 +1243,26 @@ run_ring_experiment <- function(N_values = c(10, 100, 1000, 10000),
 
   sink()
 
+  # Create a README file with directory structure explanation
+  readme_file <- file.path(exp_dir, "README.txt")
+  cat("RING EXPERIMENT RESULTS DIRECTORY STRUCTURE\n", file = readme_file)
+  cat("==========================================\n\n", file = readme_file, append = TRUE)
+  cat("This directory contains results from the ring experiment validation.\n\n", file = readme_file, append = TRUE)
+  cat("Directory Structure:\n", file = readme_file, append = TRUE)
+  cat("- metadata/          : Experiment configuration and metadata\n", file = readme_file, append = TRUE)
+  cat("- summary/           : Aggregated summary CSV files\n", file = readme_file, append = TRUE)
+  cat("- raw_results/       : All individual run results (RDS format)\n", file = readme_file, append = TRUE)
+  cat("- results_by_n/      : Results organized by network size N\n", file = readme_file, append = TRUE)
+  cat("- results_by_perturbation/ : Results organized by perturbation type\n", file = readme_file, append = TRUE)
+  cat("- reports/           : Generated reports and analyses\n", file = readme_file, append = TRUE)
+  cat("- plots/             : Visualization outputs (if generated)\n\n", file = readme_file, append = TRUE)
+  cat(sprintf("Experiment ID: %s\n", experiment_id), file = readme_file, append = TRUE)
+  cat(sprintf("Timestamp: %s\n", experiment_timestamp), file = readme_file, append = TRUE)
+
   if (verbose) {
-    cat(sprintf("\nDetailed report saved to: %s\n", report_file))
-    cat(sprintf("Summary data saved to: %s\n", final_summary_file))
+    cat(sprintf("\nExperiment results saved to: %s\n", exp_dir))
+    cat(sprintf("Summary report: %s\n", report_file))
+    cat(sprintf("All results CSV: %s\n", file.path(dirs$summary, "all_results.csv")))
     cat("\nExperiment completed successfully!\n")
   }
 
@@ -1174,28 +1283,28 @@ run_ring_experiment <- function(N_values = c(10, 100, 1000, 10000),
 #' @param ... Additional arguments passed to run_ring_experiment
 #' @return List with experiment results
 main_validation <- function(quick_test = FALSE, nodes = 10000, master_seed = 42,
-                           output_csv = TRUE, output_dir = ".", 
+                           output_csv = TRUE, output_dir = ".",
                            perturbation_types = NULL,
                            lambda_multipliers = NULL,
                            p_const_values = NULL,
                            use_gpu = "auto",
                            force_gpu = FALSE,  # Changed default to FALSE for flexibility
                            ...) {
-  
+
   # Set master seed for reproducibility
   set.seed(master_seed)
   cat(sprintf("Using master seed: %d\n", master_seed))
-  
+
   # Track if GPU is actually available
   gpu_enabled <- FALSE
-  
+
   # Setup GPU if requested
   if (use_gpu == "auto" || use_gpu == TRUE) {
     # First try to source GPU setup script
     gpu_setup_paths <- c("./R/setup_gpu.R",
                         "R/setup_gpu.R",
                         "../R/setup_gpu.R")
-    
+
     gpu_setup_sourced <- FALSE
     for (path in gpu_setup_paths) {
       if (file.exists(path)) {
@@ -1209,12 +1318,12 @@ main_validation <- function(quick_test = FALSE, nodes = 10000, master_seed = 42,
         })
       }
     }
-    
+
     # Then try to source GPU acceleration script
     gpu_script_paths <- c("./R/gpu_accelerated_ring.R",
                          "R/gpu_accelerated_ring.R",
                          "../R/gpu_accelerated_ring.R")
-    
+
     gpu_sourced <- FALSE
     for (path in gpu_script_paths) {
       if (file.exists(path)) {
@@ -1228,7 +1337,7 @@ main_validation <- function(quick_test = FALSE, nodes = 10000, master_seed = 42,
         })
       }
     }
-    
+
     # Now try to setup GPU
     if (gpu_setup_sourced && gpu_sourced && exists("setup_gpu_acceleration")) {
       tryCatch({
@@ -1239,7 +1348,7 @@ main_validation <- function(quick_test = FALSE, nodes = 10000, master_seed = 42,
           if (!is.null(device)) {
             cat(sprintf("Using device: %s\n", device$type))
             gpu_enabled <- TRUE
-            
+
             # Get GPU info if available
             if (exists("torch") && !is.null(torch$cuda$get_device_properties)) {
               props <- torch$cuda$get_device_properties(0)
@@ -1272,7 +1381,7 @@ main_validation <- function(quick_test = FALSE, nodes = 10000, master_seed = 42,
       cat("Using CPU (WARNING: This may be impractically slow)\n")
     }
   }
-  
+
   # Configure N_values based on the nodes parameter
   if (quick_test) {
     if (nodes == 10) {
@@ -1284,29 +1393,29 @@ main_validation <- function(quick_test = FALSE, nodes = 10000, master_seed = 42,
     } else {
       N_values <- c(10000)
     }
-    
+
     # Default perturbation types for quick test if not specified
     if (is.null(perturbation_types)) {
       perturbation_types <- c("lambda_half", "const_high")
     }
-    
+
     n_repetitions <- 10
-    
+
     cat("Running quick test...\n")
   } else {
     # Full validation
     N_values <- c(10, 100, 1000, 10000)
-    
+
     # Default perturbation types for full validation if not specified
     if (is.null(perturbation_types)) {
       perturbation_types <- c("lambda_half", "lambda_double", "const_high", "const_low")
     }
-    
+
     n_repetitions <- 200
-    
+
     cat("Running full validation...\n")
   }
-  
+
   # Determine number of cores based on GPU availability and problem size
   if (gpu_enabled) {
     # Check if we're dealing with large networks
@@ -1323,7 +1432,7 @@ main_validation <- function(quick_test = FALSE, nodes = 10000, master_seed = 42,
   } else {
     # Use multiple cores when running on CPU
     n_cores_to_use <- parallel::detectCores() - 1
-    
+
     # Warn if running large networks without GPU
     if (any(N_values >= 1000)) {
       cat("\n*** WARNING: Large networks without GPU will be VERY slow! ***\n")
@@ -1332,7 +1441,7 @@ main_validation <- function(quick_test = FALSE, nodes = 10000, master_seed = 42,
       }
     }
   }
-  
+
   # Run the experiment
   results <- run_ring_experiment(
     N_values = N_values,
@@ -1346,9 +1455,9 @@ main_validation <- function(quick_test = FALSE, nodes = 10000, master_seed = 42,
     force_gpu = force_gpu,  # Pass force_gpu parameter
     ...
   )
-  
+
   cat("\nExperiment completed!\n")
-  
+
   return(list(
     results = results,
     master_seed = master_seed,
@@ -1363,22 +1472,22 @@ main_validation <- function(quick_test = FALSE, nodes = 10000, master_seed = 42,
 validation_results <- main_validation(quick_test = TRUE, nodes = 100, master_seed = 42)
 
 # Quick test with custom lambda multipliers for lambda_half perturbation
-custom_lambda_test <- main_validation(
-  quick_test = TRUE, 
-  nodes = 100,
-  master_seed = 43,
-  perturbation_types = "lambda_half",
-  lambda_multipliers = list("lambda_half" = c(0.6, 0.4, 0.2))  # Custom multipliers
-)
+#custom_lambda_test <- main_validation(
+#  quick_test = TRUE,
+#  nodes = 100,
+#  master_seed = 43,
+#  perturbation_types = "lambda_half",
+#  lambda_multipliers = list("lambda_half" = c(0.6, 0.4, 0.2))  # Custom multipliers
+#)
 
 # Quick test with custom constant probabilities for const_high perturbation
-custom_prob_test <- main_validation(
-  quick_test = TRUE,
-  nodes = 10,
-  master_seed = 44,
-  perturbation_types = "const_high",
-  p_const_values = list("const_high" = c(0.80, 0.90, 0.99))  # Custom probabilities
-)
+#custom_prob_test <- main_validation(
+#  quick_test = TRUE,
+#  nodes = 10,
+#  master_seed = 44,
+#  perturbation_types = "const_high",
+#  p_const_values = list("const_high" = c(0.80, 0.90, 0.99))  # Custom probabilities
+#)
 
 # Full validation with all perturbation types and default parameters
 # Uncomment to run the full validation (takes a long time)

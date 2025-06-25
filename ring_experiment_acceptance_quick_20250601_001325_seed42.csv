@@ -1,5 +1,0 @@
-"N","perturbation_type","overall_pass","power","power_pass","recall","recall_pass","precision","precision_pass","no_residual_rate","residual_pass","runtime_95th","runtime_limit","runtime_pass","experiment_timestamp","master_seed","test_type","overall_experiment_pass"
-10,"const_high",TRUE,1,TRUE,1,TRUE,0.988888888888889,TRUE,1,TRUE,0.475260674953461,3,TRUE,"20250601_001325",42,"quick",FALSE
-10,"lambda_half",TRUE,1,TRUE,0.976470588235294,TRUE,1,TRUE,1,TRUE,0.488718903064728,3,TRUE,"20250601_001325",42,"quick",FALSE
-100,"const_high",FALSE,1,TRUE,0.911904761904762,TRUE,1,TRUE,0.9,FALSE,13.1351005673408,25,TRUE,"20250601_001325",42,"quick",FALSE
-100,"lambda_half",FALSE,1,TRUE,0.893877551020408,FALSE,1,TRUE,0.9,FALSE,13.5330987334251,25,TRUE,"20250601_001325",42,"quick",FALSE
