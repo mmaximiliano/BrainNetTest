@@ -131,12 +131,23 @@ generate_population <- function(n_graphs, N, lambda, perturbed_nodes = c(),
 
   # Try to use GPU if available and beneficial
   use_gpu <- FALSE
-  if (n_graphs >= 50 && N >= 100) {  # Only use GPU for larger problems
+  
+  # Check if we're in a parallel worker context
+  in_parallel <- !is.null(getOption("BrainNetTest.worker_id"))
+  
+  # Only use GPU for larger problems where it's actually beneficial
+  # GPU has overhead, so it's only worth it for larger N or many graphs
+  if (!in_parallel && (N >= 100 || (N >= 50 && n_graphs >= 100))) {
     tryCatch({
-      # Check if GPU functions exist
-      if (exists("get_torch_device") && exists("batch_generate_ring_graphs_gpu")) {
+      # Check if GPU functions exist in the current environment
+      if (exists("get_torch_device", mode = "function") && 
+          exists("batch_generate_ring_graphs_gpu", mode = "function")) {
         device <- get_torch_device()
         use_gpu <- !is.null(device)
+        
+        if (use_gpu && verbose && N < 100) {
+          message(sprintf("Using GPU for N=%d with %d graphs", N, n_graphs))
+        }
       }
     }, error = function(e) {
       # GPU not available, fall back to CPU
@@ -175,17 +186,34 @@ generate_population <- function(n_graphs, N, lambda, perturbed_nodes = c(),
   }
   
   if (use_gpu) {
-    # Generate graphs on GPU
-    graphs <- batch_generate_ring_graphs_gpu(
-      n_graphs, N, lambda, perturbed_nodes,
-      perturbation_type, lambda_alt, p_const, device
-    )
-    
-    # Add attributes
-    attr(graphs, "lambda_alt") <- lambda_alt
-    attr(graphs, "p_const") <- p_const
-    
-    return(graphs)
+    # Generate graphs on GPU with better error handling
+    tryCatch({
+      # Clear GPU cache before batch generation
+      if (exists("torch", mode = "environment") && !is.null(torch$cuda$empty_cache)) {
+        torch$cuda$empty_cache()
+      }
+      
+      # Make sure the GPU function is available in current environment
+      if (!exists("batch_generate_ring_graphs_gpu", mode = "function")) {
+        warning("GPU function not found in current environment, falling back to CPU")
+        use_gpu <- FALSE
+      } else {
+        graphs <- batch_generate_ring_graphs_gpu(
+          n_graphs, N, lambda, perturbed_nodes,
+          perturbation_type, lambda_alt, p_const, device
+        )
+        
+        # Add attributes
+        attr(graphs, "lambda_alt") <- lambda_alt
+        attr(graphs, "p_const") <- p_const
+        
+        return(graphs)
+      }
+    }, error = function(e) {
+      # If GPU generation fails, fall back to CPU
+      warning(sprintf("GPU generation failed: %s. Falling back to CPU.", e$message))
+      use_gpu <- FALSE
+    })
   }
   
   # Fall back to CPU implementation
@@ -304,7 +332,10 @@ run_single_experiment <- function(N, n_graphs, perturbation_type, rho = 0.03,
   experiment_params$n_true_critical_links <- length(true_critical_links)
 
   # ---- Generate populations ----
-  pop_A <- generate_population(n_graphs, N, lambda)
+  # Suppress messages during population generation to reduce log clutter
+  suppressMessages({
+    pop_A <- generate_population(n_graphs, N, lambda)
+  })
 
   # Store actual lambda value used for perturbation
   if (perturbation_type %in% c("lambda_half", "lambda_double")) {
@@ -329,8 +360,10 @@ run_single_experiment <- function(N, n_graphs, perturbation_type, rho = 0.03,
     experiment_params$p_const_value <- p_const_value
   }
 
-  pop_B <- generate_population(n_graphs, N, lambda, perturbed_nodes, perturbation_type,
-                              lambda_mult, p_const_value)
+  suppressMessages({
+    pop_B <- generate_population(n_graphs, N, lambda, perturbed_nodes, perturbation_type,
+                                lambda_mult, p_const_value)
+  })
   populations <- list(A = pop_A, B = pop_B)
 
   # ---- Run algorithm and collect detailed results ----
@@ -482,7 +515,7 @@ run_single_experiment <- function(N, n_graphs, perturbation_type, rho = 0.03,
   })
 }
 
-#' Run complete ring experiment
+#' Run complete ring experiment with GPU-optimized execution
 #' @param N_values Vector of node counts to test
 #' @param perturbation_types Vector of perturbation types to test
 #' @param n_repetitions Number of Monte Carlo repetitions per condition
@@ -494,6 +527,7 @@ run_single_experiment <- function(N, n_graphs, perturbation_type, rho = 0.03,
 #' @param output_dir Directory to save intermediate results
 #' @param lambda_multipliers Custom lambda multipliers for lambda-based perturbations
 #' @param p_const_values Custom probability values for constant perturbations
+#' @param force_gpu If TRUE, error if GPU is not available (default: FALSE)
 #' @return Data frame with all results
 run_ring_experiment <- function(N_values = c(10, 100, 1000, 10000),
                                perturbation_types = c("lambda_half", "lambda_double",
@@ -506,7 +540,8 @@ run_ring_experiment <- function(N_values = c(10, 100, 1000, 10000),
                                n_cores = parallel::detectCores() - 1,
                                output_dir = ".",
                                lambda_multipliers = NULL,
-                               p_const_values = NULL) {
+                               p_const_values = NULL,
+                               force_gpu = FALSE) {
 
   # Define default parameter values if not provided
   if (is.null(lambda_multipliers)) {
@@ -644,12 +679,140 @@ run_ring_experiment <- function(N_values = c(10, 100, 1000, 10000),
     }
   }
 
-  # Set up parallel processing
-  if (n_cores > 1) {
+  # Check GPU availability at experiment level
+  gpu_available <- FALSE
+  if (exists("get_torch_device", mode = "function")) {
+    device <- tryCatch(get_torch_device(), error = function(e) NULL)
+    gpu_available <- !is.null(device)
+  }
+  
+  if (force_gpu && !gpu_available) {
+    stop("GPU acceleration is required but not available. Please ensure CUDA and torch are properly installed.")
+  }
+  
+  # Check if we have large N values that would benefit from GPU
+  max_N <- max(N_values)
+  use_gpu_execution <- gpu_available && max_N >= 100
+  
+  # Decide execution strategy based on GPU availability and problem size
+  if (use_gpu_execution) {
+    # GPU is available and we have large enough problems - use sequential execution
     if (verbose) {
-      cat(sprintf("\nSetting up parallel processing with %d cores\n", n_cores))
+      cat("\nUsing GPU-accelerated sequential execution for optimal performance\n")
+      cat(sprintf("Processing %d experiments on GPU...\n\n", length(param_grid)))
+    }
+    
+    # Sequential GPU execution with progress tracking
+    all_results <- list()
+    pb <- txtProgressBar(min = 0, max = length(param_grid), style = 3)
+    
+    for (i in seq_along(param_grid)) {
+      # Store tracking info separately
+      tracking_info <- list(
+        experiment_id = param_grid[[i]]$experiment_id,
+        run_id = param_grid[[i]]$run_id,
+        rep_id = param_grid[[i]]$rep_id
+      )
+      
+      # Remove tracking params
+      execution_params <- param_grid[[i]]
+      execution_params$experiment_id <- NULL
+      execution_params$run_id <- NULL
+      execution_params$rep_id <- NULL
+      
+      # Clear GPU cache periodically
+      if (i %% 10 == 0 && exists("torch") && !is.null(torch$cuda$empty_cache)) {
+        torch$cuda$empty_cache()
+      }
+      
+      # Execute with clean parameters
+      result <- do.call(run_single_experiment, execution_params)
+      result$tracking_info <- tracking_info
+      all_results[[i]] <- result
+      
+      # Update progress bar
+      setTxtProgressBar(pb, i)
+      
+      # Save detailed result
+      run_id <- tracking_info$run_id
+      result_file <- file.path(output_dir,
+                              sprintf("%s_run_%04d.rds", experiment_id, run_id))
+      saveRDS(result, result_file)
+      
+      # Extract and save summary info (same as existing code)
+      if (result$success) {
+        summary_row <- data.frame(
+          experiment_id = experiment_id,
+          run_id = run_id,
+          N = result$parameters$N,
+          perturbation_type = result$parameters$perturbation_type,
+          lambda_base = result$parameters$lambda_base,
+          lambda_mult = ifelse(is.null(result$parameters$lambda_mult),
+                              NA, result$parameters$lambda_mult),
+          p_const = ifelse(is.null(result$parameters$p_const_value),
+                          NA, result$parameters$p_const_value),
+          global_significant = result$algorithm_execution$global_significant,
+          TP = result$confusion_matrix$TP,
+          FP = result$confusion_matrix$FP,
+          FN = result$confusion_matrix$FN,
+          TN = result$confusion_matrix$TN,
+          recall = result$evaluation$recall,
+          precision = result$evaluation$precision,
+          f1 = result$evaluation$f1,
+          mcc = result$evaluation$mcc,
+          n_predicted = result$algorithm_execution$n_predicted_edges,
+          n_true = result$parameters$n_true_critical_links,
+          runtime = result$timing$runtime,
+          no_residual = ifelse(is.null(result$evaluation$no_residual),
+                              NA, result$evaluation$no_residual),
+          error = NA,
+          stringsAsFactors = FALSE
+        )
+      } else {
+        summary_row <- data.frame(
+          experiment_id = experiment_id,
+          run_id = run_id,
+          N = result$parameters$N,
+          perturbation_type = result$parameters$perturbation_type,
+          lambda_base = ifelse(is.null(result$parameters$lambda_base),
+                              NA, result$parameters$lambda_base),
+          lambda_mult = ifelse(is.null(result$parameters$lambda_mult),
+                              NA, result$parameters$lambda_mult),
+          p_const = ifelse(is.null(result$parameters$p_const_value),
+                          NA, result$parameters$p_const_value),
+          global_significant = FALSE,
+          TP = NA, FP = NA, FN = NA, TN = NA,
+          recall = NA, precision = NA, f1 = NA, mcc = NA,
+          n_predicted = 0,
+          n_true = ifelse(is.null(result$parameters$n_true_critical_links),
+                          NA, result$parameters$n_true_critical_links),
+          runtime = result$timing$runtime,
+          no_residual = NA,
+          error = ifelse(is.null(result$error), NA, result$error),
+          stringsAsFactors = FALSE
+        )
+      }
+      
+      # Append to results summary
+      results_summary <- rbind(results_summary, summary_row)
+      
+      # Save intermediate summary results periodically
+      if (i %% 10 == 0) {
+        summary_file <- file.path(output_dir, paste0(experiment_id, "_summary.csv"))
+        write.csv(results_summary, summary_file, row.names = FALSE)
+      }
+    }
+    
+    close(pb)
+    
+  } else if (n_cores > 1) {
+    # GPU not available - use parallel CPU execution
+    if (verbose) {
+      cat(sprintf("\nGPU not available. Using parallel processing with %d cores\n", n_cores))
+      cat("WARNING: CPU execution may be impractically slow for large networks!\n")
     }
 
+    # Set up parallel processing
     cl <- parallel::makeCluster(n_cores, type = "PSOCK")
     on.exit(parallel::stopCluster(cl), add = TRUE)
 
@@ -665,24 +828,16 @@ run_ring_experiment <- function(N_values = c(10, 100, 1000, 10000),
       "identify_critical_links"
     )
     
-    # Add GPU functions if they exist
-    gpu_functions <- c("get_torch_device", "batch_generate_ring_graphs_gpu", 
-                      "setup_gpu_acceleration", "compute_ring_distances_gpu",
-                      "compute_probabilities_gpu", "check_cuda_compatibility",
-                      "benchmark_gpu_performance")
-    
-    for (func in gpu_functions) {
-      if (exists(func)) {
-        functions_to_export <- c(functions_to_export, func)
-      }
-    }
-    
     parallel::clusterExport(cl, functions_to_export, envir = environment())
 
-    # Load required libraries on each worker
+    # Load required libraries on each worker with proper initialization
     parallel::clusterEvalQ(cl, {
       library(Matrix)
       library(igraph)
+      
+      # Set worker ID to indicate we're in a parallel context
+      options(BrainNetTest.worker_id = Sys.getpid())
+      
       # Try to load BrainNetTest, but don't fail if it's not available
       tryCatch({
         suppressPackageStartupMessages(library(BrainNetTest))
@@ -690,52 +845,9 @@ run_ring_experiment <- function(N_values = c(10, 100, 1000, 10000),
         # If BrainNetTest is not available, that's OK
       })
       
-      # Source GPU setup functions if available
-      gpu_setup_paths <- c("./R/setup_gpu.R",
-                          "R/setup_gpu.R",
-                          "../R/setup_gpu.R",
-                          "/home/maxi/Desktop/repos/BrainNetTest/R/setup_gpu.R")
-      
-      setup_sourced <- FALSE
-      for (path in gpu_setup_paths) {
-        if (file.exists(path)) {
-          tryCatch({
-            source(path)
-            setup_sourced <- TRUE
-            break
-          }, error = function(e) {
-            # Continue
-          })
-        }
-      }
-      
-      # Source GPU acceleration functions if available
-      gpu_script_paths <- c("./R/gpu_accelerated_ring.R",
-                           "R/gpu_accelerated_ring.R",
-                           "../R/gpu_accelerated_ring.R",
-                           "/home/maxi/Desktop/repos/BrainNetTest/R/gpu_accelerated_ring.R")
-      
-      gpu_sourced <- FALSE
-      for (path in gpu_script_paths) {
-        if (file.exists(path)) {
-          tryCatch({
-            source(path)
-            gpu_sourced <- TRUE
-            break
-          }, error = function(e) {
-            # Continue
-          })
-        }
-      }
-      
-      # Try to setup GPU on each worker
-      if (setup_sourced && gpu_sourced && exists("setup_gpu_acceleration")) {
-        tryCatch({
-          setup_gpu_acceleration()
-        }, error = function(e) {
-          # GPU setup failed on this worker, will use CPU
-        })
-      }
+      # Don't initialize GPU in parallel workers - use CPU only
+      # This avoids CUDA context conflicts across processes
+      options(BrainNetTest.use_gpu = FALSE)
     })
     
     # Run experiments in parallel
@@ -899,7 +1011,8 @@ run_ring_experiment <- function(N_values = c(10, 100, 1000, 10000),
           runtime = result$timing$runtime,
           no_residual = ifelse(is.null(result$evaluation$no_residual),
                               NA, result$evaluation$no_residual),
-          error = NA
+          error = NA,
+          stringsAsFactors = FALSE
         )
       } else {
         summary_row <- data.frame(
@@ -1057,6 +1170,7 @@ run_ring_experiment <- function(N_values = c(10, 100, 1000, 10000),
 #' @param lambda_multipliers Custom lambda multipliers for lambda-based perturbations
 #' @param p_const_values Custom probability values for constant perturbations
 #' @param use_gpu If TRUE, enable GPU acceleration if available (default: "auto")
+#' @param force_gpu If TRUE, error if GPU is not available (default: FALSE for flexibility)
 #' @param ... Additional arguments passed to run_ring_experiment
 #' @return List with experiment results
 main_validation <- function(quick_test = FALSE, nodes = 10000, master_seed = 42,
@@ -1065,11 +1179,15 @@ main_validation <- function(quick_test = FALSE, nodes = 10000, master_seed = 42,
                            lambda_multipliers = NULL,
                            p_const_values = NULL,
                            use_gpu = "auto",
+                           force_gpu = FALSE,  # Changed default to FALSE for flexibility
                            ...) {
   
   # Set master seed for reproducibility
   set.seed(master_seed)
   cat(sprintf("Using master seed: %d\n", master_seed))
+  
+  # Track if GPU is actually available
+  gpu_enabled <- FALSE
   
   # Setup GPU if requested
   if (use_gpu == "auto" || use_gpu == TRUE) {
@@ -1120,13 +1238,26 @@ main_validation <- function(quick_test = FALSE, nodes = 10000, master_seed = 42,
           device <- get_torch_device()
           if (!is.null(device)) {
             cat(sprintf("Using device: %s\n", device$type))
+            gpu_enabled <- TRUE
+            
+            # Get GPU info if available
+            if (exists("torch") && !is.null(torch$cuda$get_device_properties)) {
+              props <- torch$cuda$get_device_properties(0)
+              cat(sprintf("GPU: %s (%.1f GB memory)\n", props$name, props$total_memory / 1e9))
+            }
           }
         } else {
           cat("GPU acceleration not available, using CPU\n")
+          if (force_gpu) {
+            stop("GPU is required for practical execution times but is not available.")
+          }
         }
       }, error = function(e) {
         cat(sprintf("Failed to setup GPU acceleration: %s\n", e$message))
-        cat("Using CPU\n")
+        if (force_gpu) {
+          stop("GPU is required for practical execution times but failed to initialize.")
+        }
+        cat("Using CPU (WARNING: This may be impractically slow)\n")
       })
     } else {
       if (!gpu_setup_sourced) {
@@ -1135,7 +1266,10 @@ main_validation <- function(quick_test = FALSE, nodes = 10000, master_seed = 42,
       if (!gpu_sourced) {
         cat("GPU acceleration functions not found\n")
       }
-      cat("Using CPU\n")
+      if (force_gpu) {
+        stop("GPU acceleration scripts not found but GPU is required for practical execution.")
+      }
+      cat("Using CPU (WARNING: This may be impractically slow)\n")
     }
   }
   
@@ -1173,6 +1307,32 @@ main_validation <- function(quick_test = FALSE, nodes = 10000, master_seed = 42,
     cat("Running full validation...\n")
   }
   
+  # Determine number of cores based on GPU availability and problem size
+  if (gpu_enabled) {
+    # Check if we're dealing with large networks
+    max_N <- max(N_values)
+    if (max_N >= 100) {
+      # Large networks - use GPU with sequential execution
+      n_cores_to_use <- 1
+      cat("Note: Using sequential execution to maximize GPU utilization\n")
+    } else {
+      # Small networks - GPU overhead might not be worth it
+      n_cores_to_use <- min(4, parallel::detectCores() - 1)
+      cat(sprintf("Note: Using %d cores for small networks (GPU overhead not justified)\n", n_cores_to_use))
+    }
+  } else {
+    # Use multiple cores when running on CPU
+    n_cores_to_use <- parallel::detectCores() - 1
+    
+    # Warn if running large networks without GPU
+    if (any(N_values >= 1000)) {
+      cat("\n*** WARNING: Large networks without GPU will be VERY slow! ***\n")
+      if (force_gpu) {
+        stop("GPU is required for networks with N >= 1000")
+      }
+    }
+  }
+  
   # Run the experiment
   results <- run_ring_experiment(
     N_values = N_values,
@@ -1182,6 +1342,8 @@ main_validation <- function(quick_test = FALSE, nodes = 10000, master_seed = 42,
     p_const_values = p_const_values,
     verbose = TRUE,
     output_dir = output_dir,
+    n_cores = n_cores_to_use,
+    force_gpu = force_gpu,  # Pass force_gpu parameter
     ...
   )
   
