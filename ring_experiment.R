@@ -619,7 +619,7 @@ run_ring_experiment <- function(N_values = c(10, 100, 1000, 10000),
   # Initialize progress tracking
   experiment_start_time <- Sys.time()
   last_progress_update <- experiment_start_time
-  progress_update_interval <- 120  # 2 minutes in seconds
+  progress_update_interval <- 600  # 10 minutes in seconds
 
   # Print experiment header
   if (verbose) {
@@ -698,7 +698,7 @@ run_ring_experiment <- function(N_values = c(10, 100, 1000, 10000),
         param_values <- lambda_multipliers[[pert_type]]
         param_type <- "lambda_mult"
       } else if (pert_type %in% c("const_high", "const_low")) {
-        param_values <- p_const_values[[pert_type]]  # Changed from perturbation_type to pert_type
+        param_values <- p_const_values[[pert_type]]  # Fixed: was perturbation_type
         param_type <- "p_const_value"
       } else {
         param_values <- list(NULL)  # Just one run with default parameters
@@ -797,7 +797,7 @@ run_ring_experiment <- function(N_values = c(10, 100, 1000, 10000),
     }
 
     # Process parameters in batches for real-time results
-    batch_size <- min(100, length(param_grid))
+    batch_size <- min(20, length(param_grid))  # Changed from 100 to 20
     n_batches <- ceiling(length(param_grid) / batch_size)
 
     all_results <- list()
