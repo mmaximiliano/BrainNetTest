@@ -1,3 +1,0 @@
-"N","n_experiments","success_rate","power","recall_median","recall_q25","recall_q75","precision_median","precision_q25","precision_q75","fdr_median","fdr_q25","fdr_q75","accuracy_median","f1_median","mcc_median","mcc_q25","mcc_q75","no_residual_rate","median_runtime","q95_runtime"
-10,20,1,0.05,0,0,0,0,0,0,1,1,1,0.777777777777778,0,0,0,0,0.05,0.241405487060547,0.321001935005188
-100,20,1,0,0,0,0,0,0,0,1,1,1,0.752525252525252,0,0,0,0,0,3.94784355163574,4.26097110509872
