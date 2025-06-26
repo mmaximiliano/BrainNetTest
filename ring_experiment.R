@@ -460,7 +460,7 @@ run_single_experiment <- function(N, n_graphs, perturbation_type, rho = 0.03,
 create_experiment_structure <- function(base_dir, experiment_id) {
   # Create main experiment directory
   exp_dir <- file.path(base_dir, experiment_id)
-  
+
   # Create subdirectories
   dirs <- list(
     root = exp_dir,
@@ -472,14 +472,14 @@ create_experiment_structure <- function(base_dir, experiment_id) {
     reports = file.path(exp_dir, "reports"),
     plots = file.path(exp_dir, "plots")
   )
-  
+
   # Create all directories
   for (dir in dirs) {
     if (!dir.exists(dir)) {
       dir.create(dir, recursive = TRUE)
     }
   }
-  
+
   return(dirs)
 }
 
@@ -493,7 +493,7 @@ create_experiment_structure <- function(base_dir, experiment_id) {
 generate_run_filename <- function(N, pert_type, rep, param_value = NULL, run_id) {
   # Base filename components
   base <- sprintf("N%05d_%s_rep%03d", N, pert_type, rep)
-  
+
   # Add parameter value if applicable
   if (!is.null(param_value)) {
     if (pert_type %in% c("lambda_half", "lambda_double")) {
@@ -505,7 +505,7 @@ generate_run_filename <- function(N, pert_type, rep, param_value = NULL, run_id)
     }
     base <- paste0(base, param_str)
   }
-  
+
   # Add run ID
   filename <- sprintf("%s_run%05d.rds", base, run_id)
   return(filename)
@@ -525,10 +525,10 @@ create_experiment_manifest <- function(dirs, experiment_metadata) {
       reports = "{type}_report.{ext}"
     )
   )
-  
+
   manifest_file <- file.path(dirs$metadata, "experiment_manifest.json")
   jsonlite::write_json(manifest, manifest_file, pretty = TRUE, auto_unbox = TRUE)
-  
+
   # Also save as RDS for easy R access
   saveRDS(manifest, file.path(dirs$metadata, "experiment_manifest.rds"))
 }
@@ -604,10 +604,10 @@ run_ring_experiment <- function(N_values = c(10, 100, 1000, 10000),
   # Save experiment metadata
   metadata_file <- file.path(dirs$metadata, "experiment_config.rds")
   saveRDS(experiment_metadata, metadata_file)
-  
+
   # Also save as JSON for easy inspection
-  jsonlite::write_json(experiment_metadata, 
-                      file.path(dirs$metadata, "experiment_config.json"), 
+  jsonlite::write_json(experiment_metadata,
+                      file.path(dirs$metadata, "experiment_config.json"),
                       pretty = TRUE, auto_unbox = TRUE)
 
   # Create experiment manifest
@@ -657,10 +657,10 @@ run_ring_experiment <- function(N_values = c(10, 100, 1000, 10000),
 
   if (verbose) {
     cat(sprintf("Total experiments to run: %d\n", total_experiments))
-    cat(sprintf("Estimated experiments per minute (per core): ~%.1f\n", 
+    cat(sprintf("Estimated experiments per minute (per core): ~%.1f\n",
                 ifelse(total_experiments <= 100, 2, 0.5)))
     estimated_minutes <- total_experiments / (n_cores * ifelse(total_experiments <= 100, 2, 0.5))
-    cat(sprintf("Estimated runtime: %.1f minutes (%.1f hours)\n\n", 
+    cat(sprintf("Estimated runtime: %.1f minutes (%.1f hours)\n\n",
                 estimated_minutes, estimated_minutes / 60))
   }
 
@@ -816,7 +816,7 @@ run_ring_experiment <- function(N_values = c(10, 100, 1000, 10000),
 
       # Extract current batch of parameters
       current_batch <- param_grid[start_idx:end_idx]
-      
+
       # Store tracking parameters separately but don't pass them to run_single_experiment
       tracking_info <- lapply(current_batch, function(params) {
         list(
@@ -830,7 +830,7 @@ run_ring_experiment <- function(N_values = c(10, 100, 1000, 10000),
           p_const_value = params$p_const_value
         )
       })
-      
+
       # Remove tracking parameters before passing to run_single_experiment
       execution_params <- lapply(current_batch, function(params) {
         params$experiment_id <- NULL
@@ -971,12 +971,12 @@ run_ring_experiment <- function(N_values = c(10, 100, 1000, 10000),
                     100 * successful / nrow(results_summary),
                     100 * significant / successful,
                     avg_recall, avg_precision))
-        
+
         # Estimate time remaining
         total_elapsed <- as.numeric(difftime(Sys.time(), experiment_start_time, units = "mins"))
         experiments_per_minute <- experiments_completed / total_elapsed
         minutes_remaining <- (total_experiments - experiments_completed) / experiments_per_minute
-        
+
         cat(sprintf("  Time elapsed: %.1f minutes | Estimated remaining: %.1f minutes (%.1f hours)\n",
                     total_elapsed, minutes_remaining, minutes_remaining / 60))
         cat(sprintf("  Estimated completion: %s\n",
@@ -986,28 +986,28 @@ run_ring_experiment <- function(N_values = c(10, 100, 1000, 10000),
       # Check if it's time for a periodic update
       current_time <- Sys.time()
       time_since_last_update <- as.numeric(difftime(current_time, last_progress_update, units = "secs"))
-      
+
       if (verbose && time_since_last_update >= progress_update_interval) {
         cat("\n--------------------------------------------------------\n")
         cat(sprintf("[PERIODIC UPDATE] %s\n", format(current_time, "%Y-%m-%d %H:%M:%S")))
         cat(sprintf("  Total progress: %d/%d experiments (%.1f%%)\n",
                     experiments_completed, total_experiments,
                     100 * experiments_completed / total_experiments))
-        
+
         # Performance metrics
         total_elapsed_mins <- as.numeric(difftime(current_time, experiment_start_time, units = "mins"))
         cat(sprintf("  Runtime: %.1f minutes (%.1f hours)\n",
                     total_elapsed_mins, total_elapsed_mins / 60))
         cat(sprintf("  Average speed: %.2f experiments/minute\n",
                     experiments_completed / total_elapsed_mins))
-        
+
         # Current status
         if (experiments_completed < total_experiments) {
           current_N <- param_grid[[min(experiments_completed + 1, length(param_grid))]]$N
           current_pert <- param_grid[[min(experiments_completed + 1, length(param_grid))]]$perturbation_type
           cat(sprintf("  Currently processing: N=%d, %s\n", current_N, current_pert))
         }
-        
+
         cat("--------------------------------------------------------\n\n")
         last_progress_update <- current_time
       }
@@ -1023,10 +1023,10 @@ run_ring_experiment <- function(N_values = c(10, 100, 1000, 10000),
 
     all_results <- list()
     experiments_completed <- 0
-    
+
     for (i in seq_along(param_grid)) {
       experiment_start <- Sys.time()
-      
+
       # Store tracking info separately
       tracking_info <- list(
         experiment_id = param_grid[[i]]$experiment_id,
@@ -1038,14 +1038,14 @@ run_ring_experiment <- function(N_values = c(10, 100, 1000, 10000),
         lambda_mult = param_grid[[i]]$lambda_mult,
         p_const_value = param_grid[[i]]$p_const_value
       )
-      
+
       # Remove tracking params
       execution_params <- param_grid[[i]]
       execution_params$experiment_id <- NULL
       execution_params$run_id <- NULL
       execution_params$rep_id <- NULL
       execution_params$dirs <- NULL
-      
+
       # Execute with clean parameters
       result <- do.call(run_single_experiment, execution_params)
       all_results[[i]] <- result
@@ -1056,8 +1056,8 @@ run_ring_experiment <- function(N_values = c(10, 100, 1000, 10000),
         N = tracking_info$N,
         pert_type = tracking_info$perturbation_type,
         rep = tracking_info$rep_id,
-        param_value = ifelse(is.null(tracking_info$lambda_mult), 
-                           tracking_info$p_const_value, 
+        param_value = ifelse(is.null(tracking_info$lambda_mult),
+                           tracking_info$p_const_value,
                            tracking_info$lambda_mult),
         run_id = run_id
       )
@@ -1138,23 +1138,23 @@ run_ring_experiment <- function(N_values = c(10, 100, 1000, 10000),
       # Save intermediate summary results
       summary_file <- file.path(dirs$summaries, "running_summary.csv")
       write.csv(results_summary, summary_file, row.names = FALSE)
-      
+
       # Check for periodic updates in sequential mode
       current_time <- Sys.time()
       time_since_last_update <- as.numeric(difftime(current_time, last_progress_update, units = "secs"))
-      
+
       if (verbose && (experiments_completed %% 10 == 0 || time_since_last_update >= progress_update_interval)) {
         cat(sprintf("\n[PROGRESS] %d/%d experiments completed (%.1f%%)\n",
                     experiments_completed, total_experiments,
                     100 * experiments_completed / total_experiments))
-        
+
         total_elapsed <- as.numeric(difftime(current_time, experiment_start_time, units = "mins"))
         experiments_per_minute <- experiments_completed / total_elapsed
         minutes_remaining <- (total_experiments - experiments_completed) / experiments_per_minute
-        
+
         cat(sprintf("  Time elapsed: %.1f minutes | Estimated remaining: %.1f minutes\n",
                     total_elapsed, minutes_remaining))
-        
+
         if (time_since_last_update >= progress_update_interval) {
           last_progress_update <- current_time
         }
@@ -1283,7 +1283,7 @@ run_ring_experiment <- function(N_values = c(10, 100, 1000, 10000),
       if (nrow(condition_results) > 0) {
         successful <- sum(!is.na(condition_results$global_significant))
         significant <- sum(condition_results$global_significant, na.rm = TRUE)
-        
+
         performance_metrics[[paste0("N_", N)]][[pert_type]] <- list(
           n_runs = nrow(condition_results),
           success_rate = successful / nrow(condition_results),
@@ -1312,9 +1312,9 @@ run_ring_experiment <- function(N_values = c(10, 100, 1000, 10000),
       }
     }
   }
-  
-  jsonlite::write_json(performance_metrics, 
-                      file.path(dirs$reports, "performance_metrics.json"), 
+
+  jsonlite::write_json(performance_metrics,
+                      file.path(dirs$reports, "performance_metrics.json"),
                       pretty = TRUE, auto_unbox = TRUE)
 
   # Create an index file for easy navigation
@@ -1322,7 +1322,7 @@ run_ring_experiment <- function(N_values = c(10, 100, 1000, 10000),
   cat("EXPERIMENT INDEX\n", file = index_file)
   cat("================\n\n", file = index_file, append = TRUE)
   cat(sprintf("Experiment ID: %s\n", experiment_id), file = index_file, append = TRUE)
-  cat(sprintf("Created: %s\n\n", format(experiment_start_time, "%Y-%m-%d %H:%M:%S")), 
+  cat(sprintf("Created: %s\n\n", format(experiment_start_time, "%Y-%m-%d %H:%M:%S")),
       file = index_file, append = TRUE)
   cat("Directory Structure:\n", file = index_file, append = TRUE)
   cat("-------------------\n", file = index_file, append = TRUE)
@@ -1343,7 +1343,7 @@ run_ring_experiment <- function(N_values = c(10, 100, 1000, 10000),
   if (verbose) {
     cat(sprintf("\nDetailed report saved to: %s\n", report_file))
     cat(sprintf("Summary data saved to: %s\n", final_summary_file))
-    cat(sprintf("Performance metrics saved to: %s\n", 
+    cat(sprintf("Performance metrics saved to: %s\n",
                 file.path(dirs$reports, "performance_metrics.json")))
     cat(sprintf("Experiment root directory: %s\n", dirs$root))
     cat("\nExperiment completed successfully!\n")
@@ -1368,21 +1368,21 @@ run_ring_experiment <- function(N_values = c(10, 100, 1000, 10000),
 #' @param ... Additional arguments passed to run_ring_experiment
 #' @return List with experiment results
 main_validation <- function(quick_test = FALSE, nodes = 10000, master_seed = 42,
-                           output_csv = TRUE, output_dir = "ring_experiments", 
+                           output_csv = TRUE, output_dir = "ring_experiments",
                            perturbation_types = NULL,
                            lambda_multipliers = NULL,
                            p_const_values = NULL,
                            ...) {
-  
+
   # Set master seed for reproducibility
   set.seed(master_seed)
   cat(sprintf("Using master seed: %d\n", master_seed))
-  
+
   # Create main output directory if it doesn't exist
   if (!dir.exists(output_dir)) {
     dir.create(output_dir, recursive = TRUE)
   }
-  
+
   # Configure N_values based on the nodes parameter
   if (quick_test) {
     if (nodes == 10) {
@@ -1394,29 +1394,29 @@ main_validation <- function(quick_test = FALSE, nodes = 10000, master_seed = 42,
     } else {
       N_values <- c(10000)
     }
-    
+
     # Default perturbation types for quick test if not specified
     if (is.null(perturbation_types)) {
       perturbation_types <- c("lambda_half", "const_high")
     }
-    
+
     n_repetitions <- 10
-    
+
     cat("Running quick test...\n")
   } else {
     # Full validation
     N_values <- c(10, 100, 1000, 10000)
-    
+
     # Default perturbation types for full validation if not specified
     if (is.null(perturbation_types)) {
       perturbation_types <- c("lambda_half", "lambda_double", "const_high", "const_low")
     }
-    
+
     n_repetitions <- 200
-    
+
     cat("Running full validation...\n")
   }
-  
+
   # Run the experiment
   results <- run_ring_experiment(
     N_values = N_values,
@@ -1428,9 +1428,9 @@ main_validation <- function(quick_test = FALSE, nodes = 10000, master_seed = 42,
     output_dir = output_dir,
     ...
   )
-  
+
   cat("\nExperiment completed!\n")
-  
+
   return(list(
     results = results,
     master_seed = master_seed,
@@ -1442,12 +1442,12 @@ main_validation <- function(quick_test = FALSE, nodes = 10000, master_seed = 42,
 
 # Example usage:
 # Basic quick test with default parameters (nodes=100)
-validation_results <- main_validation(quick_test = TRUE, nodes = 100, master_seed = 42, 
-                                    output_dir = "ring_experiments")
+#validation_results <- main_validation(quick_test = TRUE, nodes = 100, master_seed = 42,
+#                                    output_dir = "ring_experiments")
 
 # Quick test with custom lambda multipliers for lambda_half perturbation
 #custom_lambda_test <- main_validation(
-#  quick_test = TRUE, 
+#  quick_test = TRUE,
 #  nodes = 100,
 #  master_seed = 43,
 #  perturbation_types = "lambda_half",
@@ -1465,10 +1465,10 @@ validation_results <- main_validation(quick_test = TRUE, nodes = 100, master_see
 
 # Full validation with all perturbation types and default parameters
 # Uncomment to run the full validation (takes a long time)
-# full_validation <- main_validation(
-#   master_seed = 45,
-#   output_dir = "results/full_validation"
-# )
+ full_validation <- main_validation(
+   master_seed = 45,
+   output_dir = "results/full_validation"
+ )
 
 # Full validation with custom parameters for all perturbation types
 # Uncomment to run a comprehensive test
