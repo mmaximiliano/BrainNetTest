@@ -213,7 +213,7 @@ compute_confusion_matrix <- function(detected_edges, perturbed_nodes, N) {
   TP <- sum(true_critical & predicted_critical)
   FP <- sum(!true_critical & predicted_critical)
   FN <- sum(true_critical & !predicted_critical)
-  TN <- sum(!true_critical & !true_critical)
+  TN <- sum(!true_critical & !predicted_critical)  # Fixed: was (!true_critical & !true_critical)
 
   list(TP = TP, FP = FP, FN = FN, TN = TN)
 }
@@ -391,7 +391,11 @@ run_single_experiment <- function(N, n_graphs, perturbation_type, rho = 0.03,
     # Compute Matthews Correlation Coefficient
     denom <- sqrt((conf_matrix$TP + conf_matrix$FP) * (conf_matrix$TP + conf_matrix$FN) *
                   (conf_matrix$TN + conf_matrix$FP) * (conf_matrix$TN + conf_matrix$FN))
-    result_data$evaluation$mcc <- if (denom > 0) (conf_matrix$TP * conf_matrix$TN - conf_matrix$FP * conf_matrix$FN) / denom else 0
+    result_data$evaluation$mcc <- if (!is.na(denom) && denom > 0) {
+      (conf_matrix$TP * conf_matrix$TN - conf_matrix$FP * conf_matrix$FN) / denom
+    } else {
+      0
+    }
 
     # Store links correctly and incorrectly identified
     true_keys <- sapply(true_critical_links, function(e) paste(sort(e), collapse="-"))
@@ -1405,14 +1409,14 @@ main_validation <- function(quick_test = FALSE, nodes = 10000, master_seed = 42,
     cat("Running quick test...\n")
   } else {
     # Full validation
-    N_values <- c(10, 100, 1000, 10000)
+    N_values <- c(150, 200, 300, 400, 500)
 
     # Default perturbation types for full validation if not specified
     if (is.null(perturbation_types)) {
       perturbation_types <- c("lambda_half", "lambda_double", "const_high", "const_low")
     }
 
-    n_repetitions <- 200
+    n_repetitions <- 50
 
     cat("Running full validation...\n")
   }
@@ -1474,8 +1478,6 @@ main_validation <- function(quick_test = FALSE, nodes = 10000, master_seed = 42,
 # Uncomment to run a comprehensive test
 # comprehensive_test <- main_validation(
 #   master_seed = 46,
-#   N_values = c(50, 500),  # Custom network sizes
-#   n_repetitions = 20,     # Fewer repetitions for faster results
 #   lambda_multipliers = list(
 #     "lambda_half" = c(0.5, 0.25),
 #     "lambda_double" = c(2, 4)
@@ -1484,5 +1486,8 @@ main_validation <- function(quick_test = FALSE, nodes = 10000, master_seed = 42,
 #     "const_high" = c(0.85, 0.95),
 #     "const_low" = c(0.05, 0.01)
 #   ),
+#   n_repetitions = 20,     # Pass as extra argument via ...
+#   output_dir = "results/custom_params"
+# )
 #   output_dir = "results/custom_params"
 # )
