@@ -25,7 +25,13 @@ expected_edges <- function(lambda, N) {
   max_k <- floor(N / 2)
 
   for (k in 1:max_k) {
-    multiplier <- if (k == N / 2) 1 else 2
+    # For even N, when k = N/2, each node can only connect to one node at distance N/2
+    # (the one directly opposite), so we don't double count
+    if (N %% 2 == 0 && k == N / 2) {
+      multiplier <- 1
+    } else {
+      multiplier <- 2
+    }
     total <- total + multiplier * exp(-lambda * k)
   }
 
@@ -199,10 +205,12 @@ compute_confusion_matrix <- function(detected_edges, perturbed_nodes, N) {
   predicted_critical <- rep(FALSE, nrow(all_edges))
   if (!is.null(detected_edges) && nrow(detected_edges) > 0) {
     for (k in 1:nrow(detected_edges)) {
-      i <- detected_edges$node1[k]
-      j <- detected_edges$node2[k]
+      # Ensure we have the smaller index first for consistent matching
+      node1 <- min(detected_edges$node1[k], detected_edges$node2[k])
+      node2 <- max(detected_edges$node1[k], detected_edges$node2[k])
+      
       # Find matching edge in all_edges
-      idx <- which(all_edges$i == i & all_edges$j == j)
+      idx <- which(all_edges$i == node1 & all_edges$j == node2)
       if (length(idx) > 0) {
         predicted_critical[idx] <- TRUE
       }
@@ -213,7 +221,7 @@ compute_confusion_matrix <- function(detected_edges, perturbed_nodes, N) {
   TP <- sum(true_critical & predicted_critical)
   FP <- sum(!true_critical & predicted_critical)
   FN <- sum(true_critical & !predicted_critical)
-  TN <- sum(!true_critical & !predicted_critical)  # Fixed: was (!true_critical & !true_critical)
+  TN <- sum(!true_critical & !predicted_critical)
 
   list(TP = TP, FP = FP, FN = FN, TN = TN)
 }
@@ -388,13 +396,21 @@ run_single_experiment <- function(N, n_graphs, perturbation_type, rho = 0.03,
     result_data$evaluation$accuracy <- (conf_matrix$TP + conf_matrix$TN) /
                                       (conf_matrix$TP + conf_matrix$TN + conf_matrix$FP + conf_matrix$FN)
 
-    # Compute Matthews Correlation Coefficient
-    denom <- sqrt((conf_matrix$TP + conf_matrix$FP) * (conf_matrix$TP + conf_matrix$FN) *
-                  (conf_matrix$TN + conf_matrix$FP) * (conf_matrix$TN + conf_matrix$FN))
-    result_data$evaluation$mcc <- if (!is.na(denom) && denom > 0) {
-      (conf_matrix$TP * conf_matrix$TN - conf_matrix$FP * conf_matrix$FN) / denom
+    # Compute Matthews Correlation Coefficient with proper handling of edge cases
+    numerator <- conf_matrix$TP * conf_matrix$TN - conf_matrix$FP * conf_matrix$FN
+    denom_parts <- c(
+      (conf_matrix$TP + conf_matrix$FP),
+      (conf_matrix$TP + conf_matrix$FN),
+      (conf_matrix$TN + conf_matrix$FP),
+      (conf_matrix$TN + conf_matrix$FN)
+    )
+    
+    # MCC is undefined if any of the sums is zero
+    if (any(denom_parts == 0)) {
+      result_data$evaluation$mcc <- NA
     } else {
-      0
+      denom <- sqrt(prod(denom_parts))
+      result_data$evaluation$mcc <- numerator / denom
     }
 
     # Store links correctly and incorrectly identified
@@ -1228,11 +1244,14 @@ run_ring_experiment <- function(N_values = c(10, 100, 1000, 10000),
         cat(sprintf("    Power: %.3f (%d/%d)\n",
                     power, significant, successful))
         cat(sprintf("    Recall: %.3f (median: %.3f)\n",
-                    avg_recall, median_recall))
+                    ifelse(is.nan(avg_recall), 0, avg_recall), 
+                    ifelse(is.na(median_recall), 0, median_recall)))
         cat(sprintf("    Precision: %.3f (median: %.3f)\n",
-                    avg_precision, median_precision))
+                    ifelse(is.nan(avg_precision), 0, avg_precision), 
+                    ifelse(is.na(median_precision), 0, median_precision)))
         cat(sprintf("    F1 Score: %.3f (median: %.3f)\n",
-                    avg_f1, median_f1))
+                    ifelse(is.nan(avg_f1), 0, avg_f1), 
+                    ifelse(is.na(median_f1), 0, median_f1)))
         cat(sprintf("    Average Runtime: %.2f seconds\n", avg_runtime))
         cat("\n")
       }
@@ -1262,6 +1281,11 @@ run_ring_experiment <- function(N_values = c(10, 100, 1000, 10000),
   avg_recall <- mean(results_summary$recall, na.rm = TRUE)
   avg_precision <- mean(results_summary$precision, na.rm = TRUE)
   avg_f1 <- mean(results_summary$f1, na.rm = TRUE)
+  
+  # Handle case where all values might be NA
+  if (is.nan(avg_recall)) avg_recall <- 0
+  if (is.nan(avg_precision)) avg_precision <- 0
+  if (is.nan(avg_f1)) avg_f1 <- 0
 
   cat(sprintf("Average Recall: %.3f\n", avg_recall))
   cat(sprintf("Average Precision: %.3f\n", avg_precision))
