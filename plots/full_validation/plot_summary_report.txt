@@ -1,0 +1,23 @@
+RING EXPERIMENT VISUALIZATION SUMMARY
+=====================================
+
+Total experiments analyzed: 85920
+Network sizes tested: 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 200, 300
+Perturbation types: lambda_half, lambda_double, const_high, const_low
+
+Best performing conditions (by mean F1 score):
+---------------------------------------------
+# A tibble: 10 × 14
+   perturbation_type     N param_value n_runs mean_precision mean_recall mean_f1 mean_mcc mean_runtime power mean_tp mean_fp
+   <chr>             <int>       <dbl>  <int>          <dbl>       <dbl>   <dbl>    <dbl>        <dbl> <dbl>   <dbl>   <dbl>
+ 1 const_high           10        0.95    650          1           1       1        1            0.866     1    17      0   
+ 2 const_high           10        0.9     650          0.999       1       0.999    0.999        0.914     1    17      0.02
+ 3 lambda_half          10        0.25    650          0.999       0.994   0.996    0.994        6.09      1    16.9    0.02
+ 4 const_high           10        0.85    650          0.999       0.993   0.996    0.993        0.811     1    16.9    0.02
+ 5 lambda_half          10        0.33    650          0.999       0.982   0.990    0.985        3.05      1    16.7    0.02
+ 6 const_high           20        0.95    650          0.999       0.958   0.978    0.973        1.83      1    35.4    0.02
+ 7 lambda_half          20        0.25    650          1           0.948   0.973    0.967        1.96      1    35.1    0   
+ 8 const_high           20        0.9     650          0.999       0.935   0.965    0.958        1.97      1    34.6    0.04
+ 9 lambda_half          20        0.33    650          0.999       0.932   0.965    0.957        2.48      1    34.5    0.02
+10 const_high           30        0.95    650          1           0.927   0.962    0.957        3.90      1    52.8    0   
+# ℹ 2 more variables: mean_fn <dbl>, mean_tn <dbl>

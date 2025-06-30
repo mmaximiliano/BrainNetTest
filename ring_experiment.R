@@ -208,7 +208,7 @@ compute_confusion_matrix <- function(detected_edges, perturbed_nodes, N) {
       # Ensure we have the smaller index first for consistent matching
       node1 <- min(detected_edges$node1[k], detected_edges$node2[k])
       node2 <- max(detected_edges$node1[k], detected_edges$node2[k])
-      
+
       # Find matching edge in all_edges
       idx <- which(all_edges$i == node1 & all_edges$j == node2)
       if (length(idx) > 0) {
@@ -404,7 +404,7 @@ run_single_experiment <- function(N, n_graphs, perturbation_type, rho = 0.03,
       (conf_matrix$TN + conf_matrix$FP),
       (conf_matrix$TN + conf_matrix$FN)
     )
-    
+
     # MCC is undefined if any of the sums is zero
     if (any(denom_parts == 0)) {
       result_data$evaluation$mcc <- NA
@@ -1244,13 +1244,13 @@ run_ring_experiment <- function(N_values = c(10, 100, 1000, 10000),
         cat(sprintf("    Power: %.3f (%d/%d)\n",
                     power, significant, successful))
         cat(sprintf("    Recall: %.3f (median: %.3f)\n",
-                    ifelse(is.nan(avg_recall), 0, avg_recall), 
+                    ifelse(is.nan(avg_recall), 0, avg_recall),
                     ifelse(is.na(median_recall), 0, median_recall)))
         cat(sprintf("    Precision: %.3f (median: %.3f)\n",
-                    ifelse(is.nan(avg_precision), 0, avg_precision), 
+                    ifelse(is.nan(avg_precision), 0, avg_precision),
                     ifelse(is.na(median_precision), 0, median_precision)))
         cat(sprintf("    F1 Score: %.3f (median: %.3f)\n",
-                    ifelse(is.nan(avg_f1), 0, avg_f1), 
+                    ifelse(is.nan(avg_f1), 0, avg_f1),
                     ifelse(is.na(median_f1), 0, median_f1)))
         cat(sprintf("    Average Runtime: %.2f seconds\n", avg_runtime))
         cat("\n")
@@ -1281,7 +1281,7 @@ run_ring_experiment <- function(N_values = c(10, 100, 1000, 10000),
   avg_recall <- mean(results_summary$recall, na.rm = TRUE)
   avg_precision <- mean(results_summary$precision, na.rm = TRUE)
   avg_f1 <- mean(results_summary$f1, na.rm = TRUE)
-  
+
   # Handle case where all values might be NA
   if (is.nan(avg_recall)) avg_recall <- 0
   if (is.nan(avg_precision)) avg_precision <- 0
@@ -1433,7 +1433,7 @@ main_validation <- function(quick_test = FALSE, nodes = 10000, master_seed = 42,
     cat("Running quick test...\n")
   } else {
     # Full validation
-    N_values <- c(150, 200, 300, 400, 500)
+    N_values <- c(300, 400, 500)
 
     # Default perturbation types for full validation if not specified
     if (is.null(perturbation_types)) {

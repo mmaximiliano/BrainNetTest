@@ -1,0 +1,71 @@
+COMPREHENSIVE ANALYSIS PLOT DESCRIPTIONS
+=======================================
+
+1. performance_landscape.png
+   - Shows F1 score as a heatmap across network size and parameter values
+   - Helps identify optimal parameter regions for different network sizes
+
+2. f1_distribution_evolution.png
+   - Ridge plots showing how F1 score distributions change with network size
+   - Reveals whether performance becomes more or less variable as N increases
+
+3. error_rate_distribution.png
+   - Violin plots of total error rates by condition
+   - Shows which conditions produce more reliable results
+
+4. fp_fn_tradeoff.png
+   - Scatter plots examining the relationship between false positives and false negatives
+   - Reveals whether the algorithm tends to over- or under-detect edges
+
+5. parameter_optimization.png
+   - Line plots showing how mean F1 varies with parameter values
+   - Optimal values are highlighted with larger points
+
+6. parameter_sensitivity_heatmap.png
+   - Heatmap showing F1 scores for all parameter combinations
+   - Useful for identifying robust parameter regions
+
+7. power_analysis_ci.png
+   - Statistical power with 95% confidence intervals
+   - Shows reliability of the algorithm for detecting true differences
+
+8. sample_size_requirements.png
+   - Shows minimum network size needed for adequate statistical power
+   - Helps determine appropriate network sizes for future studies
+
+9. runtime_scaling_fitted.png
+   - Log-log plot with fitted curves showing computational complexity
+   - Confirms expected O(N²) scaling behavior
+
+10. algorithm_efficiency.png
+    - Shows F1 score achieved per second of computation
+    - Useful for comparing cost-effectiveness across conditions
+
+11. algorithm_stability.png
+    - Coefficient of variation for different metrics
+    - Lower values indicate more consistent/stable performance
+
+12. outlier_analysis.png
+    - Shows frequency of unusual results (|z-score| > 2)
+    - Helps identify conditions prone to erratic behavior
+
+13. perturbation_comparison_matrix.png
+    - Pairwise differences in mean F1 between perturbation types
+    - Quickly shows which perturbations are easier/harder to detect
+
+14. radar_comparison.png
+    - Multi-dimensional comparison across six performance metrics
+    - Provides holistic view of algorithm performance
+
+15. edge_detection_ratio.png
+    - Distribution of predicted/true edge ratios
+    - Shows tendency to over- or under-detect across conditions
+
+16. pr_tradeoff_by_parameter.png
+    - Precision-recall scatter plot with parameter values labeled
+    - Reveals how parameter tuning affects the precision-recall trade-off
+
+17. summary_dashboard.png
+    - Four-panel dashboard summarizing key metrics
+    - Provides quick overview of main results
+
