@@ -1,0 +1,37 @@
+{
+  "created": "2025-06-27 12:06:47",
+  "experiment_metadata": {
+    "experiment_id": "ring_exp_20250627_120647",
+    "timestamp": "20250627_120647",
+    "N_values": [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 200, 300, 400, 500],
+    "perturbation_types": ["lambda_half", "lambda_double", "const_high", "const_low"],
+    "n_repetitions": 50,
+    "rho": 0.02,
+    "alpha": 0.05,
+    "n_bootstrap": 1000,
+    "n_cores": 19,
+    "lambda_multipliers": {
+      "lambda_half": [0.5, 0.33, 0.25],
+      "lambda_double": [2, 3, 4]
+    },
+    "p_const_values": {
+      "const_high": [0.85, 0.9, 0.95],
+      "const_low": [0.05, 0.03, 0.01]
+    }
+  },
+  "directory_structure": {
+    "root": "results/full_validation/ring_exp_20250627_120647",
+    "metadata": "results/full_validation/ring_exp_20250627_120647/metadata",
+    "by_N": "results/full_validation/ring_exp_20250627_120647/by_network_size",
+    "by_perturbation": "results/full_validation/ring_exp_20250627_120647/by_perturbation",
+    "individual_runs": "results/full_validation/ring_exp_20250627_120647/individual_runs",
+    "summaries": "results/full_validation/ring_exp_20250627_120647/summaries",
+    "reports": "results/full_validation/ring_exp_20250627_120647/reports",
+    "plots": "results/full_validation/ring_exp_20250627_120647/plots"
+  },
+  "file_patterns": {
+    "individual_runs": "N{size}_{perturbation}_rep{rep}_run{id}.rds",
+    "summaries": "{level}_summary.csv",
+    "reports": "{type}_report.{ext}"
+  }
+}

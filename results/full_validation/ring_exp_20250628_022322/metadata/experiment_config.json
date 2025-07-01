@@ -1,0 +1,19 @@
+{
+  "experiment_id": "ring_exp_20250628_022322",
+  "timestamp": "20250628_022322",
+  "N_values": [300, 400, 500],
+  "perturbation_types": ["lambda_half", "lambda_double", "const_high", "const_low"],
+  "n_repetitions": 50,
+  "rho": 0.02,
+  "alpha": 0.05,
+  "n_bootstrap": 1000,
+  "n_cores": 19,
+  "lambda_multipliers": {
+    "lambda_half": [0.5, 0.33, 0.25],
+    "lambda_double": [2, 3, 4]
+  },
+  "p_const_values": {
+    "const_high": [0.85, 0.9, 0.95],
+    "const_low": [0.05, 0.03, 0.01]
+  }
+}
