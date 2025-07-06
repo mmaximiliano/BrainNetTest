@@ -112,95 +112,112 @@ create_plots_for_n <- function(data_n, n_value, output_dir) {
     # Skip if no data for this subset
     if (nrow(subset_data) == 0) next
     
-    # 1. Lambda vs TP
-    p1 <- ggplot(subset_data, aes(x = lambda_actual, y = TP_mean, color = as.factor(lambda_rounded))) +
+    # Calculate additional rate metrics
+    subset_data <- subset_data %>%
+      mutate(
+        # True Positive Rate (TPR / Recall) = TP / (TP + FN)
+        TPR = TP_mean / (TP_mean + FN_mean),
+        # False Negative Rate (FNR) = FN / (TP + FN)
+        FNR = FN_mean / (TP_mean + FN_mean),
+        # False Positive Rate (FPR) = FP / (FP + TN)
+        FPR = FP_mean / (FP_mean + TN_mean),
+        # True Negative Rate (TNR / Specificity) = TN / (FP + TN)
+        TNR = TN_mean / (FP_mean + TN_mean)
+      )
+    
+    # 1. Lambda vs TPR (instead of TP)
+    p1 <- ggplot(subset_data, aes(x = lambda_actual, y = TPR, color = as.factor(lambda_rounded))) +
       geom_point(size = 3) +
-      geom_errorbar(aes(ymin = TP_mean - TP_sd, ymax = TP_mean + TP_sd), width = 0.02) +
+      geom_errorbar(aes(ymin = pmax(0, TPR - recall_sd), ymax = pmin(1, TPR + recall_sd)), width = 0.02, linewidth = 0.5) +
       scale_x_log10(labels = scales::number_format(accuracy = 0.001)) +
+      scale_y_continuous(labels = percent_format(), limits = c(0, 1)) +
       labs(
-        title = sprintf("True Positives vs Lambda (N = %d)%s", n_value, title_suffix),
-        subtitle = "Average number of correctly identified critical links",
-        x = "Lambda Value (log scale)",
-        y = "True Positives",
-        color = "Lambda"
+        title = sprintf("True Positive Rate vs P(edge) (N = %d)%s", n_value, title_suffix),
+        subtitle = "Proportion of actual critical links correctly identified (Recall)",
+        x = "P(edge) in log scale",
+        y = "True Positive Rate",
+        color = "P(edge)"
       ) +
       theme_white +
       color_palette +
       theme(legend.position = "right")
     
-    # 2. Lambda vs FP
-    p2 <- ggplot(subset_data, aes(x = lambda_actual, y = FP_mean, color = as.factor(lambda_rounded))) +
+    # 2. Lambda vs FPR (instead of FP)
+    p2 <- ggplot(subset_data, aes(x = lambda_actual, y = FPR, color = as.factor(lambda_rounded))) +
       geom_point(size = 3) +
-      geom_errorbar(aes(ymin = FP_mean - FP_sd, ymax = FP_mean + FP_sd), width = 0.02) +
+      geom_errorbar(aes(ymin = pmax(0, FPR - FPR), ymax = pmin(1, FPR + FPR)), width = 0.02, linewidth = 0.5) +
       scale_x_log10(labels = scales::number_format(accuracy = 0.001)) +
+      scale_y_continuous(labels = percent_format(), limits = c(0, 1)) +
       labs(
-        title = sprintf("False Positives vs Lambda (N = %d)%s", n_value, title_suffix),
-        subtitle = "Average number of incorrectly identified critical links",
-        x = "Lambda Value (log scale)",
-        y = "False Positives",
-        color = "Lambda"
+        title = sprintf("False Positive Rate vs P(edge) (N = %d)%s", n_value, title_suffix),
+        subtitle = "Proportion of non-critical links incorrectly identified as critical",
+        x = "P(edge) in log scale",
+        y = "False Positive Rate",
+        color = "P(edge)"
       ) +
       theme_white +
       color_palette
     
-    # 3. Lambda vs FN
-    p3 <- ggplot(subset_data, aes(x = lambda_actual, y = FN_mean, color = as.factor(lambda_rounded))) +
+    # 3. Lambda vs FNR (instead of FN)
+    p3 <- ggplot(subset_data, aes(x = lambda_actual, y = FNR, color = as.factor(lambda_rounded))) +
       geom_point(size = 3) +
-      geom_errorbar(aes(ymin = FN_mean - FN_sd, ymax = FN_mean + FN_sd), width = 0.02) +
+      geom_errorbar(aes(ymin = pmax(0, FNR - FNR), ymax = pmin(1, FNR + FNR)), width = 0.02, linewidth = 0.5) +
       scale_x_log10(labels = scales::number_format(accuracy = 0.001)) +
+      scale_y_continuous(labels = percent_format(), limits = c(0, 1)) +
       labs(
-        title = sprintf("False Negatives vs Lambda (N = %d)%s", n_value, title_suffix),
-        subtitle = "Average number of missed critical links",
-        x = "Lambda Value (log scale)",
-        y = "False Negatives",
-        color = "Lambda"
+        title = sprintf("False Negative Rate vs P(edge) (N = %d)%s", n_value, title_suffix),
+        subtitle = "Proportion of actual critical links missed",
+        x = "P(edge) in log scale",
+        y = "False Negative Rate",
+        color = "P(edge)"
       ) +
       theme_white +
       color_palette
     
-    # 4. Lambda vs TN
-    p4 <- ggplot(subset_data, aes(x = lambda_actual, y = TN_mean, color = as.factor(lambda_rounded))) +
+    # 4. Lambda vs TNR (instead of TN)
+    p4 <- ggplot(subset_data, aes(x = lambda_actual, y = TNR, color = as.factor(lambda_rounded))) +
       geom_point(size = 3) +
-      geom_errorbar(aes(ymin = TN_mean - TN_sd, ymax = TN_mean + TN_sd), width = 0.02) +
+      geom_errorbar(aes(ymin = pmax(0, TNR - TNR), ymax = pmin(1, TNR + TNR)), width = 0.02, linewidth = 0.5) +
       scale_x_log10(labels = scales::number_format(accuracy = 0.001)) +
+      scale_y_continuous(labels = percent_format(), limits = c(0, 1)) +
       labs(
-        title = sprintf("True Negatives vs Lambda (N = %d)%s", n_value, title_suffix),
-        subtitle = "Average number of correctly identified non-critical links",
-        x = "Lambda Value (log scale)",
-        y = "True Negatives",
-        color = "Lambda"
+        title = sprintf("True Negative Rate vs P(edge) (N = %d)%s", n_value, title_suffix),
+        subtitle = "Proportion of non-critical links correctly identified (Specificity)",
+        x = "P(edge) in log scale",
+        y = "True Negative Rate",
+        color = "P(edge)"
       ) +
       theme_white +
       color_palette
     
-    # 5. Lambda vs Recall
+    # 5. Lambda vs Recall - already using rates, so keep this plot
     p5 <- ggplot(subset_data, aes(x = lambda_actual, y = recall_mean, color = as.factor(lambda_rounded))) +
       geom_point(size = 3) +
-      geom_errorbar(aes(ymin = recall_mean - recall_sd, ymax = recall_mean + recall_sd), width = 0.02) +
+      geom_errorbar(aes(ymin = pmax(0, recall_mean - recall_sd), ymax = pmin(1, recall_mean + recall_sd)), width = 0.02, linewidth = 0.5) +
       scale_x_log10(labels = scales::number_format(accuracy = 0.001)) +
       scale_y_continuous(labels = percent_format(), limits = c(0, 1)) +
       labs(
-        title = sprintf("Recall vs Lambda (N = %d)%s", n_value, title_suffix),
+        title = sprintf("Recall vs P(edge) (N = %d)%s", n_value, title_suffix),
         subtitle = "Proportion of actual critical links correctly identified",
-        x = "Lambda Value (log scale)",
+        x = "P(edge) in log scale",
         y = "Recall",
-        color = "Lambda"
+        color = "P(edge)"
       ) +
       theme_white +
       color_palette
     
-    # 6. Lambda vs Precision
+    # 6. Lambda vs Precision - already using rates, so keep this plot
     p6 <- ggplot(subset_data, aes(x = lambda_actual, y = precision_mean, color = as.factor(lambda_rounded))) +
       geom_point(size = 3) +
-      geom_errorbar(aes(ymin = precision_mean - precision_sd, ymax = precision_mean + precision_sd), width = 0.02) +
+      geom_errorbar(aes(ymin = pmax(0, precision_mean - precision_sd), ymax = pmin(1, precision_mean + precision_sd)), width = 0.02, linewidth = 0.5) +
       scale_x_log10(labels = scales::number_format(accuracy = 0.001)) +
       scale_y_continuous(labels = percent_format(), limits = c(0, 1)) +
       labs(
-        title = sprintf("Precision vs Lambda (N = %d)%s", n_value, title_suffix),
+        title = sprintf("Precision vs P(edge) (N = %d)%s", n_value, title_suffix),
         subtitle = "Proportion of predicted critical links that are correct",
-        x = "Lambda Value (log scale)",
+        x = "P(edge) in log scale",
         y = "Precision",
-        color = "Lambda"
+        color = "P(edge)"
       ) +
       theme_white +
       color_palette
@@ -208,15 +225,15 @@ create_plots_for_n <- function(data_n, n_value, output_dir) {
     # 7. Lambda vs F1
     p7 <- ggplot(subset_data, aes(x = lambda_actual, y = f1_mean, color = as.factor(lambda_rounded))) +
       geom_point(size = 3) +
-      geom_errorbar(aes(ymin = f1_mean - f1_sd, ymax = f1_mean + f1_sd), width = 0.02) +
+      geom_errorbar(aes(ymin = pmax(0, f1_mean - f1_sd), ymax = pmin(1, f1_mean + f1_sd)), width = 0.02, linewidth = 0.5) +
       scale_x_log10(labels = scales::number_format(accuracy = 0.001)) +
       scale_y_continuous(labels = percent_format(), limits = c(0, 1)) +
       labs(
-        title = sprintf("F1 Score vs Lambda (N = %d)%s", n_value, title_suffix),
+        title = sprintf("F1 Score vs P(edge) (N = %d)%s", n_value, title_suffix),
         subtitle = "Harmonic mean of precision and recall",
-        x = "Lambda Value (log scale)",
+        x = "P(edge) in log scale",
         y = "F1 Score",
-        color = "Lambda"
+        color = "P(edge)"
       ) +
       theme_white +
       color_palette
@@ -224,15 +241,15 @@ create_plots_for_n <- function(data_n, n_value, output_dir) {
     # 8. Lambda vs MCC
     p8 <- ggplot(subset_data, aes(x = lambda_actual, y = mcc_mean, color = as.factor(lambda_rounded))) +
       geom_point(size = 3) +
-      geom_errorbar(aes(ymin = mcc_mean - mcc_sd, ymax = mcc_mean + mcc_sd), width = 0.02) +
+      geom_errorbar(aes(ymin = pmax(-1, mcc_mean - mcc_sd), ymax = pmin(1, mcc_mean + mcc_sd)), width = 0.02, linewidth = 0.5) +
       scale_x_log10(labels = scales::number_format(accuracy = 0.001)) +
       scale_y_continuous(limits = c(-1, 1)) +
       labs(
-        title = sprintf("Matthews Correlation Coefficient vs Lambda (N = %d)%s", n_value, title_suffix),
+        title = sprintf("Matthews Correlation Coefficient vs P(edge) (N = %d)%s", n_value, title_suffix),
         subtitle = "Balanced measure of binary classification quality",
-        x = "Lambda Value (log scale)",
+        x = "P(edge) in log scale",
         y = "MCC",
-        color = "Lambda"
+        color = "P(edge)"
       ) +
       theme_white +
       color_palette
@@ -243,11 +260,11 @@ create_plots_for_n <- function(data_n, n_value, output_dir) {
       geom_hline(yintercept = 1, linetype = "dashed", alpha = 0.5) +
       scale_x_log10(labels = scales::number_format(accuracy = 0.001)) +
       labs(
-        title = sprintf("Predicted/True Ratio vs Lambda (N = %d)%s", n_value, title_suffix),
+        title = sprintf("Predicted/True Ratio vs P(edge) (N = %d)%s", n_value, title_suffix),
         subtitle = "Ratio of predicted to actual number of critical links",
-        x = "Lambda Value (log scale)",
+        x = "P(edge) in log scale",
         y = "Predicted/True Ratio",
-        color = "Lambda"
+        color = "P(edge)"
       ) +
       theme_white +
       color_palette
@@ -258,36 +275,101 @@ create_plots_for_n <- function(data_n, n_value, output_dir) {
       geom_hline(yintercept = 0, linetype = "dashed", alpha = 0.5) +
       scale_x_log10(labels = scales::number_format(accuracy = 0.001)) +
       labs(
-        title = sprintf("TP-FN Tradeoff vs Lambda (N = %d)%s", n_value, title_suffix),
+        title = sprintf("TP-FN Tradeoff vs P(edge) (N = %d)%s", n_value, title_suffix),
         subtitle = "Difference between true positives and false negatives",
-        x = "Lambda Value (log scale)",
+        x = "P(edge) in log scale",
         y = "TP - FN",
-        color = "Lambda"
+        color = "P(edge)"
       ) +
       theme_white +
       color_palette
     
-    # 11. Outlier Analysis
+    # 11. Outlier Analysis - Modified to handle zeros
     p11 <- ggplot(subset_data, aes(x = as.factor(lambda_rounded), y = runtime_mean)) +
       geom_boxplot(aes(fill = as.factor(lambda_rounded))) +
       geom_point(position = position_jitter(width = 0.1), alpha = 0.5) +
-      scale_y_log10() +
+      # Use pseudo_log to handle zeros or very small values properly
+      scale_y_continuous(trans = scales::pseudo_log_trans(base = 10), 
+                        labels = scales::label_number()) +
       labs(
-        title = sprintf("Runtime Distribution vs Lambda (N = %d)%s", n_value, title_suffix),
+        title = sprintf("Runtime Distribution vs P(edge) (N = %d)%s", n_value, title_suffix),
         subtitle = "Computational time analysis with outlier detection",
-        x = "Lambda Value",
-        y = "Runtime (seconds, log scale)",
-        fill = "Lambda"
+        x = "P(edge)",
+        y = "Runtime (seconds, pseudo-log scale)",
+        fill = "P(edge)"
       ) +
       theme_white +
       scale_fill_viridis_d(end = 0.8) +
       theme(axis.text.x = element_text(angle = 45, hjust = 1))
     
+    # Function to create a confusion matrix plot using rates
+    create_confusion_matrix_plot <- function(subset_data, n_value, title_suffix) {
+      # Calculate confusion matrix rates (normalize by row so each row sums to 1)
+      # True Positive Rate (Sensitivity/Recall) and False Negative Rate
+      TPR <- subset_data$TP_mean / (subset_data$TP_mean + subset_data$FN_mean)
+      FNR <- subset_data$FN_mean / (subset_data$TP_mean + subset_data$FN_mean)
+      
+      # False Positive Rate and True Negative Rate (Specificity)
+      FPR <- subset_data$FP_mean / (subset_data$FP_mean + subset_data$TN_mean)
+      TNR <- subset_data$TN_mean / (subset_data$FP_mean + subset_data$TN_mean)
+      
+      # Create a data frame for plotting
+      cm_data <- data.frame(
+        lambda_actual = rep(subset_data$lambda_actual, each = 4),
+        lambda_rounded = rep(subset_data$lambda_rounded, each = 4),
+        true_class = rep(c("Positive", "Negative"), each = 2, times = nrow(subset_data)),
+        predicted_class = rep(c("Positive", "Negative"), times = 2 * nrow(subset_data)),
+        rate = c(rbind(TPR, FNR, FPR, TNR))  # Interleave rates to match structure
+      )
+      
+      # Define color palette with better contrast
+      heatmap_colors <- scale_fill_gradient2(
+        low = "white", 
+        mid = "#ffcc99", 
+        high = "#ff6600", 
+        midpoint = 0.5,
+        limits = c(0, 1),
+        name = "Rate"
+      )
+      
+      # Create a faceted plot for each lambda value
+      confusion_plot <- ggplot(cm_data, aes(x = predicted_class, y = true_class, fill = rate)) +
+        geom_tile(color = "black", linewidth = 0.5) +
+        facet_wrap(~ lambda_rounded, labeller = label_both, ncol = 4) +
+        geom_text(aes(label = sprintf("%.2f", rate)), color = "black", size = 3) +
+        heatmap_colors +
+        scale_x_discrete(position = "top") +
+        labs(
+          title = sprintf("Confusion Matrix Rates vs P(edge) (N = %d)%s", n_value, title_suffix),
+          subtitle = "Rows are normalized to sum to 1 (TPR+FNR=1, FPR+TNR=1)",
+          x = "Predicted Class",
+          y = "True Class"
+        ) +
+        theme_minimal() +
+        theme(
+          panel.background = element_rect(fill = "white", color = NA),
+          plot.background = element_rect(fill = "white", color = NA),
+          legend.background = element_rect(fill = "white", color = NA),
+          axis.text = element_text(size = 10),
+          strip.text = element_text(face = "bold"),
+          strip.background = element_rect(fill = "#f0f0f0", color = "black")
+        )
+      
+      return(confusion_plot)
+    }
+    
+    # Create confusion matrix plot
+    p_confusion <- create_confusion_matrix_plot(subset_data, n_value, title_suffix)
+    
+    # Save confusion matrix plot
+    ggsave(file.path(plot_dir, sprintf("12_confusion_matrix_%s.png", suffix)), p_confusion, 
+           width = 12, height = 8, dpi = 300)
+    
     # Save individual plots
-    ggsave(file.path(plot_dir, sprintf("01_lambda_vs_tp_%s.png", suffix)), p1, width = 10, height = 6, dpi = 300)
-    ggsave(file.path(plot_dir, sprintf("02_lambda_vs_fp_%s.png", suffix)), p2, width = 10, height = 6, dpi = 300)
-    ggsave(file.path(plot_dir, sprintf("03_lambda_vs_fn_%s.png", suffix)), p3, width = 10, height = 6, dpi = 300)
-    ggsave(file.path(plot_dir, sprintf("04_lambda_vs_tn_%s.png", suffix)), p4, width = 10, height = 6, dpi = 300)
+    ggsave(file.path(plot_dir, sprintf("01_lambda_vs_tpr_%s.png", suffix)), p1, width = 10, height = 6, dpi = 300)
+    ggsave(file.path(plot_dir, sprintf("02_lambda_vs_fpr_%s.png", suffix)), p2, width = 10, height = 6, dpi = 300)
+    ggsave(file.path(plot_dir, sprintf("03_lambda_vs_fnr_%s.png", suffix)), p3, width = 10, height = 6, dpi = 300)
+    ggsave(file.path(plot_dir, sprintf("04_lambda_vs_tnr_%s.png", suffix)), p4, width = 10, height = 6, dpi = 300)
     ggsave(file.path(plot_dir, sprintf("05_lambda_vs_recall_%s.png", suffix)), p5, width = 10, height = 6, dpi = 300)
     ggsave(file.path(plot_dir, sprintf("06_lambda_vs_precision_%s.png", suffix)), p6, width = 10, height = 6, dpi = 300)
     ggsave(file.path(plot_dir, sprintf("07_lambda_vs_f1_%s.png", suffix)), p7, width = 10, height = 6, dpi = 300)
@@ -297,7 +379,7 @@ create_plots_for_n <- function(data_n, n_value, output_dir) {
     ggsave(file.path(plot_dir, sprintf("11_outlier_analysis_%s.png", suffix)), p11, width = 10, height = 6, dpi = 300)
     
     # Create combined plot
-    combined <- (p1 + p2) / (p3 + p4) / (p5 + p6) / (p7 + p8) / (p9 + p10) +
+    combined <- (p1 + p2) / (p3 + p4) / (p5 + p6) / (p7 + p8) +
       plot_annotation(
         title = sprintf("Ring Experiment Results Summary (N = %d)%s", n_value, title_suffix),
         subtitle = sprintf("Based on %d runs per parameter combination", unique(subset_data$n_runs)),
@@ -311,6 +393,22 @@ create_plots_for_n <- function(data_n, n_value, output_dir) {
       height = 30, 
       dpi = 300
     )
+    
+    # Create a separate combined plot that includes the confusion matrix
+    combined_with_cm <- (p1 + p2) / (p3 + p4) / (p_confusion) +
+      plot_annotation(
+        title = sprintf("Ring Experiment Confusion Matrix Analysis (N = %d)%s", n_value, title_suffix),
+        subtitle = sprintf("Based on %d runs per parameter combination", unique(subset_data$n_runs)),
+        theme = theme(plot.title = element_text(size = 16, face = "bold"))
+      )
+    
+    ggsave(
+      file.path(plot_dir, sprintf("00_confusion_analysis_%s.png", suffix)), 
+      combined_with_cm, 
+      width = 20, 
+      height = 20, 
+      dpi = 300
+    )
   }
 }
 
@@ -319,6 +417,27 @@ create_combined_plots <- function(aggregated_data, output_dir) {
   # Separate constant and non-constant perturbations
   data_const <- aggregated_data %>% filter(perturbation_type %in% c("const_high", "const_low"))
   data_non_const <- aggregated_data %>% filter(!perturbation_type %in% c("const_high", "const_low"))
+  
+  # Calculate additional rate metrics for both datasets
+  if(nrow(data_const) > 0) {
+    data_const <- data_const %>%
+      mutate(
+        TPR = TP_mean / (TP_mean + FN_mean),
+        FNR = FN_mean / (TP_mean + FN_mean),
+        FPR = FP_mean / (FP_mean + TN_mean),
+        TNR = TN_mean / (FP_mean + TN_mean)
+      )
+  }
+  
+  if(nrow(data_non_const) > 0) {
+    data_non_const <- data_non_const %>%
+      mutate(
+        TPR = TP_mean / (TP_mean + FN_mean),
+        FNR = FN_mean / (TP_mean + FN_mean),
+        FPR = FP_mean / (FP_mean + TN_mean),
+        TNR = TN_mean / (FP_mean + TN_mean)
+      )
+  }
   
   combined_dir <- file.path(output_dir, "combined_all_N")
   dir.create(combined_dir, showWarnings = FALSE, recursive = TRUE)
@@ -345,51 +464,85 @@ create_combined_plots <- function(aggregated_data, output_dir) {
     # Skip if no data for this subset
     if (nrow(subset_data) == 0) next
     
-    # 1. F1 Score across all N
-    p_f1_all <- ggplot(subset_data, aes(x = lambda_actual, y = f1_mean, color = as.factor(N))) +
+    # Create cross-network plots for rates instead of counts
+    # TPR across all N
+    p_tpr_all <- ggplot(subset_data, aes(x = lambda_actual, y = TPR, color = as.factor(N))) +
       geom_point(size = 3) +
-      geom_line(aes(group = as.factor(N)), alpha = 0.5) +
-      geom_errorbar(aes(ymin = f1_mean - f1_sd, ymax = f1_mean + f1_sd), width = 0.02, alpha = 0.5) +
+      geom_line(aes(group = as.factor(N)), alpha = 0.5, linewidth = 0.7) +
       scale_x_log10(labels = scales::number_format(accuracy = 0.001)) +
       scale_y_continuous(labels = percent_format(), limits = c(0, 1)) +
       labs(
-        title = paste0("F1 Score vs Lambda for Different Network Sizes", title_suffix),
+        title = paste0("True Positive Rate vs P(edge) for Different Network Sizes", title_suffix),
+        subtitle = "Proportion of actual critical links correctly identified across network scales",
+        x = "P(edge) in log scale",
+        y = "True Positive Rate",
+        color = "Network Size (N)"
+      ) +
+      theme_white +
+      scale_color_viridis_d(end = 0.8)
+    
+    # FPR across all N
+    p_fpr_all <- ggplot(subset_data, aes(x = lambda_actual, y = FPR, color = as.factor(N))) +
+      geom_point(size = 3) +
+      geom_line(aes(group = as.factor(N)), alpha = 0.5, linewidth = 0.7) +
+      scale_x_log10(labels = scales::number_format(accuracy = 0.001)) +
+      scale_y_continuous(labels = percent_format(), limits = c(0, 1)) +
+      labs(
+        title = paste0("False Positive Rate vs P(edge) for Different Network Sizes", title_suffix),
+        subtitle = "Proportion of non-critical links incorrectly identified as critical across network scales",
+        x = "P(edge) in log scale",
+        y = "False Positive Rate",
+        color = "Network Size (N)"
+      ) +
+      theme_white +
+      scale_color_viridis_d(end = 0.8)
+    
+    # 1. F1 Score across all N - Add this missing plot
+    p_f1_all <- ggplot(subset_data, aes(x = lambda_actual, y = f1_mean, color = as.factor(N))) +
+      geom_point(size = 3) +
+      geom_line(aes(group = as.factor(N)), alpha = 0.5, linewidth = 0.7) +
+      geom_errorbar(aes(ymin = f1_mean - f1_sd, ymax = f1_mean + f1_sd), width = 0.02, alpha = 0.5, linewidth = 0.5) +
+      scale_x_log10(labels = scales::number_format(accuracy = 0.001)) +
+      scale_y_continuous(labels = percent_format(), limits = c(0, 1)) +
+      labs(
+        title = paste0("F1 Score vs P(edge) for Different Network Sizes", title_suffix),
         subtitle = "Performance comparison across network scales",
-        x = "Lambda Value (log scale)",
+        x = "P(edge) in log scale",
         y = "F1 Score",
         color = "Network Size (N)"
       ) +
       theme_white +
       scale_color_viridis_d(end = 0.8)
     
-    # 2. MCC across all N
+    # 2. MCC across all N - Add this missing plot
     p_mcc_all <- ggplot(subset_data, aes(x = lambda_actual, y = mcc_mean, color = as.factor(N))) +
       geom_point(size = 3) +
-      geom_line(aes(group = as.factor(N)), alpha = 0.5) +
-      geom_errorbar(aes(ymin = mcc_mean - mcc_sd, ymax = mcc_mean + mcc_sd), width = 0.02, alpha = 0.5) +
+      geom_line(aes(group = as.factor(N)), alpha = 0.5, linewidth = 0.7) +
+      geom_errorbar(aes(ymin = mcc_mean - mcc_sd, ymax = mcc_mean + mcc_sd), width = 0.02, alpha = 0.5, linewidth = 0.5) +
       scale_x_log10(labels = scales::number_format(accuracy = 0.001)) +
       scale_y_continuous(limits = c(-1, 1)) +
       labs(
-        title = paste0("Matthews Correlation Coefficient vs Lambda for Different Network Sizes", title_suffix),
+        title = paste0("Matthews Correlation Coefficient vs P(edge) for Different Network Sizes", title_suffix),
         subtitle = "Balanced classification performance across network scales",
-        x = "Lambda Value (log scale)",
+        x = "P(edge) in log scale",
         y = "MCC",
         color = "Network Size (N)"
       ) +
       theme_white +
       scale_color_viridis_d(end = 0.8)
     
+    # Continue with existing plots like recall, precision, etc.
     # 3. Recall across all N
     p_recall_all <- ggplot(subset_data, aes(x = lambda_actual, y = recall_mean, color = as.factor(N))) +
       geom_point(size = 3) +
-      geom_line(aes(group = as.factor(N)), alpha = 0.5) +
-      geom_errorbar(aes(ymin = recall_mean - recall_sd, ymax = recall_mean + recall_sd), width = 0.02, alpha = 0.5) +
+      geom_line(aes(group = as.factor(N)), alpha = 0.5, linewidth = 0.7) +
+      geom_errorbar(aes(ymin = recall_mean - recall_sd, ymax = recall_mean + recall_sd), width = 0.02, alpha = 0.5, linewidth = 0.5) +
       scale_x_log10(labels = scales::number_format(accuracy = 0.001)) +
       scale_y_continuous(labels = percent_format(), limits = c(0, 1)) +
       labs(
-        title = paste0("Recall vs Lambda for Different Network Sizes", title_suffix),
+        title = paste0("Recall vs P(edge) for Different Network Sizes", title_suffix),
         subtitle = "Sensitivity across network scales",
-        x = "Lambda Value (log scale)",
+        x = "P(edge) in log scale",
         y = "Recall",
         color = "Network Size (N)"
       ) +
@@ -399,33 +552,36 @@ create_combined_plots <- function(aggregated_data, output_dir) {
     # 4. Precision across all N
     p_precision_all <- ggplot(subset_data, aes(x = lambda_actual, y = precision_mean, color = as.factor(N))) +
       geom_point(size = 3) +
-      geom_line(aes(group = as.factor(N)), alpha = 0.5) +
-      geom_errorbar(aes(ymin = precision_mean - precision_sd, ymax = precision_mean + precision_sd), width = 0.02, alpha = 0.5) +
+      geom_line(aes(group = as.factor(N)), alpha = 0.5, linewidth = 0.7) +
+      geom_errorbar(aes(ymin = precision_mean - precision_sd, ymax = precision_mean + precision_sd), width = 0.02, alpha = 0.5, linewidth = 0.5) +
       scale_x_log10(labels = scales::number_format(accuracy = 0.001)) +
       scale_y_continuous(labels = percent_format(), limits = c(0, 1)) +
       labs(
-        title = paste0("Precision vs Lambda for Different Network Sizes", title_suffix),
+        title = paste0("Precision vs P(edge) for Different Network Sizes", title_suffix),
         subtitle = "Positive predictive value across network scales",
-        x = "Lambda Value (log scale)",
+        x = "P(edge) in log scale",
         y = "Precision",
         color = "Network Size (N)"
       ) +
       theme_white +
       scale_color_viridis_d(end = 0.8)
     
-    # 5. Runtime scaling
+    # 5. Runtime scaling - Modified to handle zeros or very small values
     p_runtime_all <- ggplot(subset_data, aes(x = N, y = runtime_mean, color = as.factor(lambda_rounded))) +
       geom_point(size = 3) +
-      geom_line(aes(group = as.factor(lambda_rounded)), alpha = 0.5) +
-      geom_errorbar(aes(ymin = runtime_mean - runtime_sd, ymax = runtime_mean + runtime_sd), width = 0.02, alpha = 0.5) +
+      geom_line(aes(group = as.factor(lambda_rounded)), alpha = 0.5, linewidth = 0.7) +
+      geom_errorbar(aes(ymin = pmax(0.001, runtime_mean - runtime_sd), 
+                        ymax = runtime_mean + runtime_sd), width = 0.02, alpha = 0.5, linewidth = 0.5) +
       scale_x_log10() +
-      scale_y_log10() +
+      # Use pseudo_log to handle zeros or very small values properly
+      scale_y_continuous(trans = scales::pseudo_log_trans(base = 10),
+                        labels = scales::label_number()) +
       labs(
         title = paste0("Runtime Scaling with Network Size", title_suffix),
         subtitle = "Computational complexity analysis",
         x = "Network Size (N, log scale)",
-        y = "Runtime (seconds, log scale)",
-        color = "Lambda Value"
+        y = "Runtime (seconds, pseudo-log scale)",
+        color = "P(edge)"
       ) +
       theme_white +
       scale_color_viridis_d(end = 0.8)
@@ -433,8 +589,8 @@ create_combined_plots <- function(aggregated_data, output_dir) {
     # 6. Predicted ratio across all N
     p_ratio_all <- ggplot(subset_data, aes(x = lambda_actual, y = predicted_ratio, color = as.factor(N))) +
       geom_point(size = 3) +
-      geom_line(aes(group = as.factor(N)), alpha = 0.5) +
-      geom_hline(yintercept = 1, linetype = "dashed", alpha = 0.5) +
+      geom_line(aes(group = as.factor(N)), alpha = 0.5, linewidth = 0.7) +
+      geom_hline(yintercept = 1, linetype = "dashed", alpha = 0.5, linewidth = 0.7) +
       scale_x_log10(labels = scales::number_format(accuracy = 0.001)) +
       labs(
         title = paste0("Predicted/True Ratio vs Lambda for Different Network Sizes", title_suffix),
@@ -447,6 +603,8 @@ create_combined_plots <- function(aggregated_data, output_dir) {
       scale_color_viridis_d(end = 0.8)
     
     # Save plots
+    ggsave(file.path(combined_dir, sprintf("tpr_all_n_%s.png", suffix)), p_tpr_all, width = 12, height = 8, dpi = 300)
+    ggsave(file.path(combined_dir, sprintf("fpr_all_n_%s.png", suffix)), p_fpr_all, width = 12, height = 8, dpi = 300)
     ggsave(file.path(combined_dir, sprintf("f1_score_all_n_%s.png", suffix)), p_f1_all, width = 12, height = 8, dpi = 300)
     ggsave(file.path(combined_dir, sprintf("mcc_all_n_%s.png", suffix)), p_mcc_all, width = 12, height = 8, dpi = 300)
     ggsave(file.path(combined_dir, sprintf("recall_all_n_%s.png", suffix)), p_recall_all, width = 12, height = 8, dpi = 300)
@@ -455,10 +613,10 @@ create_combined_plots <- function(aggregated_data, output_dir) {
     ggsave(file.path(combined_dir, sprintf("predicted_ratio_all_n_%s.png", suffix)), p_ratio_all, width = 12, height = 8, dpi = 300)
     
     # Create summary dashboard
-    dashboard <- (p_f1_all + p_mcc_all) / (p_recall_all + p_precision_all) / (p_ratio_all + p_runtime_all) +
+    dashboard <- (p_tpr_all + p_fpr_all) / (p_recall_all + p_precision_all) / (p_f1_all + p_mcc_all) +
       plot_annotation(
         title = paste0("Ring Experiment Results: Cross-Network Comparison", title_suffix),
-        subtitle = "Performance metrics across different network sizes and lambda values",
+        subtitle = "Performance metrics across different network sizes and edge probabilities",
         theme = theme(plot.title = element_text(size = 18, face = "bold"))
       )
     
