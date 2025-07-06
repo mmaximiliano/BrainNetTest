@@ -332,10 +332,13 @@ create_plots_for_n <- function(data_n, n_value, output_dir) {
         name = "Rate"
       )
       
+      # Create a custom labeller function that explicitly formats the labels
+      p_edge_labeller <- labeller(lambda_rounded = function(x) paste("P(edge):", x))
+      
       # Create a faceted plot for each lambda value
       confusion_plot <- ggplot(cm_data, aes(x = predicted_class, y = true_class, fill = rate)) +
         geom_tile(color = "black", linewidth = 0.5) +
-        facet_wrap(~ lambda_rounded, labeller = label_both, ncol = 4) +
+        facet_wrap(~ lambda_rounded, labeller = p_edge_labeller, ncol = 4) +
         geom_text(aes(label = sprintf("%.2f", rate)), color = "black", size = 3) +
         heatmap_colors +
         scale_x_discrete(position = "top") +
