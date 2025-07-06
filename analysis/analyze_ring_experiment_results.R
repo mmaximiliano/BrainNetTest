@@ -122,13 +122,32 @@ create_plots_for_n <- function(data_n, n_value, output_dir) {
         # False Positive Rate (FPR) = FP / (FP + TN)
         FPR = FP_mean / (FP_mean + TN_mean),
         # True Negative Rate (TNR / Specificity) = TN / (FP + TN)
-        TNR = TN_mean / (FP_mean + TN_mean)
+        TNR = TN_mean / (FP_mean + TN_mean),
+        
+        # Calculate standard deviations for the rates
+        # Using error propagation formula for ratio of means
+        # For TPR and FNR (use recall_sd as an approximation)
+        TPR_sd = recall_sd,
+        FNR_sd = recall_sd,
+        
+        # For FPR and TNR (use TN_sd and FP_sd to estimate)
+        # Standard deviation of TNR can be approximated from the raw counts
+        TNR_sd = TNR * sqrt((TN_sd/TN_mean)^2 + (FP_sd/FP_mean)^2) * 0.5,
+        FPR_sd = FPR * sqrt((FP_sd/FP_mean)^2 + (TN_sd/TN_mean)^2) * 0.5
+      ) %>%
+      # Handle edge cases where the standard deviation calculation might produce NaN/Inf
+      mutate(
+        # Fix NaN or Inf values by replacing with a small default value
+        TPR_sd = ifelse(is.nan(TPR_sd) | is.infinite(TPR_sd) | is.na(TPR_sd), 0.05, TPR_sd),
+        FNR_sd = ifelse(is.nan(FNR_sd) | is.infinite(FNR_sd) | is.na(FNR_sd), 0.05, FNR_sd),
+        TNR_sd = ifelse(is.nan(TNR_sd) | is.infinite(TNR_sd) | is.na(TNR_sd), 0.05, TNR_sd),
+        FPR_sd = ifelse(is.nan(FPR_sd) | is.infinite(FPR_sd) | is.na(FPR_sd), 0.05, FPR_sd)
       )
     
     # 1. Lambda vs TPR (instead of TP)
     p1 <- ggplot(subset_data, aes(x = lambda_actual, y = TPR, color = as.factor(lambda_rounded))) +
       geom_point(size = 3) +
-      geom_errorbar(aes(ymin = pmax(0, TPR - recall_sd), ymax = pmin(1, TPR + recall_sd)), width = 0.02, linewidth = 0.5) +
+      geom_errorbar(aes(ymin = pmax(0, TPR - TPR_sd), ymax = pmin(1, TPR + TPR_sd)), width = 0.02, linewidth = 0.5) +
       scale_x_log10(labels = scales::number_format(accuracy = 0.001)) +
       scale_y_continuous(labels = percent_format(), limits = c(0, 1)) +
       labs(
@@ -145,7 +164,8 @@ create_plots_for_n <- function(data_n, n_value, output_dir) {
     # 2. Lambda vs FPR (instead of FP)
     p2 <- ggplot(subset_data, aes(x = lambda_actual, y = FPR, color = as.factor(lambda_rounded))) +
       geom_point(size = 3) +
-      geom_errorbar(aes(ymin = pmax(0, FPR - FPR), ymax = pmin(1, FPR + FPR)), width = 0.02, linewidth = 0.5) +
+      # Fix the error bar calculation to use FPR_sd
+      geom_errorbar(aes(ymin = pmax(0, FPR - FPR_sd), ymax = pmin(1, FPR + FPR_sd)), width = 0.02, linewidth = 0.5) +
       scale_x_log10(labels = scales::number_format(accuracy = 0.001)) +
       scale_y_continuous(labels = percent_format(), limits = c(0, 1)) +
       labs(
@@ -161,7 +181,8 @@ create_plots_for_n <- function(data_n, n_value, output_dir) {
     # 3. Lambda vs FNR (instead of FN)
     p3 <- ggplot(subset_data, aes(x = lambda_actual, y = FNR, color = as.factor(lambda_rounded))) +
       geom_point(size = 3) +
-      geom_errorbar(aes(ymin = pmax(0, FNR - FNR), ymax = pmin(1, FNR + FNR)), width = 0.02, linewidth = 0.5) +
+      # Fix the error bar calculation to use FNR_sd
+      geom_errorbar(aes(ymin = pmax(0, FNR - FNR_sd), ymax = pmin(1, FNR + FNR_sd)), width = 0.02, linewidth = 0.5) +
       scale_x_log10(labels = scales::number_format(accuracy = 0.001)) +
       scale_y_continuous(labels = percent_format(), limits = c(0, 1)) +
       labs(
@@ -177,7 +198,8 @@ create_plots_for_n <- function(data_n, n_value, output_dir) {
     # 4. Lambda vs TNR (instead of TN)
     p4 <- ggplot(subset_data, aes(x = lambda_actual, y = TNR, color = as.factor(lambda_rounded))) +
       geom_point(size = 3) +
-      geom_errorbar(aes(ymin = pmax(0, TNR - TNR), ymax = pmin(1, TNR + TNR)), width = 0.02, linewidth = 0.5) +
+      # Fix the error bar calculation to use TNR_sd
+      geom_errorbar(aes(ymin = pmax(0, TNR - TNR_sd), ymax = pmin(1, TNR + TNR_sd)), width = 0.02, linewidth = 0.5) +
       scale_x_log10(labels = scales::number_format(accuracy = 0.001)) +
       scale_y_continuous(labels = percent_format(), limits = c(0, 1)) +
       labs(
