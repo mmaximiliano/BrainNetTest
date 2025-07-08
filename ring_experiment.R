@@ -1433,7 +1433,7 @@ main_validation <- function(quick_test = FALSE, nodes = 10000, master_seed = 42,
     cat("Running quick test...\n")
   } else {
     # Full validation
-    N_values <- c(300, 400, 500)
+    N_values <- c(50, 100)
 
     # Default perturbation types for full validation if not specified
     if (is.null(perturbation_types)) {
@@ -1495,6 +1495,14 @@ main_validation <- function(quick_test = FALSE, nodes = 10000, master_seed = 42,
 # Uncomment to run the full validation (takes a long time)
  full_validation <- main_validation(
    master_seed = 45,
+   lambda_multipliers = list(
+     "lambda_half" = c(0.5, 0.33, 0.25, 0.2, 0.167, 0.143, 0.125, 0.111, 0.1),
+     "lambda_double" = c(2, 3, 4, 5, 6, 7, 8, 9, 10)
+   ),
+   p_const_values = list(
+     "const_high" = c(0.5, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 0.99),
+     "const_low" = c(0.01, 0.03, 0.05, 0.07, 0.09, 0.1, 0.15, 0.2, 0.25, 0.3, 0.4)
+   ),
    output_dir = "results/full_validation"
  )
 
