@@ -12,7 +12,7 @@ read_experiment_results <- function(results_dir) {
   # Find all summary CSV files
   summary_files <- list.files(
     path = file.path(results_dir, "summaries"),
-    pattern = "^summary_N_00010.*\\.csv$",
+    pattern = "^summary_N_00050.*\\.csv$",
     full.names = TRUE
   )
   
@@ -671,7 +671,7 @@ analyze_ring_experiment <- function(experiment_dir) {
     # If running interactively, use the current working directory
     script_dir <- getwd()
   }
-  output_dir <- file.path(script_dir, "ring_experiment_analysis_plots")
+  output_dir <- file.path(script_dir, "ring_experiment_deep_analysis_plots")
   dir.create(output_dir, showWarnings = FALSE, recursive = TRUE)
   
   # Create plots for each N value
@@ -734,6 +734,6 @@ create_summary_report <- function(aggregated_data, output_dir) {
 # Example usage
 if (interactive()) {
   # Replace with your actual experiment directory
-  experiment_dir <- "results/full_validation/ring_exp_20250627_120647"
+  experiment_dir <- "results/full_validation/ring_exp_20250707_004903"
   analyze_ring_experiment(experiment_dir)
 }
