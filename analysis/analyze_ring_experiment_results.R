@@ -152,8 +152,25 @@ create_plots_for_n <- function(data_n, n_value, output_dir) {
       scale_y_continuous(labels = percent_format(), limits = c(0, 1)) +
       labs(
         title = sprintf("True Positive Rate vs P(edge) (N = %d)%s", n_value, title_suffix),
-        subtitle = "Proportion of actual critical links correctly identified (Recall)",
+        subtitle = "Proportion of actual critical links correctly identified (Recall) - Log Scale",
         x = "P(edge) in log scale",
+        y = "True Positive Rate",
+        color = "P(edge)"
+      ) +
+      theme_white +
+      color_palette +
+      theme(legend.position = "right")
+    
+    # Linear scale version
+    p1_linear <- ggplot(subset_data, aes(x = lambda_actual, y = TPR, color = as.factor(lambda_rounded))) +
+      geom_point(size = 3) +
+      geom_errorbar(aes(ymin = pmax(0, TPR - TPR_sd), ymax = pmin(1, TPR + TPR_sd)), width = 0.02, linewidth = 0.5) +
+      scale_x_continuous(labels = scales::number_format(accuracy = 0.001)) +
+      scale_y_continuous(labels = percent_format(), limits = c(0, 1)) +
+      labs(
+        title = sprintf("True Positive Rate vs P(edge) (N = %d)%s", n_value, title_suffix),
+        subtitle = "Proportion of actual critical links correctly identified (Recall) - Linear Scale",
+        x = "P(edge) in linear scale",
         y = "True Positive Rate",
         color = "P(edge)"
       ) +
@@ -170,8 +187,24 @@ create_plots_for_n <- function(data_n, n_value, output_dir) {
       scale_y_continuous(labels = percent_format(), limits = c(0, 1)) +
       labs(
         title = sprintf("False Positive Rate vs P(edge) (N = %d)%s", n_value, title_suffix),
-        subtitle = "Proportion of non-critical links incorrectly identified as critical",
+        subtitle = "Proportion of non-critical links incorrectly identified as critical - Log Scale",
         x = "P(edge) in log scale",
+        y = "False Positive Rate",
+        color = "P(edge)"
+      ) +
+      theme_white +
+      color_palette
+    
+    # Linear scale version
+    p2_linear <- ggplot(subset_data, aes(x = lambda_actual, y = FPR, color = as.factor(lambda_rounded))) +
+      geom_point(size = 3) +
+      geom_errorbar(aes(ymin = pmax(0, FPR - FPR_sd), ymax = pmin(1, FPR + FPR_sd)), width = 0.02, linewidth = 0.5) +
+      scale_x_continuous(labels = scales::number_format(accuracy = 0.001)) +
+      scale_y_continuous(labels = percent_format(), limits = c(0, 1)) +
+      labs(
+        title = sprintf("False Positive Rate vs P(edge) (N = %d)%s", n_value, title_suffix),
+        subtitle = "Proportion of non-critical links incorrectly identified as critical - Linear Scale",
+        x = "P(edge) in linear scale",
         y = "False Positive Rate",
         color = "P(edge)"
       ) +
@@ -187,8 +220,24 @@ create_plots_for_n <- function(data_n, n_value, output_dir) {
       scale_y_continuous(labels = percent_format(), limits = c(0, 1)) +
       labs(
         title = sprintf("False Negative Rate vs P(edge) (N = %d)%s", n_value, title_suffix),
-        subtitle = "Proportion of actual critical links missed",
+        subtitle = "Proportion of actual critical links missed - Log Scale",
         x = "P(edge) in log scale",
+        y = "False Negative Rate",
+        color = "P(edge)"
+      ) +
+      theme_white +
+      color_palette
+    
+    # Linear scale version
+    p3_linear <- ggplot(subset_data, aes(x = lambda_actual, y = FNR, color = as.factor(lambda_rounded))) +
+      geom_point(size = 3) +
+      geom_errorbar(aes(ymin = pmax(0, FNR - FNR_sd), ymax = pmin(1, FNR + FNR_sd)), width = 0.02, linewidth = 0.5) +
+      scale_x_continuous(labels = scales::number_format(accuracy = 0.001)) +
+      scale_y_continuous(labels = percent_format(), limits = c(0, 1)) +
+      labs(
+        title = sprintf("False Negative Rate vs P(edge) (N = %d)%s", n_value, title_suffix),
+        subtitle = "Proportion of actual critical links missed - Linear Scale",
+        x = "P(edge) in linear scale",
         y = "False Negative Rate",
         color = "P(edge)"
       ) +
@@ -204,8 +253,24 @@ create_plots_for_n <- function(data_n, n_value, output_dir) {
       scale_y_continuous(labels = percent_format(), limits = c(0, 1)) +
       labs(
         title = sprintf("True Negative Rate vs P(edge) (N = %d)%s", n_value, title_suffix),
-        subtitle = "Proportion of non-critical links correctly identified (Specificity)",
+        subtitle = "Proportion of non-critical links correctly identified (Specificity) - Log Scale",
         x = "P(edge) in log scale",
+        y = "True Negative Rate",
+        color = "P(edge)"
+      ) +
+      theme_white +
+      color_palette
+    
+    # Linear scale version
+    p4_linear <- ggplot(subset_data, aes(x = lambda_actual, y = TNR, color = as.factor(lambda_rounded))) +
+      geom_point(size = 3) +
+      geom_errorbar(aes(ymin = pmax(0, TNR - TNR_sd), ymax = pmin(1, TNR + TNR_sd)), width = 0.02, linewidth = 0.5) +
+      scale_x_continuous(labels = scales::number_format(accuracy = 0.001)) +
+      scale_y_continuous(labels = percent_format(), limits = c(0, 1)) +
+      labs(
+        title = sprintf("True Negative Rate vs P(edge) (N = %d)%s", n_value, title_suffix),
+        subtitle = "Proportion of non-critical links correctly identified (Specificity) - Linear Scale",
+        x = "P(edge) in linear scale",
         y = "True Negative Rate",
         color = "P(edge)"
       ) +
@@ -220,8 +285,24 @@ create_plots_for_n <- function(data_n, n_value, output_dir) {
       scale_y_continuous(labels = percent_format(), limits = c(0, 1)) +
       labs(
         title = sprintf("Recall vs P(edge) (N = %d)%s", n_value, title_suffix),
-        subtitle = "Proportion of actual critical links correctly identified",
+        subtitle = "Proportion of actual critical links correctly identified - Log Scale",
         x = "P(edge) in log scale",
+        y = "Recall",
+        color = "P(edge)"
+      ) +
+      theme_white +
+      color_palette
+    
+    # Linear scale version
+    p5_linear <- ggplot(subset_data, aes(x = lambda_actual, y = recall_mean, color = as.factor(lambda_rounded))) +
+      geom_point(size = 3) +
+      geom_errorbar(aes(ymin = pmax(0, recall_mean - recall_sd), ymax = pmin(1, recall_mean + recall_sd)), width = 0.02, linewidth = 0.5) +
+      scale_x_continuous(labels = scales::number_format(accuracy = 0.001)) +
+      scale_y_continuous(labels = percent_format(), limits = c(0, 1)) +
+      labs(
+        title = sprintf("Recall vs P(edge) (N = %d)%s", n_value, title_suffix),
+        subtitle = "Proportion of actual critical links correctly identified - Linear Scale",
+        x = "P(edge) in linear scale",
         y = "Recall",
         color = "P(edge)"
       ) +
@@ -236,8 +317,24 @@ create_plots_for_n <- function(data_n, n_value, output_dir) {
       scale_y_continuous(labels = percent_format(), limits = c(0, 1)) +
       labs(
         title = sprintf("Precision vs P(edge) (N = %d)%s", n_value, title_suffix),
-        subtitle = "Proportion of predicted critical links that are correct",
+        subtitle = "Proportion of predicted critical links that are correct - Log Scale",
         x = "P(edge) in log scale",
+        y = "Precision",
+        color = "P(edge)"
+      ) +
+      theme_white +
+      color_palette
+    
+    # Linear scale version
+    p6_linear <- ggplot(subset_data, aes(x = lambda_actual, y = precision_mean, color = as.factor(lambda_rounded))) +
+      geom_point(size = 3) +
+      geom_errorbar(aes(ymin = pmax(0, precision_mean - precision_sd), ymax = pmin(1, precision_mean + precision_sd)), width = 0.02, linewidth = 0.5) +
+      scale_x_continuous(labels = scales::number_format(accuracy = 0.001)) +
+      scale_y_continuous(labels = percent_format(), limits = c(0, 1)) +
+      labs(
+        title = sprintf("Precision vs P(edge) (N = %d)%s", n_value, title_suffix),
+        subtitle = "Proportion of predicted critical links that are correct - Linear Scale",
+        x = "P(edge) in linear scale",
         y = "Precision",
         color = "P(edge)"
       ) +
@@ -252,8 +349,24 @@ create_plots_for_n <- function(data_n, n_value, output_dir) {
       scale_y_continuous(labels = percent_format(), limits = c(0, 1)) +
       labs(
         title = sprintf("F1 Score vs P(edge) (N = %d)%s", n_value, title_suffix),
-        subtitle = "Harmonic mean of precision and recall",
+        subtitle = "Harmonic mean of precision and recall - Log Scale",
         x = "P(edge) in log scale",
+        y = "F1 Score",
+        color = "P(edge)"
+      ) +
+      theme_white +
+      color_palette
+    
+    # Linear scale version
+    p7_linear <- ggplot(subset_data, aes(x = lambda_actual, y = f1_mean, color = as.factor(lambda_rounded))) +
+      geom_point(size = 3) +
+      geom_errorbar(aes(ymin = pmax(0, f1_mean - f1_sd), ymax = pmin(1, f1_mean + f1_sd)), width = 0.02, linewidth = 0.5) +
+      scale_x_continuous(labels = scales::number_format(accuracy = 0.001)) +
+      scale_y_continuous(labels = percent_format(), limits = c(0, 1)) +
+      labs(
+        title = sprintf("F1 Score vs P(edge) (N = %d)%s", n_value, title_suffix),
+        subtitle = "Harmonic mean of precision and recall - Linear Scale",
+        x = "P(edge) in linear scale",
         y = "F1 Score",
         color = "P(edge)"
       ) +
@@ -268,8 +381,24 @@ create_plots_for_n <- function(data_n, n_value, output_dir) {
       scale_y_continuous(limits = c(-1, 1)) +
       labs(
         title = sprintf("Matthews Correlation Coefficient vs P(edge) (N = %d)%s", n_value, title_suffix),
-        subtitle = "Balanced measure of binary classification quality",
+        subtitle = "Balanced measure of binary classification quality - Log Scale",
         x = "P(edge) in log scale",
+        y = "MCC",
+        color = "P(edge)"
+      ) +
+      theme_white +
+      color_palette
+    
+    # Linear scale version
+    p8_linear <- ggplot(subset_data, aes(x = lambda_actual, y = mcc_mean, color = as.factor(lambda_rounded))) +
+      geom_point(size = 3) +
+      geom_errorbar(aes(ymin = pmax(-1, mcc_mean - mcc_sd), ymax = pmin(1, mcc_mean + mcc_sd)), width = 0.02, linewidth = 0.5) +
+      scale_x_continuous(labels = scales::number_format(accuracy = 0.001)) +
+      scale_y_continuous(limits = c(-1, 1)) +
+      labs(
+        title = sprintf("Matthews Correlation Coefficient vs P(edge) (N = %d)%s", n_value, title_suffix),
+        subtitle = "Balanced measure of binary classification quality - Linear Scale",
+        x = "P(edge) in linear scale",
         y = "MCC",
         color = "P(edge)"
       ) +
@@ -283,8 +412,23 @@ create_plots_for_n <- function(data_n, n_value, output_dir) {
       scale_x_log10(labels = scales::number_format(accuracy = 0.001)) +
       labs(
         title = sprintf("Predicted/True Ratio vs P(edge) (N = %d)%s", n_value, title_suffix),
-        subtitle = "Ratio of predicted to actual number of critical links",
+        subtitle = "Ratio of predicted to actual number of critical links - Log Scale",
         x = "P(edge) in log scale",
+        y = "Predicted/True Ratio",
+        color = "P(edge)"
+      ) +
+      theme_white +
+      color_palette
+    
+    # Linear scale version
+    p9_linear <- ggplot(subset_data, aes(x = lambda_actual, y = predicted_ratio, color = as.factor(lambda_rounded))) +
+      geom_point(size = 3) +
+      geom_hline(yintercept = 1, linetype = "dashed", alpha = 0.5) +
+      scale_x_continuous(labels = scales::number_format(accuracy = 0.001)) +
+      labs(
+        title = sprintf("Predicted/True Ratio vs P(edge) (N = %d)%s", n_value, title_suffix),
+        subtitle = "Ratio of predicted to actual number of critical links - Linear Scale",
+        x = "P(edge) in linear scale",
         y = "Predicted/True Ratio",
         color = "P(edge)"
       ) +
@@ -298,7 +442,7 @@ create_plots_for_n <- function(data_n, n_value, output_dir) {
       scale_x_log10(labels = scales::number_format(accuracy = 0.001)) +
       labs(
         title = sprintf("TP-FN Tradeoff vs P(edge) (N = %d)%s", n_value, title_suffix),
-        subtitle = "Difference between true positives and false negatives",
+        subtitle = "Difference between true positives and false negatives - Log Scale",
         x = "P(edge) in log scale",
         y = "TP - FN",
         color = "P(edge)"
@@ -306,6 +450,52 @@ create_plots_for_n <- function(data_n, n_value, output_dir) {
       theme_white +
       color_palette
     
+    # Linear scale version
+    p10_linear <- ggplot(subset_data, aes(x = lambda_actual, y = tp_fn_tradeoff, color = as.factor(lambda_rounded))) +
+      geom_point(size = 3) +
+      geom_hline(yintercept = 0, linetype = "dashed", alpha = 0.5) +
+      scale_x_continuous(labels = scales::number_format(accuracy = 0.001)) +
+      labs(
+        title = sprintf("TP-FN Tradeoff vs P(edge) (N = %d)%s", n_value, title_suffix),
+        subtitle = "Difference between true positives and false negatives - Linear Scale",
+        x = "P(edge) in linear scale",
+        y = "TP - FN",
+        color = "P(edge)"
+      ) +
+      theme_white +
+      color_palette
+    
+    # Save individual plots (log and linear scale)
+    ggsave(file.path(plot_dir, sprintf("01_lambda_vs_tpr_%s.png", suffix)), p1, width = 10, height = 6, dpi = 300)
+    ggsave(file.path(plot_dir, sprintf("01_lambda_vs_tpr_%s_linear.png", suffix)), p1_linear, width = 10, height = 6, dpi = 300)
+    
+    ggsave(file.path(plot_dir, sprintf("02_lambda_vs_fpr_%s.png", suffix)), p2, width = 10, height = 6, dpi = 300)
+    ggsave(file.path(plot_dir, sprintf("02_lambda_vs_fpr_%s_linear.png", suffix)), p2_linear, width = 10, height = 6, dpi = 300)
+    
+    ggsave(file.path(plot_dir, sprintf("03_lambda_vs_fnr_%s.png", suffix)), p3, width = 10, height = 6, dpi = 300)
+    ggsave(file.path(plot_dir, sprintf("03_lambda_vs_fnr_%s_linear.png", suffix)), p3_linear, width = 10, height = 6, dpi = 300)
+    
+    ggsave(file.path(plot_dir, sprintf("04_lambda_vs_tnr_%s.png", suffix)), p4, width = 10, height = 6, dpi = 300)
+    ggsave(file.path(plot_dir, sprintf("04_lambda_vs_tnr_%s_linear.png", suffix)), p4_linear, width = 10, height = 6, dpi = 300)
+    
+    ggsave(file.path(plot_dir, sprintf("05_lambda_vs_recall_%s.png", suffix)), p5, width = 10, height = 6, dpi = 300)
+    ggsave(file.path(plot_dir, sprintf("05_lambda_vs_recall_%s_linear.png", suffix)), p5_linear, width = 10, height = 6, dpi = 300)
+    
+    ggsave(file.path(plot_dir, sprintf("06_lambda_vs_precision_%s.png", suffix)), p6, width = 10, height = 6, dpi = 300)
+    ggsave(file.path(plot_dir, sprintf("06_lambda_vs_precision_%s_linear.png", suffix)), p6_linear, width = 10, height = 6, dpi = 300)
+    
+    ggsave(file.path(plot_dir, sprintf("07_lambda_vs_f1_%s.png", suffix)), p7, width = 10, height = 6, dpi = 300)
+    ggsave(file.path(plot_dir, sprintf("07_lambda_vs_f1_%s_linear.png", suffix)), p7_linear, width = 10, height = 6, dpi = 300)
+    
+    ggsave(file.path(plot_dir, sprintf("08_lambda_vs_mcc_%s.png", suffix)), p8, width = 10, height = 6, dpi = 300)
+    ggsave(file.path(plot_dir, sprintf("08_lambda_vs_mcc_%s_linear.png", suffix)), p8_linear, width = 10, height = 6, dpi = 300)
+    
+    ggsave(file.path(plot_dir, sprintf("09_lambda_vs_predicted_ratio_%s.png", suffix)), p9, width = 10, height = 6, dpi = 300)
+    ggsave(file.path(plot_dir, sprintf("09_lambda_vs_predicted_ratio_%s_linear.png", suffix)), p9_linear, width = 10, height = 6, dpi = 300)
+    
+    ggsave(file.path(plot_dir, sprintf("10_lambda_vs_tp_fn_tradeoff_%s.png", suffix)), p10, width = 10, height = 6, dpi = 300)
+    ggsave(file.path(plot_dir, sprintf("10_lambda_vs_tp_fn_tradeoff_%s_linear.png", suffix)), p10_linear, width = 10, height = 6, dpi = 300)
+
     # 11. Outlier Analysis - Modified to handle zeros
     p11 <- ggplot(subset_data, aes(x = as.factor(lambda_rounded), y = runtime_mean)) +
       geom_boxplot(aes(fill = as.factor(lambda_rounded))) +
@@ -392,16 +582,693 @@ create_plots_for_n <- function(data_n, n_value, output_dir) {
     
     # Save individual plots
     ggsave(file.path(plot_dir, sprintf("01_lambda_vs_tpr_%s.png", suffix)), p1, width = 10, height = 6, dpi = 300)
+    ggsave(file.path(plot_dir, sprintf("01_lambda_vs_tpr_%s_linear.png", suffix)), p1_linear, width = 10, height = 6, dpi = 300)
+    
     ggsave(file.path(plot_dir, sprintf("02_lambda_vs_fpr_%s.png", suffix)), p2, width = 10, height = 6, dpi = 300)
+    ggsave(file.path(plot_dir, sprintf("02_lambda_vs_fpr_%s_linear.png", suffix)), p2_linear, width = 10, height = 6, dpi = 300)
+    
     ggsave(file.path(plot_dir, sprintf("03_lambda_vs_fnr_%s.png", suffix)), p3, width = 10, height = 6, dpi = 300)
+    ggsave(file.path(plot_dir, sprintf("03_lambda_vs_fnr_%s_linear.png", suffix)), p3_linear, width = 10, height = 6, dpi = 300)
+    
     ggsave(file.path(plot_dir, sprintf("04_lambda_vs_tnr_%s.png", suffix)), p4, width = 10, height = 6, dpi = 300)
+    ggsave(file.path(plot_dir, sprintf("04_lambda_vs_tnr_%s_linear.png", suffix)), p4_linear, width = 10, height = 6, dpi = 300)
+    
     ggsave(file.path(plot_dir, sprintf("05_lambda_vs_recall_%s.png", suffix)), p5, width = 10, height = 6, dpi = 300)
+    ggsave(file.path(plot_dir, sprintf("05_lambda_vs_recall_%s_linear.png", suffix)), p5_linear, width = 10, height = 6, dpi = 300)
+    
     ggsave(file.path(plot_dir, sprintf("06_lambda_vs_precision_%s.png", suffix)), p6, width = 10, height = 6, dpi = 300)
+    ggsave(file.path(plot_dir, sprintf("06_lambda_vs_precision_%s_linear.png", suffix)), p6_linear, width = 10, height = 6, dpi = 300)
+    
     ggsave(file.path(plot_dir, sprintf("07_lambda_vs_f1_%s.png", suffix)), p7, width = 10, height = 6, dpi = 300)
+    ggsave(file.path(plot_dir, sprintf("07_lambda_vs_f1_%s_linear.png", suffix)), p7_linear, width = 10, height = 6, dpi = 300)
+    
     ggsave(file.path(plot_dir, sprintf("08_lambda_vs_mcc_%s.png", suffix)), p8, width = 10, height = 6, dpi = 300)
+    ggsave(file.path(plot_dir, sprintf("08_lambda_vs_mcc_%s_linear.png", suffix)), p8_linear, width = 10, height = 6, dpi = 300)
+    
     ggsave(file.path(plot_dir, sprintf("09_lambda_vs_predicted_ratio_%s.png", suffix)), p9, width = 10, height = 6, dpi = 300)
+    ggsave(file.path(plot_dir, sprintf("09_lambda_vs_predicted_ratio_%s_linear.png", suffix)), p9_linear, width = 10, height = 6, dpi = 300)
+    
     ggsave(file.path(plot_dir, sprintf("10_lambda_vs_tp_fn_tradeoff_%s.png", suffix)), p10, width = 10, height = 6, dpi = 300)
-    ggsave(file.path(plot_dir, sprintf("11_outlier_analysis_%s.png", suffix)), p11, width = 10, height = 6, dpi = 300)
+    ggsave(file.path(plot_dir, sprintf("10_lambda_vs_tp_fn_tradeoff_%s_linear.png", suffix)), p10_linear, width = 10, height = 6, dpi = 300)
+
+    # 11. Outlier Analysis - Modified to handle zeros
+    p11 <- ggplot(subset_data, aes(x = as.factor(lambda_rounded), y = runtime_mean)) +
+      geom_boxplot(aes(fill = as.factor(lambda_rounded))) +
+      geom_point(position = position_jitter(width = 0.1), alpha = 0.5) +
+      # Use pseudo_log to handle zeros or very small values properly
+      scale_y_continuous(trans = scales::pseudo_log_trans(base = 10), 
+                        labels = scales::label_number()) +
+      labs(
+        title = sprintf("Runtime Distribution vs P(edge) (N = %d)%s", n_value, title_suffix),
+        subtitle = "Computational time analysis with outlier detection",
+        x = "P(edge)",
+        y = "Runtime (seconds, pseudo-log scale)",
+        fill = "P(edge)"
+      ) +
+      theme_white +
+      scale_fill_viridis_d(end = 0.8) +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1))
+    
+    # Function to create a confusion matrix plot using rates
+    create_confusion_matrix_plot <- function(subset_data, n_value, title_suffix) {
+      # Calculate confusion matrix rates (normalize by row so each row sums to 1)
+      # True Positive Rate (Sensitivity/Recall) and False Negative Rate
+      TPR <- subset_data$TP_mean / (subset_data$TP_mean + subset_data$FN_mean)
+      FNR <- subset_data$FN_mean / (subset_data$TP_mean + subset_data$FN_mean)
+      
+      # False Positive Rate and True Negative Rate (Specificity)
+      FPR <- subset_data$FP_mean / (subset_data$FP_mean + subset_data$TN_mean)
+      TNR <- subset_data$TN_mean / (subset_data$FP_mean + subset_data$TN_mean)
+      
+      # Create a data frame for plotting
+      cm_data <- data.frame(
+        lambda_actual = rep(subset_data$lambda_actual, each = 4),
+        lambda_rounded = rep(subset_data$lambda_rounded, each = 4),
+        true_class = rep(c("Positive", "Negative"), each = 2, times = nrow(subset_data)),
+        predicted_class = rep(c("Positive", "Negative"), times = 2 * nrow(subset_data)),
+        rate = c(rbind(TPR, FNR, FPR, TNR))  # Interleave rates to match structure
+      )
+      
+      # Define color palette with better contrast
+      heatmap_colors <- scale_fill_gradient2(
+        low = "white", 
+        mid = "#ffcc99", 
+        high = "#ff6600", 
+        midpoint = 0.5,
+        limits = c(0, 1),
+        name = "Rate"
+      )
+      
+      # Create a custom labeller function that explicitly formats the labels
+      p_edge_labeller <- labeller(lambda_rounded = function(x) paste("P(edge):", x))
+      
+      # Create a faceted plot for each lambda value
+      confusion_plot <- ggplot(cm_data, aes(x = predicted_class, y = true_class, fill = rate)) +
+        geom_tile(color = "black", linewidth = 0.5) +
+        facet_wrap(~ lambda_rounded, labeller = p_edge_labeller, ncol = 4) +
+        geom_text(aes(label = sprintf("%.2f", rate)), color = "black", size = 3) +
+        heatmap_colors +
+        scale_x_discrete(position = "top") +
+        labs(
+          title = sprintf("Confusion Matrix Rates vs P(edge) (N = %d)%s", n_value, title_suffix),
+          subtitle = "Rows are normalized to sum to 1 (TPR+FNR=1, FPR+TNR=1)",
+          x = "Predicted Class",
+          y = "True Class"
+        ) +
+        theme_minimal() +
+        theme(
+          panel.background = element_rect(fill = "white", color = NA),
+          plot.background = element_rect(fill = "white", color = NA),
+          legend.background = element_rect(fill = "white", color = NA),
+          axis.text = element_text(size = 10),
+          strip.text = element_text(face = "bold"),
+          strip.background = element_rect(fill = "#f0f0f0", color = "black")
+        )
+      
+      return(confusion_plot)
+    }
+    
+    # Create confusion matrix plot
+    p_confusion <- create_confusion_matrix_plot(subset_data, n_value, title_suffix)
+    
+    # Save confusion matrix plot
+    ggsave(file.path(plot_dir, sprintf("12_confusion_matrix_%s.png", suffix)), p_confusion, 
+           width = 12, height = 8, dpi = 300)
+    
+    # Save individual plots
+    ggsave(file.path(plot_dir, sprintf("01_lambda_vs_tpr_%s.png", suffix)), p1, width = 10, height = 6, dpi = 300)
+    ggsave(file.path(plot_dir, sprintf("01_lambda_vs_tpr_%s_linear.png", suffix)), p1_linear, width = 10, height = 6, dpi = 300)
+    
+    ggsave(file.path(plot_dir, sprintf("02_lambda_vs_fpr_%s.png", suffix)), p2, width = 10, height = 6, dpi = 300)
+    ggsave(file.path(plot_dir, sprintf("02_lambda_vs_fpr_%s_linear.png", suffix)), p2_linear, width = 10, height = 6, dpi = 300)
+    
+    ggsave(file.path(plot_dir, sprintf("03_lambda_vs_fnr_%s.png", suffix)), p3, width = 10, height = 6, dpi = 300)
+    ggsave(file.path(plot_dir, sprintf("03_lambda_vs_fnr_%s_linear.png", suffix)), p3_linear, width = 10, height = 6, dpi = 300)
+    
+    ggsave(file.path(plot_dir, sprintf("04_lambda_vs_tnr_%s.png", suffix)), p4, width = 10, height = 6, dpi = 300)
+    ggsave(file.path(plot_dir, sprintf("04_lambda_vs_tnr_%s_linear.png", suffix)), p4_linear, width = 10, height = 6, dpi = 300)
+    
+    ggsave(file.path(plot_dir, sprintf("05_lambda_vs_recall_%s.png", suffix)), p5, width = 10, height = 6, dpi = 300)
+    ggsave(file.path(plot_dir, sprintf("05_lambda_vs_recall_%s_linear.png", suffix)), p5_linear, width = 10, height = 6, dpi = 300)
+    
+    ggsave(file.path(plot_dir, sprintf("06_lambda_vs_precision_%s.png", suffix)), p6, width = 10, height = 6, dpi = 300)
+    ggsave(file.path(plot_dir, sprintf("06_lambda_vs_precision_%s_linear.png", suffix)), p6_linear, width = 10, height = 6, dpi = 300)
+    
+    ggsave(file.path(plot_dir, sprintf("07_lambda_vs_f1_%s.png", suffix)), p7, width = 10, height = 6, dpi = 300)
+    ggsave(file.path(plot_dir, sprintf("07_lambda_vs_f1_%s_linear.png", suffix)), p7_linear, width = 10, height = 6, dpi = 300)
+    
+    ggsave(file.path(plot_dir, sprintf("08_lambda_vs_mcc_%s.png", suffix)), p8, width = 10, height = 6, dpi = 300)
+    ggsave(file.path(plot_dir, sprintf("08_lambda_vs_mcc_%s_linear.png", suffix)), p8_linear, width = 10, height = 6, dpi = 300)
+    
+    ggsave(file.path(plot_dir, sprintf("09_lambda_vs_predicted_ratio_%s.png", suffix)), p9, width = 10, height = 6, dpi = 300)
+    ggsave(file.path(plot_dir, sprintf("09_lambda_vs_predicted_ratio_%s_linear.png", suffix)), p9_linear, width = 10, height = 6, dpi = 300)
+    
+    ggsave(file.path(plot_dir, sprintf("10_lambda_vs_tp_fn_tradeoff_%s.png", suffix)), p10, width = 10, height = 6, dpi = 300)
+    ggsave(file.path(plot_dir, sprintf("10_lambda_vs_tp_fn_tradeoff_%s_linear.png", suffix)), p10_linear, width = 10, height = 6, dpi = 300)
+
+    # 11. Outlier Analysis - Modified to handle zeros
+    p11 <- ggplot(subset_data, aes(x = as.factor(lambda_rounded), y = runtime_mean)) +
+      geom_boxplot(aes(fill = as.factor(lambda_rounded))) +
+      geom_point(position = position_jitter(width = 0.1), alpha = 0.5) +
+      # Use pseudo_log to handle zeros or very small values properly
+      scale_y_continuous(trans = scales::pseudo_log_trans(base = 10), 
+                        labels = scales::label_number()) +
+      labs(
+        title = sprintf("Runtime Distribution vs P(edge) (N = %d)%s", n_value, title_suffix),
+        subtitle = "Computational time analysis with outlier detection",
+        x = "P(edge)",
+        y = "Runtime (seconds, pseudo-log scale)",
+        fill = "P(edge)"
+      ) +
+      theme_white +
+      scale_fill_viridis_d(end = 0.8) +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1))
+    
+    # Function to create a confusion matrix plot using rates
+    create_confusion_matrix_plot <- function(subset_data, n_value, title_suffix) {
+      # Calculate confusion matrix rates (normalize by row so each row sums to 1)
+      # True Positive Rate (Sensitivity/Recall) and False Negative Rate
+      TPR <- subset_data$TP_mean / (subset_data$TP_mean + subset_data$FN_mean)
+      FNR <- subset_data$FN_mean / (subset_data$TP_mean + subset_data$FN_mean)
+      
+      # False Positive Rate and True Negative Rate (Specificity)
+      FPR <- subset_data$FP_mean / (subset_data$FP_mean + subset_data$TN_mean)
+      TNR <- subset_data$TN_mean / (subset_data$FP_mean + subset_data$TN_mean)
+      
+      # Create a data frame for plotting
+      cm_data <- data.frame(
+        lambda_actual = rep(subset_data$lambda_actual, each = 4),
+        lambda_rounded = rep(subset_data$lambda_rounded, each = 4),
+        true_class = rep(c("Positive", "Negative"), each = 2, times = nrow(subset_data)),
+        predicted_class = rep(c("Positive", "Negative"), times = 2 * nrow(subset_data)),
+        rate = c(rbind(TPR, FNR, FPR, TNR))  # Interleave rates to match structure
+      )
+      
+      # Define color palette with better contrast
+      heatmap_colors <- scale_fill_gradient2(
+        low = "white", 
+        mid = "#ffcc99", 
+        high = "#ff6600", 
+        midpoint = 0.5,
+        limits = c(0, 1),
+        name = "Rate"
+      )
+      
+      # Create a custom labeller function that explicitly formats the labels
+      p_edge_labeller <- labeller(lambda_rounded = function(x) paste("P(edge):", x))
+      
+      # Create a faceted plot for each lambda value
+      confusion_plot <- ggplot(cm_data, aes(x = predicted_class, y = true_class, fill = rate)) +
+        geom_tile(color = "black", linewidth = 0.5) +
+        facet_wrap(~ lambda_rounded, labeller = p_edge_labeller, ncol = 4) +
+        geom_text(aes(label = sprintf("%.2f", rate)), color = "black", size = 3) +
+        heatmap_colors +
+        scale_x_discrete(position = "top") +
+        labs(
+          title = sprintf("Confusion Matrix Rates vs P(edge) (N = %d)%s", n_value, title_suffix),
+          subtitle = "Rows are normalized to sum to 1 (TPR+FNR=1, FPR+TNR=1)",
+          x = "Predicted Class",
+          y = "True Class"
+        ) +
+        theme_minimal() +
+        theme(
+          panel.background = element_rect(fill = "white", color = NA),
+          plot.background = element_rect(fill = "white", color = NA),
+          legend.background = element_rect(fill = "white", color = NA),
+          axis.text = element_text(size = 10),
+          strip.text = element_text(face = "bold"),
+          strip.background = element_rect(fill = "#f0f0f0", color = "black")
+        )
+      
+      return(confusion_plot)
+    }
+    
+    # Create confusion matrix plot
+    p_confusion <- create_confusion_matrix_plot(subset_data, n_value, title_suffix)
+    
+    # Save confusion matrix plot
+    ggsave(file.path(plot_dir, sprintf("12_confusion_matrix_%s.png", suffix)), p_confusion, 
+           width = 12, height = 8, dpi = 300)
+    
+    # Save individual plots
+    ggsave(file.path(plot_dir, sprintf("01_lambda_vs_tpr_%s.png", suffix)), p1, width = 10, height = 6, dpi = 300)
+    ggsave(file.path(plot_dir, sprintf("01_lambda_vs_tpr_%s_linear.png", suffix)), p1_linear, width = 10, height = 6, dpi = 300)
+    
+    ggsave(file.path(plot_dir, sprintf("02_lambda_vs_fpr_%s.png", suffix)), p2, width = 10, height = 6, dpi = 300)
+    ggsave(file.path(plot_dir, sprintf("02_lambda_vs_fpr_%s_linear.png", suffix)), p2_linear, width = 10, height = 6, dpi = 300)
+    
+    ggsave(file.path(plot_dir, sprintf("03_lambda_vs_fnr_%s.png", suffix)), p3, width = 10, height = 6, dpi = 300)
+    ggsave(file.path(plot_dir, sprintf("03_lambda_vs_fnr_%s_linear.png", suffix)), p3_linear, width = 10, height = 6, dpi = 300)
+    
+    ggsave(file.path(plot_dir, sprintf("04_lambda_vs_tnr_%s.png", suffix)), p4, width = 10, height = 6, dpi = 300)
+    ggsave(file.path(plot_dir, sprintf("04_lambda_vs_tnr_%s_linear.png", suffix)), p4_linear, width = 10, height = 6, dpi = 300)
+    
+    ggsave(file.path(plot_dir, sprintf("05_lambda_vs_recall_%s.png", suffix)), p5, width = 10, height = 6, dpi = 300)
+    ggsave(file.path(plot_dir, sprintf("05_lambda_vs_recall_%s_linear.png", suffix)), p5_linear, width = 10, height = 6, dpi = 300)
+    
+    ggsave(file.path(plot_dir, sprintf("06_lambda_vs_precision_%s.png", suffix)), p6, width = 10, height = 6, dpi = 300)
+    ggsave(file.path(plot_dir, sprintf("06_lambda_vs_precision_%s_linear.png", suffix)), p6_linear, width = 10, height = 6, dpi = 300)
+    
+    ggsave(file.path(plot_dir, sprintf("07_lambda_vs_f1_%s.png", suffix)), p7, width = 10, height = 6, dpi = 300)
+    ggsave(file.path(plot_dir, sprintf("07_lambda_vs_f1_%s_linear.png", suffix)), p7_linear, width = 10, height = 6, dpi = 300)
+    
+    ggsave(file.path(plot_dir, sprintf("08_lambda_vs_mcc_%s.png", suffix)), p8, width = 10, height = 6, dpi = 300)
+    ggsave(file.path(plot_dir, sprintf("08_lambda_vs_mcc_%s_linear.png", suffix)), p8_linear, width = 10, height = 6, dpi = 300)
+    
+    ggsave(file.path(plot_dir, sprintf("09_lambda_vs_predicted_ratio_%s.png", suffix)), p9, width = 10, height = 6, dpi = 300)
+    ggsave(file.path(plot_dir, sprintf("09_lambda_vs_predicted_ratio_%s_linear.png", suffix)), p9_linear, width = 10, height = 6, dpi = 300)
+    
+    ggsave(file.path(plot_dir, sprintf("10_lambda_vs_tp_fn_tradeoff_%s.png", suffix)), p10, width = 10, height = 6, dpi = 300)
+    ggsave(file.path(plot_dir, sprintf("10_lambda_vs_tp_fn_tradeoff_%s_linear.png", suffix)), p10_linear, width = 10, height = 6, dpi = 300)
+
+    # 11. Outlier Analysis - Modified to handle zeros
+    p11 <- ggplot(subset_data, aes(x = as.factor(lambda_rounded), y = runtime_mean)) +
+      geom_boxplot(aes(fill = as.factor(lambda_rounded))) +
+      geom_point(position = position_jitter(width = 0.1), alpha = 0.5) +
+      # Use pseudo_log to handle zeros or very small values properly
+      scale_y_continuous(trans = scales::pseudo_log_trans(base = 10), 
+                        labels = scales::label_number()) +
+      labs(
+        title = sprintf("Runtime Distribution vs P(edge) (N = %d)%s", n_value, title_suffix),
+        subtitle = "Computational time analysis with outlier detection",
+        x = "P(edge)",
+        y = "Runtime (seconds, pseudo-log scale)",
+        fill = "P(edge)"
+      ) +
+      theme_white +
+      scale_fill_viridis_d(end = 0.8) +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1))
+    
+    # Function to create a confusion matrix plot using rates
+    create_confusion_matrix_plot <- function(subset_data, n_value, title_suffix) {
+      # Calculate confusion matrix rates (normalize by row so each row sums to 1)
+      # True Positive Rate (Sensitivity/Recall) and False Negative Rate
+      TPR <- subset_data$TP_mean / (subset_data$TP_mean + subset_data$FN_mean)
+      FNR <- subset_data$FN_mean / (subset_data$TP_mean + subset_data$FN_mean)
+      
+      # False Positive Rate and True Negative Rate (Specificity)
+      FPR <- subset_data$FP_mean / (subset_data$FP_mean + subset_data$TN_mean)
+      TNR <- subset_data$TN_mean / (subset_data$FP_mean + subset_data$TN_mean)
+      
+      # Create a data frame for plotting
+      cm_data <- data.frame(
+        lambda_actual = rep(subset_data$lambda_actual, each = 4),
+        lambda_rounded = rep(subset_data$lambda_rounded, each = 4),
+        true_class = rep(c("Positive", "Negative"), each = 2, times = nrow(subset_data)),
+        predicted_class = rep(c("Positive", "Negative"), times = 2 * nrow(subset_data)),
+        rate = c(rbind(TPR, FNR, FPR, TNR))  # Interleave rates to match structure
+      )
+      
+      # Define color palette with better contrast
+      heatmap_colors <- scale_fill_gradient2(
+        low = "white", 
+        mid = "#ffcc99", 
+        high = "#ff6600", 
+        midpoint = 0.5,
+        limits = c(0, 1),
+        name = "Rate"
+      )
+      
+      # Create a custom labeller function that explicitly formats the labels
+      p_edge_labeller <- labeller(lambda_rounded = function(x) paste("P(edge):", x))
+      
+      # Create a faceted plot for each lambda value
+      confusion_plot <- ggplot(cm_data, aes(x = predicted_class, y = true_class, fill = rate)) +
+        geom_tile(color = "black", linewidth = 0.5) +
+        facet_wrap(~ lambda_rounded, labeller = p_edge_labeller, ncol = 4) +
+        geom_text(aes(label = sprintf("%.2f", rate)), color = "black", size = 3) +
+        heatmap_colors +
+        scale_x_discrete(position = "top") +
+        labs(
+          title = sprintf("Confusion Matrix Rates vs P(edge) (N = %d)%s", n_value, title_suffix),
+          subtitle = "Rows are normalized to sum to 1 (TPR+FNR=1, FPR+TNR=1)",
+          x = "Predicted Class",
+          y = "True Class"
+        ) +
+        theme_minimal() +
+        theme(
+          panel.background = element_rect(fill = "white", color = NA),
+          plot.background = element_rect(fill = "white", color = NA),
+          legend.background = element_rect(fill = "white", color = NA),
+          axis.text = element_text(size = 10),
+          strip.text = element_text(face = "bold"),
+          strip.background = element_rect(fill = "#f0f0f0", color = "black")
+        )
+      
+      return(confusion_plot)
+    }
+    
+    # Create confusion matrix plot
+    p_confusion <- create_confusion_matrix_plot(subset_data, n_value, title_suffix)
+    
+    # Save confusion matrix plot
+    ggsave(file.path(plot_dir, sprintf("12_confusion_matrix_%s.png", suffix)), p_confusion, 
+           width = 12, height = 8, dpi = 300)
+    
+    # Save individual plots
+    ggsave(file.path(plot_dir, sprintf("01_lambda_vs_tpr_%s.png", suffix)), p1, width = 10, height = 6, dpi = 300)
+    ggsave(file.path(plot_dir, sprintf("01_lambda_vs_tpr_%s_linear.png", suffix)), p1_linear, width = 10, height = 6, dpi = 300)
+    
+    ggsave(file.path(plot_dir, sprintf("02_lambda_vs_fpr_%s.png", suffix)), p2, width = 10, height = 6, dpi = 300)
+    ggsave(file.path(plot_dir, sprintf("02_lambda_vs_fpr_%s_linear.png", suffix)), p2_linear, width = 10, height = 6, dpi = 300)
+    
+    ggsave(file.path(plot_dir, sprintf("03_lambda_vs_fnr_%s.png", suffix)), p3, width = 10, height = 6, dpi = 300)
+    ggsave(file.path(plot_dir, sprintf("03_lambda_vs_fnr_%s_linear.png", suffix)), p3_linear, width = 10, height = 6, dpi = 300)
+    
+    ggsave(file.path(plot_dir, sprintf("04_lambda_vs_tnr_%s.png", suffix)), p4, width = 10, height = 6, dpi = 300)
+    ggsave(file.path(plot_dir, sprintf("04_lambda_vs_tnr_%s_linear.png", suffix)), p4_linear, width = 10, height = 6, dpi = 300)
+    
+    ggsave(file.path(plot_dir, sprintf("05_lambda_vs_recall_%s.png", suffix)), p5, width = 10, height = 6, dpi = 300)
+    ggsave(file.path(plot_dir, sprintf("05_lambda_vs_recall_%s_linear.png", suffix)), p5_linear, width = 10, height = 6, dpi = 300)
+    
+    ggsave(file.path(plot_dir, sprintf("06_lambda_vs_precision_%s.png", suffix)), p6, width = 10, height = 6, dpi = 300)
+    ggsave(file.path(plot_dir, sprintf("06_lambda_vs_precision_%s_linear.png", suffix)), p6_linear, width = 10, height = 6, dpi = 300)
+    
+    ggsave(file.path(plot_dir, sprintf("07_lambda_vs_f1_%s.png", suffix)), p7, width = 10, height = 6, dpi = 300)
+    ggsave(file.path(plot_dir, sprintf("07_lambda_vs_f1_%s_linear.png", suffix)), p7_linear, width = 10, height = 6, dpi = 300)
+    
+    ggsave(file.path(plot_dir, sprintf("08_lambda_vs_mcc_%s.png", suffix)), p8, width = 10, height = 6, dpi = 300)
+    ggsave(file.path(plot_dir, sprintf("08_lambda_vs_mcc_%s_linear.png", suffix)), p8_linear, width = 10, height = 6, dpi = 300)
+    
+    ggsave(file.path(plot_dir, sprintf("09_lambda_vs_predicted_ratio_%s.png", suffix)), p9, width = 10, height = 6, dpi = 300)
+    ggsave(file.path(plot_dir, sprintf("09_lambda_vs_predicted_ratio_%s_linear.png", suffix)), p9_linear, width = 10, height = 6, dpi = 300)
+    
+    ggsave(file.path(plot_dir, sprintf("10_lambda_vs_tp_fn_tradeoff_%s.png", suffix)), p10, width = 10, height = 6, dpi = 300)
+    ggsave(file.path(plot_dir, sprintf("10_lambda_vs_tp_fn_tradeoff_%s_linear.png", suffix)), p10_linear, width = 10, height = 6, dpi = 300)
+
+    # 11. Outlier Analysis - Modified to handle zeros
+    p11 <- ggplot(subset_data, aes(x = as.factor(lambda_rounded), y = runtime_mean)) +
+      geom_boxplot(aes(fill = as.factor(lambda_rounded))) +
+      geom_point(position = position_jitter(width = 0.1), alpha = 0.5) +
+      # Use pseudo_log to handle zeros or very small values properly
+      scale_y_continuous(trans = scales::pseudo_log_trans(base = 10), 
+                        labels = scales::label_number()) +
+      labs(
+        title = sprintf("Runtime Distribution vs P(edge) (N = %d)%s", n_value, title_suffix),
+        subtitle = "Computational time analysis with outlier detection",
+        x = "P(edge)",
+        y = "Runtime (seconds, pseudo-log scale)",
+        fill = "P(edge)"
+      ) +
+      theme_white +
+      scale_fill_viridis_d(end = 0.8) +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1))
+    
+    # Function to create a confusion matrix plot using rates
+    create_confusion_matrix_plot <- function(subset_data, n_value, title_suffix) {
+      # Calculate confusion matrix rates (normalize by row so each row sums to 1)
+      # True Positive Rate (Sensitivity/Recall) and False Negative Rate
+      TPR <- subset_data$TP_mean / (subset_data$TP_mean + subset_data$FN_mean)
+      FNR <- subset_data$FN_mean / (subset_data$TP_mean + subset_data$FN_mean)
+      
+      # False Positive Rate and True Negative Rate (Specificity)
+      FPR <- subset_data$FP_mean / (subset_data$FP_mean + subset_data$TN_mean)
+      TNR <- subset_data$TN_mean / (subset_data$FP_mean + subset_data$TN_mean)
+      
+      # Create a data frame for plotting
+      cm_data <- data.frame(
+        lambda_actual = rep(subset_data$lambda_actual, each = 4),
+        lambda_rounded = rep(subset_data$lambda_rounded, each = 4),
+        true_class = rep(c("Positive", "Negative"), each = 2, times = nrow(subset_data)),
+        predicted_class = rep(c("Positive", "Negative"), times = 2 * nrow(subset_data)),
+        rate = c(rbind(TPR, FNR, FPR, TNR))  # Interleave rates to match structure
+      )
+      
+      # Define color palette with better contrast
+      heatmap_colors <- scale_fill_gradient2(
+        low = "white", 
+        mid = "#ffcc99", 
+        high = "#ff6600", 
+        midpoint = 0.5,
+        limits = c(0, 1),
+        name = "Rate"
+      )
+      
+      # Create a custom labeller function that explicitly formats the labels
+      p_edge_labeller <- labeller(lambda_rounded = function(x) paste("P(edge):", x))
+      
+      # Create a faceted plot for each lambda value
+      confusion_plot <- ggplot(cm_data, aes(x = predicted_class, y = true_class, fill = rate)) +
+        geom_tile(color = "black", linewidth = 0.5) +
+        facet_wrap(~ lambda_rounded, labeller = p_edge_labeller, ncol = 4) +
+        geom_text(aes(label = sprintf("%.2f", rate)), color = "black", size = 3) +
+        heatmap_colors +
+        scale_x_discrete(position = "top") +
+        labs(
+          title = sprintf("Confusion Matrix Rates vs P(edge) (N = %d)%s", n_value, title_suffix),
+          subtitle = "Rows are normalized to sum to 1 (TPR+FNR=1, FPR+TNR=1)",
+          x = "Predicted Class",
+          y = "True Class"
+        ) +
+        theme_minimal() +
+        theme(
+          panel.background = element_rect(fill = "white", color = NA),
+          plot.background = element_rect(fill = "white", color = NA),
+          legend.background = element_rect(fill = "white", color = NA),
+          axis.text = element_text(size = 10),
+          strip.text = element_text(face = "bold"),
+          strip.background = element_rect(fill = "#f0f0f0", color = "black")
+        )
+      
+      return(confusion_plot)
+    }
+    
+    # Create confusion matrix plot
+    p_confusion <- create_confusion_matrix_plot(subset_data, n_value, title_suffix)
+    
+    # Save confusion matrix plot
+    ggsave(file.path(plot_dir, sprintf("12_confusion_matrix_%s.png", suffix)), p_confusion, 
+           width = 12, height = 8, dpi = 300)
+    
+    # Save individual plots
+    ggsave(file.path(plot_dir, sprintf("01_lambda_vs_tpr_%s.png", suffix)), p1, width = 10, height = 6, dpi = 300)
+    ggsave(file.path(plot_dir, sprintf("01_lambda_vs_tpr_%s_linear.png", suffix)), p1_linear, width = 10, height = 6, dpi = 300)
+    
+    ggsave(file.path(plot_dir, sprintf("02_lambda_vs_fpr_%s.png", suffix)), p2, width = 10, height = 6, dpi = 300)
+    ggsave(file.path(plot_dir, sprintf("02_lambda_vs_fpr_%s_linear.png", suffix)), p2_linear, width = 10, height = 6, dpi = 300)
+    
+    ggsave(file.path(plot_dir, sprintf("03_lambda_vs_fnr_%s.png", suffix)), p3, width = 10, height = 6, dpi = 300)
+    ggsave(file.path(plot_dir, sprintf("03_lambda_vs_fnr_%s_linear.png", suffix)), p3_linear, width = 10, height = 6, dpi = 300)
+    
+    ggsave(file.path(plot_dir, sprintf("04_lambda_vs_tnr_%s.png", suffix)), p4, width = 10, height = 6, dpi = 300)
+    ggsave(file.path(plot_dir, sprintf("04_lambda_vs_tnr_%s_linear.png", suffix)), p4_linear, width = 10, height = 6, dpi = 300)
+    
+    ggsave(file.path(plot_dir, sprintf("05_lambda_vs_recall_%s.png", suffix)), p5, width = 10, height = 6, dpi = 300)
+    ggsave(file.path(plot_dir, sprintf("05_lambda_vs_recall_%s_linear.png", suffix)), p5_linear, width = 10, height = 6, dpi = 300)
+    
+    ggsave(file.path(plot_dir, sprintf("06_lambda_vs_precision_%s.png", suffix)), p6, width = 10, height = 6, dpi = 300)
+    ggsave(file.path(plot_dir, sprintf("06_lambda_vs_precision_%s_linear.png", suffix)), p6_linear, width = 10, height = 6, dpi = 300)
+    
+    ggsave(file.path(plot_dir, sprintf("07_lambda_vs_f1_%s.png", suffix)), p7, width = 10, height = 6, dpi = 300)
+    ggsave(file.path(plot_dir, sprintf("07_lambda_vs_f1_%s_linear.png", suffix)), p7_linear, width = 10, height = 6, dpi = 300)
+    
+    ggsave(file.path(plot_dir, sprintf("08_lambda_vs_mcc_%s.png", suffix)), p8, width = 10, height = 6, dpi = 300)
+    ggsave(file.path(plot_dir, sprintf("08_lambda_vs_mcc_%s_linear.png", suffix)), p8_linear, width = 10, height = 6, dpi = 300)
+    
+    ggsave(file.path(plot_dir, sprintf("09_lambda_vs_predicted_ratio_%s.png", suffix)), p9, width = 10, height = 6, dpi = 300)
+    ggsave(file.path(plot_dir, sprintf("09_lambda_vs_predicted_ratio_%s_linear.png", suffix)), p9_linear, width = 10, height = 6, dpi = 300)
+    
+    ggsave(file.path(plot_dir, sprintf("10_lambda_vs_tp_fn_tradeoff_%s.png", suffix)), p10, width = 10, height = 6, dpi = 300)
+    ggsave(file.path(plot_dir, sprintf("10_lambda_vs_tp_fn_tradeoff_%s_linear.png", suffix)), p10_linear, width = 10, height = 6, dpi = 300)
+
+    # 11. Outlier Analysis - Modified to handle zeros
+    p11 <- ggplot(subset_data, aes(x = as.factor(lambda_rounded), y = runtime_mean)) +
+      geom_boxplot(aes(fill = as.factor(lambda_rounded))) +
+      geom_point(position = position_jitter(width = 0.1), alpha = 0.5) +
+      # Use pseudo_log to handle zeros or very small values properly
+      scale_y_continuous(trans = scales::pseudo_log_trans(base = 10), 
+                        labels = scales::label_number()) +
+      labs(
+        title = sprintf("Runtime Distribution vs P(edge) (N = %d)%s", n_value, title_suffix),
+        subtitle = "Computational time analysis with outlier detection",
+        x = "P(edge)",
+        y = "Runtime (seconds, pseudo-log scale)",
+        fill = "P(edge)"
+      ) +
+      theme_white +
+      scale_fill_viridis_d(end = 0.8) +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1))
+    
+    # Function to create a confusion matrix plot using rates
+    create_confusion_matrix_plot <- function(subset_data, n_value, title_suffix) {
+      # Calculate confusion matrix rates (normalize by row so each row sums to 1)
+      # True Positive Rate (Sensitivity/Recall) and False Negative Rate
+      TPR <- subset_data$TP_mean / (subset_data$TP_mean + subset_data$FN_mean)
+      FNR <- subset_data$FN_mean / (subset_data$TP_mean + subset_data$FN_mean)
+      
+      # False Positive Rate and True Negative Rate (Specificity)
+      FPR <- subset_data$FP_mean / (subset_data$FP_mean + subset_data$TN_mean)
+      TNR <- subset_data$TN_mean / (subset_data$FP_mean + subset_data$TN_mean)
+      
+      # Create a data frame for plotting
+      cm_data <- data.frame(
+        lambda_actual = rep(subset_data$lambda_actual, each = 4),
+        lambda_rounded = rep(subset_data$lambda_rounded, each = 4),
+        true_class = rep(c("Positive", "Negative"), each = 2, times = nrow(subset_data)),
+        predicted_class = rep(c("Positive", "Negative"), times = 2 * nrow(subset_data)),
+        rate = c(rbind(TPR, FNR, FPR, TNR))  # Interleave rates to match structure
+      )
+      
+      # Define color palette with better contrast
+      heatmap_colors <- scale_fill_gradient2(
+        low = "white", 
+        mid = "#ffcc99", 
+        high = "#ff6600", 
+        midpoint = 0.5,
+        limits = c(0, 1),
+        name = "Rate"
+      )
+      
+      # Create a custom labeller function that explicitly formats the labels
+      p_edge_labeller <- labeller(lambda_rounded = function(x) paste("P(edge):", x))
+      
+      # Create a faceted plot for each lambda value
+      confusion_plot <- ggplot(cm_data, aes(x = predicted_class, y = true_class, fill = rate)) +
+        geom_tile(color = "black", linewidth = 0.5) +
+        facet_wrap(~ lambda_rounded, labeller = p_edge_labeller, ncol = 4) +
+        geom_text(aes(label = sprintf("%.2f", rate)), color = "black", size = 3) +
+        heatmap_colors +
+        scale_x_discrete(position = "top") +
+        labs(
+          title = sprintf("Confusion Matrix Rates vs P(edge) (N = %d)%s", n_value, title_suffix),
+          subtitle = "Rows are normalized to sum to 1 (TPR+FNR=1, FPR+TNR=1)",
+          x = "Predicted Class",
+          y = "True Class"
+        ) +
+        theme_minimal() +
+        theme(
+          panel.background = element_rect(fill = "white", color = NA),
+          plot.background = element_rect(fill = "white", color = NA),
+          legend.background = element_rect(fill = "white", color = NA),
+          axis.text = element_text(size = 10),
+          strip.text = element_text(face = "bold"),
+          strip.background = element_rect(fill = "#f0f0f0", color = "black")
+        )
+      
+      return(confusion_plot)
+    }
+    
+    # Create confusion matrix plot
+    p_confusion <- create_confusion_matrix_plot(subset_data, n_value, title_suffix)
+    
+    # Save confusion matrix plot
+    ggsave(file.path(plot_dir, sprintf("12_confusion_matrix_%s.png", suffix)), p_confusion, 
+           width = 12, height = 8, dpi = 300)
+    
+    # Save individual plots
+    ggsave(file.path(plot_dir, sprintf("01_lambda_vs_tpr_%s.png", suffix)), p1, width = 10, height = 6, dpi = 300)
+    ggsave(file.path(plot_dir, sprintf("01_lambda_vs_tpr_%s_linear.png", suffix)), p1_linear, width = 10, height = 6, dpi = 300)
+    
+    ggsave(file.path(plot_dir, sprintf("02_lambda_vs_fpr_%s.png", suffix)), p2, width = 10, height = 6, dpi = 300)
+    ggsave(file.path(plot_dir, sprintf("02_lambda_vs_fpr_%s_linear.png", suffix)), p2_linear, width = 10, height = 6, dpi = 300)
+    
+    ggsave(file.path(plot_dir, sprintf("03_lambda_vs_fnr_%s.png", suffix)), p3, width = 10, height = 6, dpi = 300)
+    ggsave(file.path(plot_dir, sprintf("03_lambda_vs_fnr_%s_linear.png", suffix)), p3_linear, width = 10, height = 6, dpi = 300)
+    
+    ggsave(file.path(plot_dir, sprintf("04_lambda_vs_tnr_%s.png", suffix)), p4, width = 10, height = 6, dpi = 300)
+    ggsave(file.path(plot_dir, sprintf("04_lambda_vs_tnr_%s_linear.png", suffix)), p4_linear, width = 10, height = 6, dpi = 300)
+    
+    ggsave(file.path(plot_dir, sprintf("05_lambda_vs_recall_%s.png", suffix)), p5, width = 10, height = 6, dpi = 300)
+    ggsave(file.path(plot_dir, sprintf("05_lambda_vs_recall_%s_linear.png", suffix)), p5_linear, width = 10, height = 6, dpi = 300)
+    
+    ggsave(file.path(plot_dir, sprintf("06_lambda_vs_precision_%s.png", suffix)), p6, width = 10, height = 6, dpi = 300)
+    ggsave(file.path(plot_dir, sprintf("06_lambda_vs_precision_%s_linear.png", suffix)), p6_linear, width = 10, height = 6, dpi = 300)
+    
+    ggsave(file.path(plot_dir, sprintf("07_lambda_vs_f1_%s.png", suffix)), p7, width = 10, height = 6, dpi = 300)
+    ggsave(file.path(plot_dir, sprintf("07_lambda_vs_f1_%s_linear.png", suffix)), p7_linear, width = 10, height = 6, dpi = 300)
+    
+    ggsave(file.path(plot_dir, sprintf("08_lambda_vs_mcc_%s.png", suffix)), p8, width = 10, height = 6, dpi = 300)
+    ggsave(file.path(plot_dir, sprintf("08_lambda_vs_mcc_%s_linear.png", suffix)), p8_linear, width = 10, height = 6, dpi = 300)
+    
+    ggsave(file.path(plot_dir, sprintf("09_lambda_vs_predicted_ratio_%s.png", suffix)), p9, width = 10, height = 6, dpi = 300)
+    ggsave(file.path(plot_dir, sprintf("09_lambda_vs_predicted_ratio_%s_linear.png", suffix)), p9_linear, width = 10, height = 6, dpi = 300)
+    
+    ggsave(file.path(plot_dir, sprintf("10_lambda_vs_tp_fn_tradeoff_%s.png", suffix)), p10, width = 10, height = 6, dpi = 300)
+    ggsave(file.path(plot_dir, sprintf("10_lambda_vs_tp_fn_tradeoff_%s_linear.png", suffix)), p10_linear, width = 10, height = 6, dpi = 300)
+
+    # 11. Outlier Analysis - Modified to handle zeros
+    p11 <- ggplot(subset_data, aes(x = as.factor(lambda_rounded), y = runtime_mean)) +
+      geom_boxplot(aes(fill = as.factor(lambda_rounded))) +
+      geom_point(position = position_jitter(width = 0.1), alpha = 0.5) +
+      # Use pseudo_log to handle zeros or very small values properly
+      scale_y_continuous(trans = scales::pseudo_log_trans(base = 10), 
+                        labels = scales::label_number()) +
+      labs(
+        title = sprintf("Runtime Distribution vs P(edge) (N = %d)%s", n_value, title_suffix),
+        subtitle = "Computational time analysis with outlier detection",
+        x = "P(edge)",
+        y = "Runtime (seconds, pseudo-log scale)",
+        fill = "P(edge)"
+      ) +
+      theme_white +
+      scale_fill_viridis_d(end = 0.8) +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1))
+    
+    # Function to create a confusion matrix plot using rates
+    create_confusion_matrix_plot <- function(subset_data, n_value, title_suffix) {
+      # Calculate confusion matrix rates (normalize by row so each row sums to 1)
+      # True Positive Rate (Sensitivity/Recall) and False Negative Rate
+      TPR <- subset_data$TP_mean / (subset_data$TP_mean + subset_data$FN_mean)
+      FNR <- subset_data$FN_mean / (subset_data$TP_mean + subset_data$FN_mean)
+      
+      # False Positive Rate and True Negative Rate (Specificity)
+      FPR <- subset_data$FP_mean / (subset_data$FP_mean + subset_data$TN_mean)
+      TNR <- subset_data$TN_mean / (subset_data$FP_mean + subset_data$TN_mean)
+      
+      # Create a data frame for plotting
+      cm_data <- data.frame(
+        lambda_actual = rep(subset_data$lambda_actual, each = 4),
+        lambda_rounded = rep(subset_data$lambda_rounded, each = 4),
+        true_class = rep(c("Positive", "Negative"), each = 2, times = nrow(subset_data)),
+        predicted_class = rep(c("Positive", "Negative"), times = 2 * nrow(subset_data)),
+        rate = c(rbind(TPR, FNR, FPR, TNR))  # Interleave rates to match structure
+      )
+      
+      # Define color palette with better contrast
+      heatmap_colors <- scale_fill_gradient2(
+        low = "white", 
+        mid = "#ffcc99", 
+        high = "#ff6600", 
+        midpoint = 0.5,
+        limits = c(0, 1),
+        name = "Rate"
+      )
+      
+      # Create a custom labeller function that explicitly formats the labels
+      p_edge_labeller <- labeller(lambda_rounded = function(x) paste("P(edge):", x))
+      
+      # Create a faceted plot for each lambda value
+      confusion_plot <- ggplot(cm_data, aes(x = predicted_class, y = true_class, fill = rate)) +
+        geom_tile(color = "black", linewidth = 0.5) +
+        facet_wrap(~ lambda_rounded, labeller = p_edge_labeller, ncol = 4) +
+        geom_text(aes(label = sprintf("%.2f", rate)), color = "black", size = 3) +
+        heatmap_colors +
+        scale_x_discrete(position = "top") +
+        labs(
+          title = sprintf("Confusion Matrix Rates vs P(edge) (N = %d)%s", n_value, title_suffix),
+          subtitle = "Rows are normalized to sum to 1 (TPR+FNR=1, FPR+TNR=1)",
+          x = "Predicted Class",
+          y = "True Class"
+        ) +
+        theme_minimal() +
+        theme(
+          panel.background = element_rect(fill = "white", color = NA),
+          plot.background = element_rect(fill = "white", color = NA),
+          legend.background = element_rect(fill = "white", color = NA),
+          axis.text = element_text(size = 10),
+          strip.text = element_text(face = "bold"),
+          strip.background = element_rect(fill = "#f0f0f0", color = "black")
+        )
+      
+      return(confusion_plot)
+    }
+    
+    # Create confusion matrix plot
+    p_confusion <- create_confusion_matrix_plot(subset_data, n_value, title_suffix)
+    
+    # Save confusion matrix plot
+    ggsave(file.path(plot_dir, sprintf("12_confusion_matrix_%s.png", suffix)), p_confusion, 
+           width = 12, height = 8, dpi = 300)
     
     # Create combined plot
     combined <- (p1 + p2) / (p3 + p4) / (p5 + p6) / (p7 + p8) +
@@ -430,6 +1297,38 @@ create_plots_for_n <- function(data_n, n_value, output_dir) {
     ggsave(
       file.path(plot_dir, sprintf("00_confusion_analysis_%s.png", suffix)), 
       combined_with_cm, 
+      width = 20, 
+      height = 20, 
+      dpi = 300
+    )
+    
+    # Create combined plot with linear scale
+    combined_linear <- (p1_linear + p2_linear) / (p3_linear + p4_linear) / (p5_linear + p6_linear) / (p7_linear + p8_linear) +
+      plot_annotation(
+        title = sprintf("Ring Experiment Results Summary (N = %d)%s - Linear Scale", n_value, title_suffix),
+        subtitle = sprintf("Based on %d runs per parameter combination", unique(subset_data$n_runs)),
+        theme = theme(plot.title = element_text(size = 16, face = "bold"))
+      )
+    
+    ggsave(
+      file.path(plot_dir, sprintf("00_combined_summary_%s_linear.png", suffix)), 
+      combined_linear, 
+      width = 20, 
+      height = 30, 
+      dpi = 300
+    )
+    
+    # Create a separate combined plot with linear scale that includes the confusion matrix
+    combined_with_cm_linear <- (p1_linear + p2_linear) / (p3_linear + p4_linear) / (p_confusion) +
+      plot_annotation(
+        title = sprintf("Ring Experiment Confusion Matrix Analysis (N = %d)%s - Linear Scale", n_value, title_suffix),
+        subtitle = sprintf("Based on %d runs per parameter combination", unique(subset_data$n_runs)),
+        theme = theme(plot.title = element_text(size = 16, face = "bold"))
+      )
+    
+    ggsave(
+      file.path(plot_dir, sprintf("00_confusion_analysis_%s_linear.png", suffix)), 
+      combined_with_cm_linear, 
       width = 20, 
       height = 20, 
       dpi = 300
@@ -489,8 +1388,7 @@ create_combined_plots <- function(aggregated_data, output_dir) {
     # Skip if no data for this subset
     if (nrow(subset_data) == 0) next
     
-    # Create cross-network plots for rates instead of counts
-    # TPR across all N
+    # TPR across all N - Log scale
     p_tpr_all <- ggplot(subset_data, aes(x = lambda_actual, y = TPR, color = as.factor(N))) +
       geom_point(size = 3) +
       geom_line(aes(group = as.factor(N)), alpha = 0.5, linewidth = 0.7) +
@@ -498,7 +1396,7 @@ create_combined_plots <- function(aggregated_data, output_dir) {
       scale_y_continuous(labels = percent_format(), limits = c(0, 1)) +
       labs(
         title = paste0("True Positive Rate vs P(edge) for Different Network Sizes", title_suffix),
-        subtitle = "Proportion of actual critical links correctly identified across network scales",
+        subtitle = "Proportion of actual critical links correctly identified across network scales - Log Scale",
         x = "P(edge) in log scale",
         y = "True Positive Rate",
         color = "Network Size (N)"
@@ -506,7 +1404,23 @@ create_combined_plots <- function(aggregated_data, output_dir) {
       theme_white +
       scale_color_viridis_d(end = 0.8)
     
-    # FPR across all N
+    # TPR across all N - Linear scale
+    p_tpr_all_linear <- ggplot(subset_data, aes(x = lambda_actual, y = TPR, color = as.factor(N))) +
+      geom_point(size = 3) +
+      geom_line(aes(group = as.factor(N)), alpha = 0.5, linewidth = 0.7) +
+      scale_x_continuous(labels = scales::number_format(accuracy = 0.001)) +
+      scale_y_continuous(labels = percent_format(), limits = c(0, 1)) +
+      labs(
+        title = paste0("True Positive Rate vs P(edge) for Different Network Sizes", title_suffix),
+        subtitle = "Proportion of actual critical links correctly identified across network scales - Linear Scale",
+        x = "P(edge) in linear scale",
+        y = "True Positive Rate",
+        color = "Network Size (N)"
+      ) +
+      theme_white +
+      scale_color_viridis_d(end = 0.8)
+    
+    # FPR across all N - Log scale
     p_fpr_all <- ggplot(subset_data, aes(x = lambda_actual, y = FPR, color = as.factor(N))) +
       geom_point(size = 3) +
       geom_line(aes(group = as.factor(N)), alpha = 0.5, linewidth = 0.7) +
@@ -514,7 +1428,7 @@ create_combined_plots <- function(aggregated_data, output_dir) {
       scale_y_continuous(labels = percent_format(), limits = c(0, 1)) +
       labs(
         title = paste0("False Positive Rate vs P(edge) for Different Network Sizes", title_suffix),
-        subtitle = "Proportion of non-critical links incorrectly identified as critical across network scales",
+        subtitle = "Proportion of non-critical links incorrectly identified as critical across network scales - Log Scale",
         x = "P(edge) in log scale",
         y = "False Positive Rate",
         color = "Network Size (N)"
@@ -522,7 +1436,23 @@ create_combined_plots <- function(aggregated_data, output_dir) {
       theme_white +
       scale_color_viridis_d(end = 0.8)
     
-    # 1. F1 Score across all N - Add this missing plot
+    # FPR across all N - Linear scale
+    p_fpr_all_linear <- ggplot(subset_data, aes(x = lambda_actual, y = FPR, color = as.factor(N))) +
+      geom_point(size = 3) +
+      geom_line(aes(group = as.factor(N)), alpha = 0.5, linewidth = 0.7) +
+      scale_x_continuous(labels = scales::number_format(accuracy = 0.001)) +
+      scale_y_continuous(labels = percent_format(), limits = c(0, 1)) +
+      labs(
+        title = paste0("False Positive Rate vs P(edge) for Different Network Sizes", title_suffix),
+        subtitle = "Proportion of non-critical links incorrectly identified as critical across network scales - Linear Scale",
+        x = "P(edge) in linear scale",
+        y = "False Positive Rate",
+        color = "Network Size (N)"
+      ) +
+      theme_white +
+      scale_color_viridis_d(end = 0.8)
+    
+    # F1 Score across all N - Log scale
     p_f1_all <- ggplot(subset_data, aes(x = lambda_actual, y = f1_mean, color = as.factor(N))) +
       geom_point(size = 3) +
       geom_line(aes(group = as.factor(N)), alpha = 0.5, linewidth = 0.7) +
@@ -531,7 +1461,7 @@ create_combined_plots <- function(aggregated_data, output_dir) {
       scale_y_continuous(labels = percent_format(), limits = c(0, 1)) +
       labs(
         title = paste0("F1 Score vs P(edge) for Different Network Sizes", title_suffix),
-        subtitle = "Performance comparison across network scales",
+        subtitle = "Performance comparison across network scales - Log Scale",
         x = "P(edge) in log scale",
         y = "F1 Score",
         color = "Network Size (N)"
@@ -539,7 +1469,24 @@ create_combined_plots <- function(aggregated_data, output_dir) {
       theme_white +
       scale_color_viridis_d(end = 0.8)
     
-    # 2. MCC across all N - Add this missing plot
+    # F1 Score across all N - Linear scale
+    p_f1_all_linear <- ggplot(subset_data, aes(x = lambda_actual, y = f1_mean, color = as.factor(N))) +
+      geom_point(size = 3) +
+      geom_line(aes(group = as.factor(N)), alpha = 0.5, linewidth = 0.7) +
+      geom_errorbar(aes(ymin = f1_mean - f1_sd, ymax = f1_mean + f1_sd), width = 0.02, alpha = 0.5, linewidth = 0.5) +
+      scale_x_continuous(labels = scales::number_format(accuracy = 0.001)) +
+      scale_y_continuous(labels = percent_format(), limits = c(0, 1)) +
+      labs(
+        title = paste0("F1 Score vs P(edge) for Different Network Sizes", title_suffix),
+        subtitle = "Performance comparison across network scales - Linear Scale",
+        x = "P(edge) in linear scale",
+        y = "F1 Score",
+        color = "Network Size (N)"
+      ) +
+      theme_white +
+      scale_color_viridis_d(end = 0.8)
+    
+    # MCC across all N - Log scale
     p_mcc_all <- ggplot(subset_data, aes(x = lambda_actual, y = mcc_mean, color = as.factor(N))) +
       geom_point(size = 3) +
       geom_line(aes(group = as.factor(N)), alpha = 0.5, linewidth = 0.7) +
@@ -548,8 +1495,25 @@ create_combined_plots <- function(aggregated_data, output_dir) {
       scale_y_continuous(limits = c(-1, 1)) +
       labs(
         title = paste0("Matthews Correlation Coefficient vs P(edge) for Different Network Sizes", title_suffix),
-        subtitle = "Balanced classification performance across network scales",
+        subtitle = "Balanced classification performance across network scales - Log Scale",
         x = "P(edge) in log scale",
+        y = "MCC",
+        color = "Network Size (N)"
+      ) +
+      theme_white +
+      scale_color_viridis_d(end = 0.8)
+    
+    # MCC across all N - Linear scale
+    p_mcc_all_linear <- ggplot(subset_data, aes(x = lambda_actual, y = mcc_mean, color = as.factor(N))) +
+      geom_point(size = 3) +
+      geom_line(aes(group = as.factor(N)), alpha = 0.5, linewidth = 0.7) +
+      geom_errorbar(aes(ymin = mcc_mean - mcc_sd, ymax = mcc_mean + mcc_sd), width = 0.02, alpha = 0.5, linewidth = 0.5) +
+      scale_x_continuous(labels = scales::number_format(accuracy = 0.001)) +
+      scale_y_continuous(limits = c(-1, 1)) +
+      labs(
+        title = paste0("Matthews Correlation Coefficient vs P(edge) for Different Network Sizes", title_suffix),
+        subtitle = "Balanced classification performance across network scales - Linear Scale",
+        x = "P(edge) in linear scale",
         y = "MCC",
         color = "Network Size (N)"
       ) +
@@ -566,8 +1530,25 @@ create_combined_plots <- function(aggregated_data, output_dir) {
       scale_y_continuous(labels = percent_format(), limits = c(0, 1)) +
       labs(
         title = paste0("Recall vs P(edge) for Different Network Sizes", title_suffix),
-        subtitle = "Sensitivity across network scales",
+        subtitle = "Sensitivity across network scales - Log Scale",
         x = "P(edge) in log scale",
+        y = "Recall",
+        color = "Network Size (N)"
+      ) +
+      theme_white +
+      scale_color_viridis_d(end = 0.8)
+    
+    # Recall across all N - Linear scale
+    p_recall_all_linear <- ggplot(subset_data, aes(x = lambda_actual, y = recall_mean, color = as.factor(N))) +
+      geom_point(size = 3) +
+      geom_line(aes(group = as.factor(N)), alpha = 0.5, linewidth = 0.7) +
+      geom_errorbar(aes(ymin = recall_mean - recall_sd, ymax = recall_mean + recall_sd), width = 0.02, alpha = 0.5, linewidth = 0.5) +
+      scale_x_continuous(labels = scales::number_format(accuracy = 0.001)) +
+      scale_y_continuous(labels = percent_format(), limits = c(0, 1)) +
+      labs(
+        title = paste0("Recall vs P(edge) for Different Network Sizes", title_suffix),
+        subtitle = "Sensitivity across network scales - Linear Scale",
+        x = "P(edge) in linear scale",
         y = "Recall",
         color = "Network Size (N)"
       ) +
@@ -583,8 +1564,25 @@ create_combined_plots <- function(aggregated_data, output_dir) {
       scale_y_continuous(labels = percent_format(), limits = c(0, 1)) +
       labs(
         title = paste0("Precision vs P(edge) for Different Network Sizes", title_suffix),
-        subtitle = "Positive predictive value across network scales",
+        subtitle = "Positive predictive value across network scales - Log Scale",
         x = "P(edge) in log scale",
+        y = "Precision",
+        color = "Network Size (N)"
+      ) +
+      theme_white +
+      scale_color_viridis_d(end = 0.8)
+    
+    # Precision across all N - Linear scale
+    p_precision_all_linear <- ggplot(subset_data, aes(x = lambda_actual, y = precision_mean, color = as.factor(N))) +
+      geom_point(size = 3) +
+      geom_line(aes(group = as.factor(N)), alpha = 0.5, linewidth = 0.7) +
+      geom_errorbar(aes(ymin = precision_mean - precision_sd, ymax = precision_mean + precision_sd), width = 0.02, alpha = 0.5, linewidth = 0.5) +
+      scale_x_continuous(labels = scales::number_format(accuracy = 0.001)) +
+      scale_y_continuous(labels = percent_format(), limits = c(0, 1)) +
+      labs(
+        title = paste0("Precision vs P(edge) for Different Network Sizes", title_suffix),
+        subtitle = "Positive predictive value across network scales - Linear Scale",
+        x = "P(edge) in linear scale",
         y = "Precision",
         color = "Network Size (N)"
       ) +
@@ -611,6 +1609,25 @@ create_combined_plots <- function(aggregated_data, output_dir) {
       theme_white +
       scale_color_viridis_d(end = 0.8)
     
+    # Runtime scaling - Linear scale
+    p_runtime_all_linear <- ggplot(subset_data, aes(x = N, y = runtime_mean, color = as.factor(lambda_rounded))) +
+      geom_point(size = 3) +
+      geom_line(aes(group = as.factor(lambda_rounded)), alpha = 0.5, linewidth = 0.7) +
+      geom_errorbar(aes(ymin = pmax(0.001, runtime_mean - runtime_sd), 
+                        ymax = runtime_mean + runtime_sd), width = 0.02, alpha = 0.5, linewidth = 0.5) +
+      scale_x_continuous() +
+      scale_y_continuous(trans = scales::pseudo_log_trans(base = 10),
+                        labels = scales::label_number()) +
+      labs(
+        title = paste0("Runtime Scaling with Network Size", title_suffix),
+        subtitle = "Computational complexity analysis - Linear Scale",
+        x = "Network Size (N, linear scale)",
+        y = "Runtime (seconds, pseudo-log scale)",
+        color = "P(edge)"
+      ) +
+      theme_white +
+      scale_color_viridis_d(end = 0.8)
+    
     # 6. Predicted ratio across all N
     p_ratio_all <- ggplot(subset_data, aes(x = lambda_actual, y = predicted_ratio, color = as.factor(N))) +
       geom_point(size = 3) +
@@ -619,7 +1636,7 @@ create_combined_plots <- function(aggregated_data, output_dir) {
       scale_x_log10(labels = scales::number_format(accuracy = 0.001)) +
       labs(
         title = paste0("Predicted/True Ratio vs Lambda for Different Network Sizes", title_suffix),
-        subtitle = "Over/under-prediction across network scales",
+        subtitle = "Over/under-prediction across network scales - Log Scale",
         x = "Lambda Value (log scale)",
         y = "Predicted/True Ratio",
         color = "Network Size (N)"
@@ -627,27 +1644,46 @@ create_combined_plots <- function(aggregated_data, output_dir) {
       theme_white +
       scale_color_viridis_d(end = 0.8)
     
-    # Save plots
-    ggsave(file.path(combined_dir, sprintf("tpr_all_n_%s.png", suffix)), p_tpr_all, width = 12, height = 8, dpi = 300)
-    ggsave(file.path(combined_dir, sprintf("fpr_all_n_%s.png", suffix)), p_fpr_all, width = 12, height = 8, dpi = 300)
-    ggsave(file.path(combined_dir, sprintf("f1_score_all_n_%s.png", suffix)), p_f1_all, width = 12, height = 8, dpi = 300)
-    ggsave(file.path(combined_dir, sprintf("mcc_all_n_%s.png", suffix)), p_mcc_all, width = 12, height = 8, dpi = 300)
-    ggsave(file.path(combined_dir, sprintf("recall_all_n_%s.png", suffix)), p_recall_all, width = 12, height = 8, dpi = 300)
-    ggsave(file.path(combined_dir, sprintf("precision_all_n_%s.png", suffix)), p_precision_all, width = 12, height = 8, dpi = 300)
-    ggsave(file.path(combined_dir, sprintf("runtime_scaling_%s.png", suffix)), p_runtime_all, width = 12, height = 8, dpi = 300)
-    ggsave(file.path(combined_dir, sprintf("predicted_ratio_all_n_%s.png", suffix)), p_ratio_all, width = 12, height = 8, dpi = 300)
+    # Predicted ratio across all N - Linear scale
+    p_ratio_all_linear <- ggplot(subset_data, aes(x = lambda_actual, y = predicted_ratio, color = as.factor(N))) +
+      geom_point(size = 3) +
+      geom_line(aes(group = as.factor(N)), alpha = 0.5, linewidth = 0.7) +
+      geom_hline(yintercept = 1, linetype = "dashed", alpha = 0.5, linewidth = 0.7) +
+      scale_x_continuous(labels = scales::number_format(accuracy = 0.001)) +
+      labs(
+        title = paste0("Predicted/True Ratio vs Lambda for Different Network Sizes", title_suffix),
+        subtitle = "Over/under-prediction across network scales - Linear Scale",
+        x = "Lambda Value (linear scale)",
+        y = "Predicted/True Ratio",
+        color = "Network Size (N)"
+      ) +
+      theme_white +
+      scale_color_viridis_d(end = 0.8)
     
-    # Create summary dashboard
-    dashboard <- (p_tpr_all + p_fpr_all) / (p_recall_all + p_precision_all) / (p_f1_all + p_mcc_all) +
+    # Save both log and linear scale plots
+    ggsave(file.path(combined_dir, sprintf("tpr_all_n_%s.png", suffix)), p_tpr_all, width = 12, height = 8, dpi = 300)
+    ggsave(file.path(combined_dir, sprintf("tpr_all_n_%s_linear.png", suffix)), p_tpr_all_linear, width = 12, height = 8, dpi = 300)
+    
+    ggsave(file.path(combined_dir, sprintf("fpr_all_n_%s.png", suffix)), p_fpr_all, width = 12, height = 8, dpi = 300)
+    ggsave(file.path(combined_dir, sprintf("fpr_all_n_%s_linear.png", suffix)), p_fpr_all_linear, width = 12, height = 8, dpi = 300)
+    
+    ggsave(file.path(combined_dir, sprintf("f1_score_all_n_%s.png", suffix)), p_f1_all, width = 12, height = 8, dpi = 300)
+    ggsave(file.path(combined_dir, sprintf("f1_score_all_n_%s_linear.png", suffix)), p_f1_all_linear, width = 12, height = 8, dpi = 300)
+    
+    ggsave(file.path(combined_dir, sprintf("mcc_all_n_%s.png", suffix)), p_mcc_all, width = 12, height = 8, dpi = 300)
+    ggsave(file.path(combined_dir, sprintf("mcc_all_n_%s_linear.png", suffix)), p_mcc_all_linear, width = 12, height = 8, dpi = 300)
+    
+    # Create a linear scale dashboard
+    dashboard_linear <- (p_tpr_all_linear + p_fpr_all_linear) / (p_recall_all_linear + p_precision_all_linear) / (p_f1_all_linear + p_mcc_all_linear) +
       plot_annotation(
         title = paste0("Ring Experiment Results: Cross-Network Comparison", title_suffix),
-        subtitle = "Performance metrics across different network sizes and edge probabilities",
+        subtitle = "Performance metrics across different network sizes and edge probabilities - Linear Scale",
         theme = theme(plot.title = element_text(size = 18, face = "bold"))
       )
     
     ggsave(
-      file.path(combined_dir, sprintf("dashboard_all_metrics_%s.png", suffix)), 
-      dashboard, 
+      file.path(combined_dir, sprintf("dashboard_all_metrics_%s_linear.png", suffix)), 
+      dashboard_linear, 
       width = 24, 
       height = 18, 
       dpi = 300
