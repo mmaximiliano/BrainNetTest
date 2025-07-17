@@ -1,0 +1,91 @@
+=================================================================
+RING EXPERIMENT SUMMARY REPORT
+=================================================================
+Experiment ID: ring_exp_20250716_175510
+Started: 2025-07-16 17:55:10
+Completed: 2025-07-16 21:08:36
+=================================================================
+
+PERFORMANCE BY CONDITION:
+-------------------------------------------------------------------
+
+Results for N = 50:
+-------------------------------------------------------------------
+  lambda_half (n=500):
+    Success rate: 100.0% (500/500)
+    Power: 1.000 (500/500)
+    Recall: 0.923 (median: 0.925)
+    Precision: 1.000 (median: 1.000)
+    F1 Score: 0.960 (median: 0.961)
+    Average Runtime: 43.38 seconds
+
+  lambda_double (n=1400):
+    Success rate: 100.0% (1400/1400)
+    Power: 1.000 (1400/1400)
+    Recall: 0.503 (median: 0.507)
+    Precision: 1.000 (median: 1.000)
+    F1 Score: 0.668 (median: 0.673)
+    Average Runtime: 43.52 seconds
+
+  const_high (n=100):
+    Success rate: 100.0% (100/100)
+    Power: 1.000 (100/100)
+    Recall: 0.924 (median: 0.925)
+    Precision: 1.000 (median: 1.000)
+    F1 Score: 0.960 (median: 0.961)
+    Average Runtime: 43.61 seconds
+
+  const_low (n=100):
+    Success rate: 100.0% (100/100)
+    Power: 1.000 (100/100)
+    Recall: 0.498 (median: 0.498)
+    Precision: 1.000 (median: 1.000)
+    F1 Score: 0.664 (median: 0.665)
+    Average Runtime: 42.86 seconds
+
+
+Results for N = 100:
+-------------------------------------------------------------------
+  lambda_half (n=500):
+    Success rate: 100.0% (500/500)
+    Power: 1.000 (500/500)
+    Recall: 0.923 (median: 0.925)
+    Precision: 1.000 (median: 1.000)
+    F1 Score: 0.960 (median: 0.961)
+    Average Runtime: 43.38 seconds
+
+  lambda_double (n=1400):
+    Success rate: 100.0% (1400/1400)
+    Power: 1.000 (1400/1400)
+    Recall: 0.503 (median: 0.507)
+    Precision: 1.000 (median: 1.000)
+    F1 Score: 0.668 (median: 0.673)
+    Average Runtime: 43.52 seconds
+
+  const_high (n=100):
+    Success rate: 100.0% (100/100)
+    Power: 1.000 (100/100)
+    Recall: 0.924 (median: 0.925)
+    Precision: 1.000 (median: 1.000)
+    F1 Score: 0.960 (median: 0.961)
+    Average Runtime: 43.61 seconds
+
+  const_low (n=100):
+    Success rate: 100.0% (100/100)
+    Power: 1.000 (100/100)
+    Recall: 0.498 (median: 0.498)
+    Precision: 1.000 (median: 1.000)
+    F1 Score: 0.664 (median: 0.665)
+    Average Runtime: 42.86 seconds
+
+=================================================================
+OVERALL EXPERIMENT SUMMARY:
+=================================================================
+Total experiments: 2100
+Successful runs: 2100 (100.0%)
+Failed runs: 0 (0.0%)
+Overall power: 1.000 (2100/2100)
+Average Recall: 0.623
+Average Precision: 1.000
+Average F1 Score: 0.752
+Runtime - Average: 43.46 seconds, Median: 13.13 seconds, Max: 86.50 seconds

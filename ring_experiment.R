@@ -1496,12 +1496,12 @@ main_validation <- function(quick_test = FALSE, nodes = 10000, master_seed = 42,
  full_validation <- main_validation(
    master_seed = 45,
    lambda_multipliers = list(
-     "lambda_half" = c(0.5, 0.33, 0.25, 0.2, 0.167, 0.143, 0.125, 0.111, 0.1),
-     "lambda_double" = c(2, 3, 4, 5, 6, 7, 8, 9, 10)
+     "lambda_half" = c(0.05, 0.01, 0.005, 0.001, 0.0001),
+     "lambda_double" = c(15, 20, 30, 50, 75, 100, 150, 200, 300, 500, 1000, 2000, 5000, 10000)
    ),
    p_const_values = list(
-     "const_high" = c(0.5, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 0.99),
-     "const_low" = c(0.01, 0.03, 0.05, 0.07, 0.09, 0.1, 0.15, 0.2, 0.25, 0.3, 0.4)
+     "const_high" = c(0.999),
+     "const_low" = c(0.001)
    ),
    output_dir = "results/full_validation"
  )
