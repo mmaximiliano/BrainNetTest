@@ -1,0 +1,106 @@
+{
+  "N_50": {
+    "lambda_half": {
+      "n_runs": 600,
+      "success_rate": 1,
+      "power": 0.7783,
+      "recall": {
+        "mean": 0.2687,
+        "median": 0.2273,
+        "sd": 0.2417
+      },
+      "precision": {
+        "mean": 0.9206,
+        "median": 0.9538,
+        "sd": 0.1031
+      },
+      "f1": {
+        "mean": 0.3611,
+        "median": 0.3636,
+        "sd": 0.2923
+      },
+      "runtime": {
+        "mean": 60.1415,
+        "median": 13.8554,
+        "max": 601.7307
+      }
+    },
+    "lambda_double": {
+      "n_runs": 100,
+      "success_rate": 1,
+      "power": 1,
+      "recall": {
+        "mean": 0.5057,
+        "median": 0.5145,
+        "sd": 0.0459
+      },
+      "precision": {
+        "mean": 1,
+        "median": 1,
+        "sd": 0
+      },
+      "f1": {
+        "mean": 0.6705,
+        "median": 0.6795,
+        "sd": 0.0406
+      },
+      "runtime": {
+        "mean": 44.5778,
+        "median": 13.722,
+        "max": 85.9756
+      }
+    }
+  },
+  "N_100": {
+    "lambda_half": {
+      "n_runs": 600,
+      "success_rate": 1,
+      "power": 0.7783,
+      "recall": {
+        "mean": 0.2687,
+        "median": 0.2273,
+        "sd": 0.2417
+      },
+      "precision": {
+        "mean": 0.9206,
+        "median": 0.9538,
+        "sd": 0.1031
+      },
+      "f1": {
+        "mean": 0.3611,
+        "median": 0.3636,
+        "sd": 0.2923
+      },
+      "runtime": {
+        "mean": 60.1415,
+        "median": 13.8554,
+        "max": 601.7307
+      }
+    },
+    "lambda_double": {
+      "n_runs": 100,
+      "success_rate": 1,
+      "power": 1,
+      "recall": {
+        "mean": 0.5057,
+        "median": 0.5145,
+        "sd": 0.0459
+      },
+      "precision": {
+        "mean": 1,
+        "median": 1,
+        "sd": 0
+      },
+      "f1": {
+        "mean": 0.6705,
+        "median": 0.6795,
+        "sd": 0.0406
+      },
+      "runtime": {
+        "mean": 44.5778,
+        "median": 13.722,
+        "max": 85.9756
+      }
+    }
+  }
+}

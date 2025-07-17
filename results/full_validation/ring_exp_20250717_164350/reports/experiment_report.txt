@@ -1,0 +1,59 @@
+=================================================================
+RING EXPERIMENT SUMMARY REPORT
+=================================================================
+Experiment ID: ring_exp_20250717_164350
+Started: 2025-07-17 16:43:50
+Completed: 2025-07-17 17:51:48
+=================================================================
+
+PERFORMANCE BY CONDITION:
+-------------------------------------------------------------------
+
+Results for N = 50:
+-------------------------------------------------------------------
+  lambda_half (n=600):
+    Success rate: 100.0% (600/600)
+    Power: 0.778 (467/600)
+    Recall: 0.269 (median: 0.227)
+    Precision: 0.921 (median: 0.954)
+    F1 Score: 0.361 (median: 0.364)
+    Average Runtime: 60.14 seconds
+
+  lambda_double (n=100):
+    Success rate: 100.0% (100/100)
+    Power: 1.000 (100/100)
+    Recall: 0.506 (median: 0.515)
+    Precision: 1.000 (median: 1.000)
+    F1 Score: 0.671 (median: 0.679)
+    Average Runtime: 44.58 seconds
+
+
+Results for N = 100:
+-------------------------------------------------------------------
+  lambda_half (n=600):
+    Success rate: 100.0% (600/600)
+    Power: 0.778 (467/600)
+    Recall: 0.269 (median: 0.227)
+    Precision: 0.921 (median: 0.954)
+    F1 Score: 0.361 (median: 0.364)
+    Average Runtime: 60.14 seconds
+
+  lambda_double (n=100):
+    Success rate: 100.0% (100/100)
+    Power: 1.000 (100/100)
+    Recall: 0.506 (median: 0.515)
+    Precision: 1.000 (median: 1.000)
+    F1 Score: 0.671 (median: 0.679)
+    Average Runtime: 44.58 seconds
+
+=================================================================
+OVERALL EXPERIMENT SUMMARY:
+=================================================================
+Total experiments: 700
+Successful runs: 700 (100.0%)
+Failed runs: 0 (0.0%)
+Overall power: 0.810 (567/700)
+Average Recall: 0.303
+Average Precision: 0.932
+Average F1 Score: 0.405
+Runtime - Average: 57.92 seconds, Median: 13.82 seconds, Max: 601.73 seconds

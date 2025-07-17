@@ -1,0 +1,43 @@
+=================================================================
+RING EXPERIMENT SUMMARY REPORT
+=================================================================
+Experiment ID: ring_exp_20250717_185315
+Started: 2025-07-17 18:53:15
+Completed: 2025-07-17 19:26:31
+=================================================================
+
+PERFORMANCE BY CONDITION:
+-------------------------------------------------------------------
+
+Results for N = 50:
+-------------------------------------------------------------------
+  lambda_double (n=400):
+    Success rate: 100.0% (400/400)
+    Power: 0.695 (278/400)
+    Recall: 0.191 (median: 0.133)
+    Precision: 0.952 (median: 0.994)
+    F1 Score: 0.278 (median: 0.226)
+    Average Runtime: 45.19 seconds
+
+
+Results for N = 100:
+-------------------------------------------------------------------
+  lambda_double (n=400):
+    Success rate: 100.0% (400/400)
+    Power: 0.695 (278/400)
+    Recall: 0.191 (median: 0.133)
+    Precision: 0.952 (median: 0.994)
+    F1 Score: 0.278 (median: 0.226)
+    Average Runtime: 45.19 seconds
+
+=================================================================
+OVERALL EXPERIMENT SUMMARY:
+=================================================================
+Total experiments: 400
+Successful runs: 400 (100.0%)
+Failed runs: 0 (0.0%)
+Overall power: 0.695 (278/400)
+Average Recall: 0.191
+Average Precision: 0.952
+Average F1 Score: 0.278
+Runtime - Average: 45.19 seconds, Median: 15.36 seconds, Max: 90.74 seconds

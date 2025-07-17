@@ -1,0 +1,22 @@
+EXPERIMENT INDEX
+================
+
+Experiment ID: ring_exp_20250717_185315
+Created: 2025-07-17 18:53:15
+
+Directory Structure:
+-------------------
+metadata/          - Experiment configuration and manifest
+by_network_size/   - Results organized by N value
+by_perturbation/   - Results organized by perturbation type
+individual_runs/   - All individual run results
+summaries/         - CSV summaries at various levels
+reports/           - Text and JSON reports
+plots/             - Directory for generated plots
+
+Key Files:
+----------
+metadata/experiment_manifest.json  - Complete experiment documentation
+summaries/complete_summary.csv     - All results in one CSV
+reports/experiment_report.txt      - Human-readable summary
+reports/performance_metrics.json   - Machine-readable metrics
