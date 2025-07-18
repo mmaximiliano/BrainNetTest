@@ -1,0 +1,56 @@
+{
+  "N_50": {
+    "const_high": {
+      "n_runs": 100,
+      "success_rate": 1,
+      "power": 1,
+      "recall": {
+        "mean": 0.971,
+        "median": 0.9745,
+        "sd": 0.0109
+      },
+      "precision": {
+        "mean": 1,
+        "median": 1,
+        "sd": 0
+      },
+      "f1": {
+        "mean": 0.9852,
+        "median": 0.9871,
+        "sd": 0.0056
+      },
+      "runtime": {
+        "mean": 44.2802,
+        "median": 14.9124,
+        "max": 89.7464
+      }
+    }
+  },
+  "N_100": {
+    "const_high": {
+      "n_runs": 100,
+      "success_rate": 1,
+      "power": 1,
+      "recall": {
+        "mean": 0.971,
+        "median": 0.9745,
+        "sd": 0.0109
+      },
+      "precision": {
+        "mean": 1,
+        "median": 1,
+        "sd": 0
+      },
+      "f1": {
+        "mean": 0.9852,
+        "median": 0.9871,
+        "sd": 0.0056
+      },
+      "runtime": {
+        "mean": 44.2802,
+        "median": 14.9124,
+        "max": 89.7464
+      }
+    }
+  }
+}

@@ -73,16 +73,24 @@ find_lambda <- function(N, target_density = 0.25) {  # Increased target density
 #' @param perturbation_type Type of perturbation ("lambda_half", "lambda_double", "const_high", "const_low")
 #' @param lambda_alt Alternative lambda for perturbed edges
 #' @param p_const Constant probability for perturbed edges
+#' @param use_decay_law Whether to use decay law for normal nodes (default TRUE)
+#' @param const_edge_prob Constant probability for normal nodes (if use_decay_law=FALSE)
 #' @return Symmetric adjacency matrix
 generate_ring_graph <- function(N, lambda, perturbed_nodes = c(),
                                 perturbation_type = "none",
-                                lambda_alt = NULL, p_const = NULL) {
+                                lambda_alt = NULL, p_const = NULL,
+                                use_decay_law = TRUE, const_edge_prob = NULL) {
 
   # Compute distance matrix using vectorized operation
   D <- outer(1:N, 1:N, ring_distance, N)
 
   # Compute baseline probability matrix
-  P <- exp(-lambda * D)
+  if (use_decay_law) {
+    P <- exp(-lambda * D)
+  } else {
+    if (is.null(const_edge_prob)) stop("const_edge_prob must be provided when use_decay_law=FALSE")
+    P <- matrix(const_edge_prob, nrow = N, ncol = N)
+  }
 
   # Handle perturbations if any
   if (length(perturbed_nodes) > 0 && perturbation_type != "none") {
@@ -130,10 +138,13 @@ generate_ring_graph <- function(N, lambda, perturbed_nodes = c(),
 #' @param perturbation_type Type of perturbation
 #' @param lambda_mult Specific lambda multiplier (for lambda_half, lambda_double)
 #' @param p_const_value Specific constant probability value (for const_high, const_low)
+#' @param use_decay_law Whether to use decay law for normal nodes (default TRUE)
+#' @param const_edge_prob Constant probability for normal nodes (if use_decay_law=FALSE)
 #' @return List of adjacency matrices
 generate_population <- function(n_graphs, N, lambda, perturbed_nodes = c(),
                                perturbation_type = "none",
-                               lambda_mult = NULL, p_const_value = NULL) {
+                               lambda_mult = NULL, p_const_value = NULL,
+                               use_decay_law = TRUE, const_edge_prob = NULL) {
 
   # Define available parameter values (used if not explicitly provided)
   lambda_multipliers <- switch(perturbation_type,
@@ -169,10 +180,11 @@ generate_population <- function(n_graphs, N, lambda, perturbed_nodes = c(),
   graphs <- vector("list", n_graphs)
 
   # Use a fixed parameter value for all graphs in this population
-  # (lambda_alt and p_const are now passed directly to generate_population)
   for (i in 1:n_graphs) {
     graphs[[i]] <- generate_ring_graph(N, lambda, perturbed_nodes,
-                                      perturbation_type, lambda_alt, p_const)
+                                      perturbation_type, lambda_alt, p_const,
+                                      use_decay_law = use_decay_law,
+                                      const_edge_prob = const_edge_prob)
   }
 
   # Add parameter information to the returned list
@@ -236,10 +248,13 @@ compute_confusion_matrix <- function(detected_edges, perturbed_nodes, N) {
 #' @param seed Random seed for reproducibility
 #' @param lambda_mult Specific lambda multiplier (for lambda_half, lambda_double)
 #' @param p_const_value Specific constant probability value (for const_high, const_low)
+#' @param use_decay_law Whether to use decay law for normal nodes (default TRUE)
+#' @param const_edge_prob Constant probability for normal nodes (if use_decay_law=FALSE)
 #' @return List with comprehensive experiment results
 run_single_experiment <- function(N, n_graphs, perturbation_type, rho = 0.03,
                                  alpha = 0.05, n_bootstrap = 1000, seed = NULL,
-                                 lambda_mult = NULL, p_const_value = NULL) {
+                                 lambda_mult = NULL, p_const_value = NULL,
+                                 use_decay_law = TRUE, const_edge_prob = NULL) {
 
   if (!is.null(seed)) set.seed(seed)
 
@@ -253,12 +268,19 @@ run_single_experiment <- function(N, n_graphs, perturbation_type, rho = 0.03,
     n_bootstrap = n_bootstrap,
     seed = seed,
     lambda_mult = lambda_mult,
-    p_const_value = p_const_value
+    p_const_value = p_const_value,
+    use_decay_law = use_decay_law,
+    const_edge_prob = const_edge_prob
   )
 
-  # Find appropriate lambda
-  lambda <- find_lambda(N, target_density = 0.25)
-  experiment_params$lambda_base <- lambda
+  # Find appropriate lambda (only if using decay law)
+  if (use_decay_law) {
+    lambda <- find_lambda(N, target_density = 0.25)
+    experiment_params$lambda_base <- lambda
+  } else {
+    lambda <- NA
+    experiment_params$lambda_base <- NA
+  }
 
   # Determine perturbed nodes
   K <- max(2, ceiling(rho * N))
@@ -283,7 +305,9 @@ run_single_experiment <- function(N, n_graphs, perturbation_type, rho = 0.03,
   experiment_params$n_true_critical_links <- length(true_critical_links)
 
   # ---- Generate populations ----
-  pop_A <- generate_population(n_graphs, N, lambda)
+  pop_A <- generate_population(n_graphs, N, lambda,
+                              use_decay_law = use_decay_law,
+                              const_edge_prob = const_edge_prob)
 
   # Store actual lambda value used for perturbation
   if (perturbation_type %in% c("lambda_half", "lambda_double")) {
@@ -309,7 +333,9 @@ run_single_experiment <- function(N, n_graphs, perturbation_type, rho = 0.03,
   }
 
   pop_B <- generate_population(n_graphs, N, lambda, perturbed_nodes, perturbation_type,
-                              lambda_mult, p_const_value)
+                              lambda_mult, p_const_value,
+                              use_decay_law = use_decay_law,
+                              const_edge_prob = const_edge_prob)
   populations <- list(A = pop_A, B = pop_B)
 
   # ---- Run algorithm and collect detailed results ----
@@ -565,6 +591,8 @@ create_experiment_manifest <- function(dirs, experiment_metadata) {
 #' @param output_dir Directory to save intermediate results
 #' @param lambda_multipliers Custom lambda multipliers for lambda-based perturbations
 #' @param p_const_values Custom probability values for constant perturbations
+#' @param use_decay_law Whether to use decay law for normal nodes (default TRUE)
+#' @param const_edge_prob Constant probability for normal nodes (if use_decay_law=FALSE)
 #' @return Data frame with all results
 run_ring_experiment <- function(N_values = c(10, 100, 1000, 10000),
                                perturbation_types = c("lambda_half", "lambda_double",
@@ -577,7 +605,9 @@ run_ring_experiment <- function(N_values = c(10, 100, 1000, 10000),
                                n_cores = parallel::detectCores() - 1,
                                output_dir = ".",
                                lambda_multipliers = NULL,
-                               p_const_values = NULL) {
+                               p_const_values = NULL,
+                               use_decay_law = TRUE,
+                               const_edge_prob = NULL) {
 
   # Define default parameter values if not provided
   if (is.null(lambda_multipliers)) {
@@ -749,7 +779,9 @@ run_ring_experiment <- function(N_values = c(10, 100, 1000, 10000),
             rho = rho,
             alpha = alpha,
             n_bootstrap = n_bootstrap,
-            seed = seed
+            seed = seed,
+            use_decay_law = use_decay_law,
+            const_edge_prob = const_edge_prob
           )
 
           # Add the specific parameter being tested
@@ -1393,6 +1425,8 @@ run_ring_experiment <- function(N_values = c(10, 100, 1000, 10000),
 #' @param perturbation_types Perturbation types to test
 #' @param lambda_multipliers Custom lambda multipliers for lambda-based perturbations
 #' @param p_const_values Custom probability values for constant perturbations
+#' @param use_decay_law Whether to use decay law for normal nodes (default TRUE)
+#' @param const_edge_prob Constant probability for normal nodes (if use_decay_law=FALSE)
 #' @param ... Additional arguments passed to run_ring_experiment
 #' @return List with experiment results
 main_validation <- function(quick_test = FALSE, nodes = 10000, master_seed = 42,
@@ -1400,6 +1434,8 @@ main_validation <- function(quick_test = FALSE, nodes = 10000, master_seed = 42,
                            perturbation_types = NULL,
                            lambda_multipliers = NULL,
                            p_const_values = NULL,
+                           use_decay_law = TRUE,
+                           const_edge_prob = NULL,
                            ...) {
 
   # Set master seed for reproducibility
@@ -1454,6 +1490,8 @@ main_validation <- function(quick_test = FALSE, nodes = 10000, master_seed = 42,
     p_const_values = p_const_values,
     verbose = TRUE,
     output_dir = output_dir,
+    use_decay_law = use_decay_law,
+    const_edge_prob = const_edge_prob,
     ...
   )
 
@@ -1468,39 +1506,16 @@ main_validation <- function(quick_test = FALSE, nodes = 10000, master_seed = 42,
   ))
 }
 
-# Example usage:
-# Basic quick test with default parameters (nodes=100)
-#validation_results <- main_validation(quick_test = TRUE, nodes = 100, master_seed = 42,
-#                                    output_dir = "ring_experiments")
-
-# Quick test with custom lambda multipliers for lambda_half perturbation
-#custom_lambda_test <- main_validation(
-#  quick_test = TRUE,
-#  nodes = 100,
-#  master_seed = 43,
-#  perturbation_types = "lambda_half",
-#  lambda_multipliers = list("lambda_half" = c(0.6, 0.4, 0.2))  # Custom multipliers
-#)
-
-# Quick test with custom constant probabilities for const_high perturbation
-#custom_prob_test <- main_validation(
-#  quick_test = TRUE,
-#  nodes = 10,
-#  master_seed = 44,
-#  perturbation_types = "const_high",
-#  p_const_values = list("const_high" = c(0.80, 0.90, 0.99))  # Custom probabilities
-#)
-
-# Full validation with all perturbation types and default parameters
-# Uncomment to run the full validation (takes a long time)
- full_validation <- main_validation(
+full_validation <- main_validation(
    master_seed = 45,
+   use_decay_law = FALSE,
+   const_edge_prob = 0.5,
    lambda_multipliers = list(
      "lambda_half" = c(),
-     "lambda_double" = c(1, 1.3, 1.5, 1.7)
+     "lambda_double" = c()
    ),
    p_const_values = list(
-     "const_high" = c(),
+     "const_high" = c(0.01, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95),
      "const_low" = c()
    ),
    output_dir = "results/full_validation"
