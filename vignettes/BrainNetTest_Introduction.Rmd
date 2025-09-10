@@ -12,90 +12,311 @@ vignette: >
 ```{r setup_intro, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
-  comment = "#>"
+  comment = "#>",
+  fig.width = 7,
+  fig.height = 5,
+  warning = FALSE,
+  message = FALSE
 )
 ```
 
-Introduction
-BrainNetTest is an R package designed to perform hypothesis testing on brain networks represented as graphs. It provides functionalities to:
+## Introduction
 
-Generate random brain networks.
-Compute central graphs for populations.
-Calculate distances between graphs.
-Compute test statistics to assess differences between populations.
-This vignette introduces the basic usage of BrainNetTest.
+**BrainNetTest** is a comprehensive R package designed for statistical analysis and hypothesis testing of brain network populations. In computational neuroscience, brain networks are commonly represented as undirected graphs where nodes correspond to brain regions (e.g., parcellated areas from neuroimaging) and edges represent functional or structural connections between these regions.
 
-Installation
-You can install the development version of BrainNetTest from GitHub:
+This package addresses the critical need for robust statistical methods to:
 
-**Note:** To install the development version of **BrainNetTest** from GitHub, you need the `devtools` package. If you haven't installed it yet, you can install it using:
+1. **Detect population-level differences** between groups (e.g., healthy controls vs. patients)
+2. **Identify specific connections** that drive observed differences
+3. **Perform rigorous statistical inference** at both global and edge levels
+4. **Generate realistic synthetic networks** for method validation
 
-```r
-# Install devtools if not already installed
-install.packages("devtools")
+## Key Concepts
 
-# Install BrainNetTest from GitHub
-devtools::install_github("mmaximiliano/BrainNetTest")
+### Brain Networks as Graphs
+
+In BrainNetTest, each brain network is represented as:
+- **Adjacency matrix**: Symmetric binary matrix where 1 indicates connection, 0 indicates no connection
+- **No self-loops**: Diagonal elements are always 0
+- **Undirected**: Matrix is symmetric (connections are bidirectional)
+
+### Population Analysis
+
+The package works with **populations** of brain networks:
+- Each population represents a group (e.g., "Control", "Patient") 
+- Each group contains multiple individual brain networks
+- Statistical tests compare distributions across populations
+
+## Installation
+
+Install the development version from GitHub:
+
+```{r installation, eval = FALSE}
+# Install remotes if needed
+if (!requireNamespace("remotes", quietly = TRUE)) {
+  install.packages("remotes")
+}
+
+# Install BrainNetTest
+remotes::install_github("mmaximiliano/BrainNetTest", build_vignettes = TRUE)
 ```
 
-Getting Started
-Load the BrainNetTest package:
+## Getting Started
 
-```{r, include = FALSE}
+Load the package:
+
+```{r load_package}
 library(BrainNetTest)
 ```
 
-Generating Random Brain Networks
-You can generate random symmetric adjacency matrices representing brain networks using the generate_random_graph function.
+## Core Functionalities
 
-```{r, include = FALSE}
-# Generate a random brain network with 10 nodes and edge probability of 0.1
-G <- generate_random_graph(n_nodes = 10, edge_prob = 0.1)
-print(G)
+### 1. Generating Synthetic Brain Networks
+
+BrainNetTest provides tools to generate realistic synthetic brain networks for testing and validation:
+
+```{r generate_networks}
+# Set seed for reproducibility
+set.seed(42)
+
+# Generate a simple random network
+simple_network <- generate_random_graph(n_nodes = 20, edge_prob = 0.15)
+
+# Display network properties
+cat("Network size:", nrow(simple_network), "x", ncol(simple_network), "\n")
+cat("Number of edges:", sum(simple_network) / 2, "\n")
+cat("Density:", round(sum(simple_network) / (nrow(simple_network) * (nrow(simple_network) - 1)), 3), "\n")
+
+# Show a portion of the adjacency matrix
+print(simple_network[1:8, 1:8])
 ```
 
-Computing the Central Graph
-The compute_central_graph function computes the central (representative) graph for a population.
+### 2. Generating Networks with Community Structure
 
-```{r, include = FALSE}
-# Generate synthetic data for a population
-population <- list(
-  generate_random_graph(n_nodes = 10, edge_prob = 0.1),
-  generate_random_graph(n_nodes = 10, edge_prob = 0.1)
+Real brain networks exhibit community structure (modules). Generate more realistic networks:
+
+```{r community_networks}
+# Generate networks with community structure
+community_networks <- generate_category_graphs(
+  n_graphs = 5,
+  n_nodes = 50,
+  n_communities = 4,
+  base_intra_prob = 0.6,    # High connectivity within communities
+  base_inter_prob = 0.1,    # Low connectivity between communities
+  seed = 123
 )
 
-# Compute the central graph
-central_graph <- compute_central_graph(population)
-print(central_graph)
+cat("Generated", length(community_networks), "networks\n")
+cat("Each network has", nrow(community_networks[[1]]), "nodes\n")
+
+# Compare densities
+densities <- sapply(community_networks, function(g) sum(g) / (nrow(g) * (nrow(g) - 1)))
+cat("Network densities:", round(densities, 3), "\n")
 ```
 
-Computing Distances Between Graphs
-Use compute_distance to calculate the Manhattan norm distance between two graphs.
+### 3. Computing Central (Representative) Graphs
 
-```{r, include = FALSE}
-# Compute distance between a graph and the central graph
-distance <- compute_distance(population[[1]], central_graph)
-print(distance)
+For each population, compute a central graph that represents the typical connectivity pattern:
+
+```{r central_graphs}
+# Generate two populations with different properties
+control_population <- generate_category_graphs(
+  n_graphs = 20,
+  n_nodes = 30,
+  base_intra_prob = 0.7,
+  base_inter_prob = 0.1,
+  seed = 456
+)
+
+patient_population <- generate_category_graphs(
+  n_graphs = 20,
+  n_nodes = 30,
+  base_intra_prob = 0.5,    # Reduced intra-community connectivity
+  base_inter_prob = 0.2,    # Increased inter-community connectivity
+  seed = 789
+)
+
+# Compute central graphs
+control_central <- compute_central_graph(control_population)
+patient_central <- compute_central_graph(patient_population)
+
+cat("Central graphs computed\n")
+cat("Control central graph density:", 
+    round(sum(control_central) / (nrow(control_central) * (nrow(control_central) - 1)), 3), "\n")
+cat("Patient central graph density:", 
+    round(sum(patient_central) / (nrow(patient_central) * (nrow(patient_central) - 1)), 3), "\n")
 ```
 
-Computing the Test Statistic
-The compute_test_statistic function computes the test statistic T to assess whether different populations of brain networks originate from the same distribution.
+### 4. Computing Distances Between Networks
 
-```{r, include = FALSE}
-# Generate synthetic data for three populations
-Control <- replicate(30, generate_random_graph(n_nodes = 10, edge_prob = 0.1), simplify = FALSE)
-Schizophrenia <- replicate(30, generate_random_graph(n_nodes = 10, edge_prob = 0.15), simplify = FALSE)
-Alzheimer <- replicate(30, generate_random_graph(n_nodes = 10, edge_prob = 0.2), simplify = FALSE)
+Measure how similar/different networks are using Manhattan distance:
 
-# Combine populations into a list
-populations <- list(Control = Control, Schizophrenia = Schizophrenia, Alzheimer = Alzheimer)
+```{r distances}
+# Compute distances from individuals to their population centrals
+control_distances <- sapply(control_population, function(g) compute_distance(g, control_central))
+patient_distances <- sapply(patient_population, function(g) compute_distance(g, patient_central))
 
-# Compute the test statistic T
-T_value <- compute_test_statistic(populations, a = 1)
-print(T_value)
+cat("Control population distances (first 5):", round(control_distances[1:5], 2), "\n")
+cat("Patient population distances (first 5):", round(patient_distances[1:5], 2), "\n")
+
+# Summary statistics
+cat("\nDistance summary:\n")
+cat("Control - Mean:", round(mean(control_distances), 2), 
+    ", SD:", round(sd(control_distances), 2), "\n")
+cat("Patient - Mean:", round(mean(patient_distances), 2), 
+    ", SD:", round(sd(patient_distances), 2), "\n")
 ```
 
-Conclusion
-This vignette provided an introduction to the basic functionalities of BrainNetTest. In the next vignette, we'll explore generating brain networks with community structures and analyzing them.
+### 5. Global Population Testing
 
-References
+Test whether populations have significantly different network properties:
+
+```{r global_test}
+# Combine populations for testing
+populations <- list(Control = control_population, Patient = patient_population)
+
+# Compute test statistic
+T_statistic <- compute_test_statistic(populations, a = 1)
+
+cat("T-statistic:", round(T_statistic, 4), "\n")
+cat("Interpretation: Larger |T| values indicate greater population differences\n")
+```
+
+### 6. Edge-Level Analysis
+
+Identify which specific connections differ between populations:
+
+```{r edge_analysis}
+# Compute edge frequencies across populations
+edge_frequencies <- compute_edge_frequencies(populations)
+
+cat("Edge frequency analysis:\n")
+cat("Dimensions of edge counts:", dim(edge_frequencies$edge_counts), "\n")
+
+# Compute p-values for each edge
+population_sizes <- sapply(populations, length)
+edge_pvalues <- compute_edge_pvalues(
+  edge_frequencies$edge_counts, 
+  population_sizes,
+  method = "fisher",
+  adjust_method = "fdr"
+)
+
+# Rank edges by significance
+ranked_edges <- rank_edges(edge_pvalues)
+
+cat("Number of edges tested:", nrow(ranked_edges), "\n")
+cat("Top 5 most significant edges:\n")
+print(head(ranked_edges, 5))
+```
+
+### 7. Identifying Critical Connections
+
+Find the specific edges that explain population differences:
+
+```{r critical_edges}
+# Identify critical links
+critical_results <- identify_critical_links(
+  populations = populations,
+  alpha = 0.05,
+  method = "fisher",
+  n_bootstrap = 500,  # Reduced for vignette speed
+  seed = 999
+)
+
+if (!is.null(critical_results$critical_edges)) {
+  cat("Number of critical edges identified:", nrow(critical_results$critical_edges), "\n")
+  cat("Critical edges:\n")
+  print(head(critical_results$critical_edges))
+} else {
+  cat("No critical edges identified at α = 0.05\n")
+}
+
+cat("Number of edges physically removed:", length(critical_results$edges_removed), "\n")
+```
+
+## Practical Example: Simulated Clinical Study
+
+Let's simulate a realistic clinical study comparing brain networks:
+
+```{r clinical_example}
+# Simulate a clinical study with larger populations
+set.seed(2024)
+
+# Healthy controls: Strong community structure
+healthy_nets <- generate_category_graphs(
+  n_graphs = 50,
+  n_nodes = 80,
+  n_communities = 5,
+  base_intra_prob = 0.75,
+  base_inter_prob = 0.05,
+  intra_prob_variation = 0.1,
+  inter_prob_variation = 0.02
+)
+
+# Patients: Disrupted community structure
+patient_nets <- generate_category_graphs(
+  n_graphs = 45,
+  n_nodes = 80,
+  n_communities = 5,
+  base_intra_prob = 0.45,    # Much weaker communities
+  base_inter_prob = 0.15,    # More random connections
+  intra_prob_variation = 0.15,
+  inter_prob_variation = 0.05
+)
+
+study_populations <- list(Healthy = healthy_nets, Patient = patient_nets)
+
+# Global test
+study_T <- compute_test_statistic(study_populations, a = 1)
+cat("Study T-statistic:", round(study_T, 3), "\n")
+
+# Edge-level analysis with multiple testing correction
+study_frequencies <- compute_edge_frequencies(study_populations)
+study_sizes <- sapply(study_populations, length)
+
+study_pvalues <- compute_edge_pvalues(
+  study_frequencies$edge_counts,
+  study_sizes,
+  method = "fisher",
+  adjust_method = "bonferroni"
+)
+
+study_edges <- rank_edges(study_pvalues)
+significant_edges <- study_edges[study_edges$p_adjusted < 0.05, ]
+
+cat("Significant edges (Bonferroni corrected):", nrow(significant_edges), "\n")
+if (nrow(significant_edges) > 0) {
+  cat("Most significant edge: nodes", significant_edges$node1[1], "-", 
+      significant_edges$node2[1], ", p =", format(significant_edges$p_adjusted[1], scientific = TRUE), "\n")
+}
+```
+
+## Best Practices
+
+### Sample Size Considerations
+- **Minimum**: 20-30 networks per population for reliable statistics
+- **Recommended**: 50+ networks for robust edge-level inference
+- **Power**: Larger samples detect smaller effect sizes
+
+### Statistical Considerations
+- Use **multiple testing correction** for edge-level analysis
+- Consider **effect sizes** not just p-values
+- **Bootstrap iterations**: 1000+ for critical link identification
+
+### Computational Efficiency
+- Start with smaller networks for exploratory analysis
+- Use `batch_size > 1` in `identify_critical_links()` for faster computation
+- Set `seed` parameters for reproducible results
+
+## Next Steps
+
+This vignette introduced the core functionality of BrainNetTest. For more advanced topics:
+
+- **Community Structure Analysis**: See the "Community Structures" vignette
+- **Function Documentation**: Use `?function_name` for detailed parameter descriptions
+- **GitHub Repository**: Visit for latest updates and examples
+
+## References
+
+For methodological details and applications, refer to the package documentation and associated publications.
