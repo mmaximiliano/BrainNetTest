@@ -1,6 +1,6 @@
 Package: BrainNetTest
 Title: Statistical Testing and Edge Identification in Brain Network Populations
-Version: 0.0.0.9000
+Version: 0.1.0
 Authors@R: 
     person("Maximiliano", "Martino", , "maxii.martino@gmail.com", role = c("aut", "cre"))
 Description: BrainNetTest provides tools for analyzing and statistically 
