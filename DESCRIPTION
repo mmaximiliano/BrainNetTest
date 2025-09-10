@@ -1,0 +1,28 @@
+Package: BrainNetTest
+Title: Statistical Testing and Edge Identification in Brain Network Populations
+Version: 0.0.0.9000
+Authors@R: 
+    person("Maximiliano", "Martino", , "maxii.martino@gmail.com", role = c("aut", "cre"))
+Description: BrainNetTest provides tools for analyzing and statistically 
+    testing brain networks represented as graphs. Each brain is modeled as 
+    an undirected graph where nodes correspond to brain regions and edges 
+    to functional or structural connections. The package implements:
+    (i) computation of central (representative) graphs and distances between 
+    networks, 
+    (ii) statistical hypothesis testing for global population differences 
+    using the T statistic, 
+    (iii) edge-level inference via Fisher’s exact test, chi-squared tests, or 
+    proportion tests, including multiple testing corrections, 
+    (iv) ranking and visualization of significant edges, and 
+    (v) an iterative algorithm to identify critical connections responsible 
+    for inter-population differences. 
+    Applications include neuroscientific studies aiming to distinguish 
+    populations (e.g., control vs diseased) and to highlight the specific 
+    brain connections driving observed differences.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.3
+Suggests: 
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3
