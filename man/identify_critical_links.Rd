@@ -25,7 +25,7 @@ matrices (binary, symmetric, zero diagonal).}
 
 \item{adjust_method}{The method for p-value adjustment for multiple testing. Default is "none".}
 
-\item{batch_size}{How many edges to drop per iteration (≥ 1).}
+\item{batch_size}{How many edges to drop per iteration (>= 1).}
 
 \item{n_bootstrap}{Size of the bootstrap null distribution.}
 

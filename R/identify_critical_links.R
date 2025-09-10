@@ -1,13 +1,13 @@
 # R/identify_critical_links.R
 # Fast, mathematically exact implementation
-# ──────────────────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------------------------
 
 #' Identify critical edges that explain population differences
 #' @inheritParams compute_edge_pvalues
 #' @param populations Named list; each element is itself a list of adjacency
 #'   matrices (binary, symmetric, zero diagonal).
 #' @param alpha Significance level (global + iterative tests).
-#' @param batch_size How many edges to drop per iteration (≥ 1).
+#' @param batch_size How many edges to drop per iteration (>= 1).
 #' @param n_bootstrap Size of the bootstrap null distribution.
 #' @param a Normalisation constant used in the original statistic.
 #' @param seed Optional integer for reproducibility.
@@ -24,18 +24,18 @@ identify_critical_links <- function(populations,
 
   if (!is.null(seed)) set.seed(seed)
   if (!is.list(populations) || length(populations) < 2)
-    stop("`populations` must be a list with ≥ 2 groups.")
-  if (batch_size  < 1L) stop("`batch_size` must be ≥ 1.")
-  if (n_bootstrap < 1L) stop("`n_bootstrap` must be ≥ 1.")
+    stop("`populations` must be a list with >= 2 groups.")
+  if (batch_size  < 1L) stop("`batch_size` must be >= 1.")
+  if (n_bootstrap < 1L) stop("`n_bootstrap` must be >= 1.")
 
-  ## 0 ── metadata ------------------------------------------------------------
+  ## 0 -- metadata ------------------------------------------------------------
   Npop <- sapply(populations, length)      # n_k
   m    <- length(populations)
   n    <- sum(Npop)
 
   make_key <- function(i, j) paste(i, j, sep = "-")
 
-  ## 1 ── rank edges by marginal p-value --------------------------------------
+  ## 1 -- rank edges by marginal p-value --------------------------------------
   freq       <- compute_edge_frequencies(populations)
   edge_pvals <- compute_edge_pvalues(freq$edge_counts, Npop,
                                      method        = method,
@@ -47,17 +47,17 @@ identify_critical_links <- function(populations,
                 edges_removed        = list(),
                 modified_populations = populations))
 
-  ## 2 ── Δₑ helper -----------------------------------------------------------
+  ## 2 -- Delta_e helper -----------------------------------------------------------
   .edge_deltas <- function(edge_counts) {
     n_nodes <- dim(edge_counts)[1]
     idx     <- which(upper.tri(matrix(0, n_nodes, n_nodes)), arr.ind = TRUE)
     if (nrow(idx) == 0L)
       return(list(indices = idx, deltas = numeric(0)))
 
-    ## counts[#edges × m] – number of 1's per edge & population
+    ## counts[#edges x m] - number of 1's per edge & population
     counts <- do.call(cbind, lapply(seq_len(m),
                      function(k) edge_counts[ , , k][idx]))
-    # for a single edge counts is 1 × m (matrix, not vector)
+    # for a single edge counts is 1 x m (matrix, not vector)
     if (!is.matrix(counts))
       counts <- matrix(counts, nrow = 1L)
 
@@ -88,7 +88,7 @@ identify_critical_links <- function(populations,
   prefix_obs <- cumsum(delta_ord)          # T after k removals (obs)
   T0         <- sum(obs_delta_info$deltas)
 
-  ## 3 ── bootstrap -----------------------------------------------------------
+  ## 3 -- bootstrap -----------------------------------------------------------
   all_graphs  <- unlist(populations, recursive = FALSE)
   boot_deltas <- matrix(0, nrow = n_bootstrap, ncol = n_edges)
 
@@ -100,9 +100,9 @@ identify_critical_links <- function(populations,
     boot_deltas[b, ]  <- .edge_deltas(boot_counts)$deltas[map_idx]
   }
   T_boot0     <- rowSums(boot_deltas)
-  prefix_boot <- t(apply(boot_deltas, 1, cumsum))   # B × n_edges
+  prefix_boot <- t(apply(boot_deltas, 1, cumsum))   # B x n_edges
 
-  ## 4 ── global test ---------------------------------------------------------
+  ## 4 -- global test ---------------------------------------------------------
   initial_p <- mean(T_boot0 < T0)        # two-tailed
   if (initial_p > alpha) {
     warning("Initial test is not significant (p = ",
@@ -113,7 +113,7 @@ identify_critical_links <- function(populations,
                 modified_populations = populations))
   }
 
-  ## 5 ── iterative edge removal ---------------------------------------------
+  ## 5 -- iterative edge removal ---------------------------------------------
   edges_removed <- list()
   k_removed     <- 0L
   continue      <- TRUE
@@ -121,11 +121,11 @@ identify_critical_links <- function(populations,
   while (continue && k_removed < n_edges) {
     batch_end <- min(k_removed + batch_size, n_edges)
 
-    #La comparación mean(T_boot_k < T_obs_k) es correcta porque:
-    # - Si T_obs_k sigue siendo muy negativo → pocos T_boot_k serán menores
-    #   → p pequeño → continuar eliminando
-    # - Si T_obs_k se acerca a 0 → muchos T_boot_k serán menores → p grande
-    #   → dejar de eliminar
+    #La comparacion mean(T_boot_k < T_obs_k) es correcta porque:
+    # - Si T_obs_k sigue siendo muy negativo -> pocos T_boot_k seran menores
+    #   -> p pequeno -> continuar eliminando
+    # - Si T_obs_k se acerca a 0 -> muchos T_boot_k seran menores -> p grande
+    #   -> dejar de eliminar
     T_obs_k  <- T0 - prefix_obs[batch_end]
     T_boot_k <- T_boot0 - prefix_boot[ , batch_end]
     p_k      <- mean(T_boot_k < T_obs_k)   # one-tailed (left tail)
