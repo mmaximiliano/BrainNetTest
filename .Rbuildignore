@@ -1,10 +1,10 @@
-^BrainNetTest\.Rproj$
+^.*\.Rproj$
 ^\.Rproj\.user$
 ^LICENSE\.md$
-^README\.Rmd$
+^README\.md$
+^NEWS\.md$
+^\.github$
+^cran-comments\.md$
 ^doc$
 ^Meta$
-^_pkgdown\.yml$
-^docs$
-^pkgdown$
-^\.github$
+^tests/testthat/Rplots\.pdf$

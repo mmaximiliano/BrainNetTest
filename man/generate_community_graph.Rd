@@ -22,8 +22,10 @@ Default is 100.}
 \item{community_sizes}{An integer vector specifying the sizes of each community.
 If NULL, communities are of equal size. Default is NULL.}
 
-\item{intra_prob}{A numeric value between 0 and 1 specifying the probability
-of an edge existing between nodes within the same community. Default is 0.8.}
+\item{intra_prob}{A numeric value between 0 and 1, or a numeric vector of
+length \code{n_communities}, specifying the probability of an edge existing
+between nodes within the same community. If a scalar, the same probability
+is used for all communities. Default is 0.8.}
 
 \item{inter_prob}{A numeric value between 0 and 1 specifying the probability
 of an edge existing between nodes from different communities. Default is 0.2.}
@@ -33,7 +35,7 @@ Default is NULL.}
 }
 \value{
 A symmetric binary adjacency matrix with no self-loops, representing
-a brain network with community structure.
+  a brain network with community structure.
 }
 \description{
 This function generates a random symmetric adjacency matrix representing

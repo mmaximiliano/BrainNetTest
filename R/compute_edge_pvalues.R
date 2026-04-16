@@ -121,12 +121,16 @@ compute_edge_pvalues <- function(edge_counts, N, method = "fisher", adjust_metho
   
   # Adjust p-values for multiple testing if needed
   if (adjust_method != "none") {
-    # Convert upper triangle of p-value matrix to vector
-    p_values_vec <- edge_pvalues[upper.tri(edge_pvalues)]
+    # Adjust using only the upper triangle, then mirror to the lower triangle.
+    # Note: assigning the same vector to both upper.tri() and lower.tri() would
+    # pair elements incorrectly (R traverses each triangle in column-major
+    # order over different index sets), producing an asymmetric matrix. We
+    # therefore write the upper triangle first and then transpose.
+    ut <- upper.tri(edge_pvalues)
+    p_values_vec <- edge_pvalues[ut]
     adjusted_p_values <- p.adjust(p_values_vec, method = adjust_method)
-    # Map back to matrix
-    edge_pvalues[upper.tri(edge_pvalues)] <- adjusted_p_values
-    edge_pvalues[lower.tri(edge_pvalues)] <- adjusted_p_values
+    edge_pvalues[ut] <- adjusted_p_values
+    edge_pvalues[lower.tri(edge_pvalues)] <- t(edge_pvalues)[lower.tri(edge_pvalues)]
   }
   
   return(edge_pvalues)

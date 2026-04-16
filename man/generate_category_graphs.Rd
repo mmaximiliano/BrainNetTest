@@ -26,8 +26,10 @@ generate_category_graphs(
 \item{community_sizes}{An integer vector specifying the sizes of each community.
 If NULL, communities are of equal size. Default is NULL.}
 
-\item{base_intra_prob}{A numeric value between 0 and 1 specifying the base probability
-of an edge existing between nodes within the same community. Default is 0.8.}
+\item{base_intra_prob}{A numeric value between 0 and 1, or a numeric vector
+of length \code{n_communities}, specifying the base probability of an edge
+existing between nodes within the same community. If a vector, each element
+sets the base probability for the corresponding community. Default is 0.8.}
 
 \item{base_inter_prob}{A numeric value between 0 and 1 specifying the base probability
 of an edge existing between nodes from different communities. Default is 0.2.}
@@ -43,7 +45,7 @@ Default is NULL.}
 }
 \value{
 A list of symmetric binary adjacency matrices with no self-loops, representing
-brain networks with similar community structures.
+  brain networks with similar community structures.
 }
 \description{
 This function generates a list of adjacency matrices representing brain networks

@@ -12,8 +12,10 @@
 #' @param n_communities An integer specifying the number of communities. Default is 4.
 #' @param community_sizes An integer vector specifying the sizes of each community.
 #'   If NULL, communities are of equal size. Default is NULL.
-#' @param intra_prob A numeric value between 0 and 1 specifying the probability
-#'   of an edge existing between nodes within the same community. Default is 0.8.
+#' @param intra_prob A numeric value between 0 and 1, or a numeric vector of
+#'   length \code{n_communities}, specifying the probability of an edge existing
+#'   between nodes within the same community. If a scalar, the same probability
+#'   is used for all communities. Default is 0.8.
 #' @param inter_prob A numeric value between 0 and 1 specifying the probability
 #'   of an edge existing between nodes from different communities. Default is 0.2.
 #' @param seed An optional integer for setting the random seed to ensure reproducibility.
@@ -60,8 +62,13 @@ generate_community_graph <- function(n_nodes = 100, n_communities = 4, community
     }
   }
 
-  if (!is.numeric(intra_prob) || intra_prob < 0 || intra_prob > 1) {
-    stop("intra_prob must be a numeric value between 0 and 1.")
+  if (!is.numeric(intra_prob) || any(intra_prob < 0) || any(intra_prob > 1)) {
+    stop("intra_prob must be numeric value(s) between 0 and 1.")
+  }
+  if (length(intra_prob) == 1L) {
+    intra_prob <- rep(intra_prob, n_communities)
+  } else if (length(intra_prob) != n_communities) {
+    stop("intra_prob must be a scalar or a vector of length n_communities.")
   }
   
   if (!is.numeric(inter_prob) || inter_prob < 0 || inter_prob > 1) {
@@ -80,7 +87,7 @@ generate_community_graph <- function(n_nodes = 100, n_communities = 4, community
     nodes_in_i <- node_indices[community_assignments == i]
     # Edges within community i
     if (length(nodes_in_i) > 1) {
-      G_intra <- rbinom(length(nodes_in_i) * (length(nodes_in_i) - 1) / 2, 1, intra_prob)
+      G_intra <- rbinom(length(nodes_in_i) * (length(nodes_in_i) - 1) / 2, 1, intra_prob[i])
       G_intra_matrix <- matrix(0, nrow = length(nodes_in_i), ncol = length(nodes_in_i))
       G_intra_matrix[upper.tri(G_intra_matrix)] <- G_intra
       G_intra_matrix <- G_intra_matrix + t(G_intra_matrix)
@@ -89,15 +96,17 @@ generate_community_graph <- function(n_nodes = 100, n_communities = 4, community
   }
 
   # Create inter-community edges
-  for (i in 1:(n_communities - 1)) {
-    for (j in (i + 1):n_communities) {
-      nodes_in_i <- node_indices[community_assignments == i]
-      nodes_in_j <- node_indices[community_assignments == j]
-      # Edges between community i and community j
-      G_inter <- matrix(rbinom(length(nodes_in_i) * length(nodes_in_j), 1, inter_prob),
-                        nrow = length(nodes_in_i), ncol = length(nodes_in_j))
-      G[nodes_in_i, nodes_in_j] <- G_inter
-      G[nodes_in_j, nodes_in_i] <- t(G_inter)
+  if (n_communities >= 2L) {
+    for (i in 1:(n_communities - 1)) {
+      for (j in (i + 1):n_communities) {
+        nodes_in_i <- node_indices[community_assignments == i]
+        nodes_in_j <- node_indices[community_assignments == j]
+        # Edges between community i and community j
+        G_inter <- matrix(rbinom(length(nodes_in_i) * length(nodes_in_j), 1, inter_prob),
+                          nrow = length(nodes_in_i), ncol = length(nodes_in_j))
+        G[nodes_in_i, nodes_in_j] <- G_inter
+        G[nodes_in_j, nodes_in_i] <- t(G_inter)
+      }
     }
   }
 

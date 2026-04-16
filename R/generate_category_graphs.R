@@ -7,14 +7,15 @@
 #' similar community structures but vary slightly in their intra-community and
 #' inter-community connection probabilities to reflect natural variability.
 #'
-#' @importFrom stats runif
 #' @param n_graphs An integer specifying the number of graphs to generate. Default is 10.
 #' @param n_nodes An integer specifying the total number of nodes (brain regions). Default is 100.
 #' @param n_communities An integer specifying the number of communities. Default is 4.
 #' @param community_sizes An integer vector specifying the sizes of each community.
 #'   If NULL, communities are of equal size. Default is NULL.
-#' @param base_intra_prob A numeric value between 0 and 1 specifying the base probability
-#'   of an edge existing between nodes within the same community. Default is 0.8.
+#' @param base_intra_prob A numeric value between 0 and 1, or a numeric vector
+#'   of length \code{n_communities}, specifying the base probability of an edge
+#'   existing between nodes within the same community. If a vector, each element
+#'   sets the base probability for the corresponding community. Default is 0.8.
 #' @param base_inter_prob A numeric value between 0 and 1 specifying the base probability
 #'   of an edge existing between nodes from different communities. Default is 0.2.
 #' @param intra_prob_variation A numeric value specifying the maximum variation to apply
@@ -28,6 +29,7 @@
 #'   brain networks with similar community structures.
 #' @export
 #'
+#' @importFrom stats runif
 #' @examples
 #' # Generate a set of 5 graphs for the Control category
 #' control_graphs <- generate_category_graphs(n_graphs = 5, n_nodes = 100, n_communities = 4,
@@ -45,7 +47,7 @@ generate_category_graphs <- function(n_graphs = 10, n_nodes = 100, n_communities
   n_graphs <- as.integer(n_graphs)
   
   # Validate probabilities and variations
-  if (!is.numeric(base_intra_prob) || base_intra_prob < 0 || base_intra_prob > 1) {
+  if (!is.numeric(base_intra_prob) || any(base_intra_prob < 0) || any(base_intra_prob > 1)) {
     stop("base_intra_prob must be between 0 and 1.")
   }
   if (!is.numeric(base_inter_prob) || base_inter_prob < 0 || base_inter_prob > 1) {
@@ -81,11 +83,12 @@ generate_category_graphs <- function(n_graphs = 10, n_nodes = 100, n_communities
   
   for (g in 1:n_graphs) {
     # Apply slight variations to probabilities
-    intra_prob <- base_intra_prob + runif(1, -intra_prob_variation, intra_prob_variation)
+    intra_prob <- base_intra_prob + runif(length(base_intra_prob),
+                                          -intra_prob_variation, intra_prob_variation)
     inter_prob <- base_inter_prob + runif(1, -inter_prob_variation, inter_prob_variation)
     
     # Ensure probabilities remain within [0, 1]
-    intra_prob <- min(max(intra_prob, 0), 1)
+    intra_prob <- pmin(pmax(intra_prob, 0), 1)
     inter_prob <- min(max(inter_prob, 0), 1)
     
     # Generate the graph using the base community assignments
