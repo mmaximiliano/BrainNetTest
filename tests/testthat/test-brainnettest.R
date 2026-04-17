@@ -98,3 +98,57 @@ test_that("compute_test_statistic validates inputs", {
     "at least two graphs")
 })
 
+
+
+# ---------------------------------------------------------------------------
+# Multi-population (m >= 3) support
+# ---------------------------------------------------------------------------
+test_that("pipeline works end-to-end for m = 3 populations", {
+  skip_on_cran()
+  set.seed(1)
+  A <- generate_category_graphs(8, 10, 2, base_intra_prob = 0.9,
+                                base_inter_prob = 0.1, seed = 1)
+  B <- generate_category_graphs(8, 10, 2, base_intra_prob = 0.5,
+                                base_inter_prob = 0.5, seed = 2)
+  C <- generate_category_graphs(8, 10, 2, base_intra_prob = 0.1,
+                                base_inter_prob = 0.9, seed = 3)
+  pops <- list(A = A, B = B, C = C)
+
+  # compute_test_statistic accepts m = 3
+  T_val <- compute_test_statistic(pops, a = 1)
+  expect_true(is.finite(T_val))
+
+  # compute_edge_frequencies returns a 3-slice array
+  fr <- compute_edge_frequencies(pops)
+  expect_equal(dim(fr$edge_counts)[3], 3L)
+
+  # Fisher and chi-squared both admit m = 3 via the m x 2 contingency table
+  N <- sapply(pops, length)
+  for (mm in c("fisher", "chi.squared")) {
+    p <- suppressWarnings(compute_edge_pvalues(fr$edge_counts, N, method = mm))
+    expect_true(isSymmetric(p), info = paste("method =", mm))
+    expect_true(all(p >= 0 & p <= 1))
+  }
+
+  # prop.test is explicitly restricted to 2 populations by design
+  expect_error(compute_edge_pvalues(fr$edge_counts, N, method = "prop"),
+               "two populations")
+
+  # Full critical-edge pipeline works for m = 3
+  res <- suppressWarnings(identify_critical_links(
+    pops, n_permutations = 200, seed = 42))
+  expect_true(is.list(res))
+  expect_true(all(c("critical_edges", "edges_removed",
+                    "modified_populations") %in% names(res)))
+  expect_equal(length(res$modified_populations), 3L)
+})
+
+test_that("compute_test_statistic is invariant to population order for m = 3", {
+  set.seed(11)
+  A <- replicate(5, generate_random_graph(6, 0.3), simplify = FALSE)
+  B <- replicate(5, generate_random_graph(6, 0.5), simplify = FALSE)
+  C <- replicate(5, generate_random_graph(6, 0.7), simplify = FALSE)
+  T1 <- compute_test_statistic(list(A = A, B = B, C = C), a = 1)
+  T2 <- compute_test_statistic(list(C = C, A = A, B = B), a = 1)
+  expect_equal(unname(T1), unname(T2))
+})
