@@ -34,11 +34,8 @@ Depends:
     R (>= 4.0.0)
 Imports:
     stats,
-    grDevices,
     graphics,
-    igraph,
-    gridExtra,
-    ggplotify
+    igraph
 Suggests:
     knitr,
     rmarkdown,

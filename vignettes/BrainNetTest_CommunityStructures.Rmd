@@ -48,12 +48,11 @@ mean(G[upper.tri(G)])
 
 ### Visualising the network
 
-When the optional `igraph` package is available, the network can be plotted
-with communities highlighted:
-
-```{r, eval = requireNamespace("igraph", quietly = TRUE), fig.width=5, fig.height=5}
-plot_graph_with_communities(G, vertex_size = 6)
-```
+A single community-structured adjacency matrix is best inspected directly
+with `igraph`. The package's own visualisation helper,
+`plot_critical_edges()`, is designed to summarise the *result* of an analysis
+(per-population central graphs plus the identified critical edges) and is
+illustrated at the end of this vignette.
 
 ## Simulating populations of graphs
 
@@ -119,6 +118,22 @@ node):
 
 ```{r}
 get_critical_nodes(result)
+```
+
+## Visualising the result
+
+`plot_critical_edges()` produces a multi-panel figure that summarises the
+analysis: one panel per population showing the (weighted) central graph,
+plus a final panel that highlights the critical edges on the chosen
+reference central graph. Communities can be passed in to color the vertices
+consistently across panels.
+
+```{r, eval = requireNamespace("igraph", quietly = TRUE), fig.width=7, fig.height=7}
+plot_critical_edges(
+  populations,
+  result,
+  communities = rep(seq_len(2), each = 10),
+  reference   = "Control")
 ```
 
 ## References

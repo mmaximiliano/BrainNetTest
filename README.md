@@ -21,7 +21,9 @@ The package includes:
 * `get_critical_nodes()` to summarise the critical edges at the node level.
 * `generate_category_graphs()` and `generate_community_graph()` to simulate
   populations of community-structured graphs.
-* `plot_graph_with_communities()` and `plot_graphs_grid()` for visualisation.
+* `plot_critical_edges()` for a multi-panel visualisation of the
+  per-population central graphs and the critical edges identified by
+  `identify_critical_links()`.
 
 ## Installation
 
