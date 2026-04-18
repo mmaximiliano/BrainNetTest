@@ -72,7 +72,7 @@ control <- generate_category_graphs(
   inter_prob_variation = 0.05,
   seed                 = 1)
 
-disease <- generate_category_graphs(
+patient <- generate_category_graphs(
   n_graphs             = 20,
   n_nodes              = 20,
   n_communities        = 2,
@@ -82,7 +82,7 @@ disease <- generate_category_graphs(
   inter_prob_variation = 0.05,
   seed                 = 2)
 
-populations <- list(Control = control, Disease = disease)
+populations <- list(Control = control, Patient = patient)
 lengths(populations)
 ```
 

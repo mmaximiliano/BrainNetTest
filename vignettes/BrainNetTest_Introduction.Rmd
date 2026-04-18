@@ -88,11 +88,11 @@ that the groups differ:
 control <- replicate(
   15, generate_random_graph(n_nodes = 10, edge_prob = 0.20),
   simplify = FALSE)
-disease <- replicate(
+patient <- replicate(
   15, generate_random_graph(n_nodes = 10, edge_prob = 0.40),
   simplify = FALSE)
 
-populations <- list(Control = control, Disease = disease)
+populations <- list(Control = control, Patient = patient)
 compute_test_statistic(populations, a = 1)
 ```
 

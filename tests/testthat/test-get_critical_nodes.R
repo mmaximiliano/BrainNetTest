@@ -6,7 +6,7 @@ test_that("get_critical_nodes returns correct structure without labels", {
     n_communities = 2, base_intra_prob = 0.8, base_inter_prob = 0.2, seed = 1)
   dis  <- generate_category_graphs(n_graphs = 15, n_nodes = 10,
     n_communities = 2, base_intra_prob = 0.5, base_inter_prob = 0.5, seed = 2)
-  pops <- list(Control = ctrl, Disease = dis)
+  pops <- list(Control = ctrl, Patient = dis)
 
   result <- identify_critical_links(pops, alpha = 0.05, method = "fisher",
     n_permutations = 200, seed = 99)
@@ -40,7 +40,7 @@ test_that("get_critical_nodes includes labels when provided", {
     n_communities = 2, base_intra_prob = 0.8, base_inter_prob = 0.2, seed = 1)
   dis  <- generate_category_graphs(n_graphs = 15, n_nodes = 10,
     n_communities = 2, base_intra_prob = 0.5, base_inter_prob = 0.5, seed = 2)
-  pops <- list(Control = ctrl, Disease = dis)
+  pops <- list(Control = ctrl, Patient = dis)
 
   result <- identify_critical_links(pops, alpha = 0.05, method = "fisher",
     n_permutations = 200, seed = 99)

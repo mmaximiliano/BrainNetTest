@@ -34,7 +34,7 @@ control_graphs <- generate_category_graphs(
   inter_prob_variation = 0.05,
   seed = 1
 )
-disease_graphs <- generate_category_graphs(
+patient_graphs <- generate_category_graphs(
   n_graphs = 5,
   n_nodes = 10,
   n_communities = 2,
@@ -44,7 +44,7 @@ disease_graphs <- generate_category_graphs(
   inter_prob_variation = 0.05,
   seed = 2
 )
-populations <- list(Control = control_graphs, Disease = disease_graphs)
+populations <- list(Control = control_graphs, Patient = patient_graphs)
 
 # Compute edge frequencies
 frequencies <- compute_edge_frequencies(populations)

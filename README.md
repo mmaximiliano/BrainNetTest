@@ -43,11 +43,11 @@ set.seed(1)
 control <- generate_category_graphs(
   n_graphs = 20, n_nodes = 10, n_communities = 2,
   base_intra_prob = 0.8, base_inter_prob = 0.2, seed = 1)
-disease <- generate_category_graphs(
+patient <- generate_category_graphs(
   n_graphs = 20, n_nodes = 10, n_communities = 2,
   base_intra_prob = 0.6, base_inter_prob = 0.4, seed = 2)
 
-populations <- list(Control = control, Disease = disease)
+populations <- list(Control = control, Patient = patient)
 
 # Global test and critical-edge identification (permutation test)
 result <- identify_critical_links(

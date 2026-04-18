@@ -85,10 +85,10 @@ set.seed(1)
 control <- generate_category_graphs(
   n_graphs = 15, n_nodes = 10, n_communities = 2,
   base_intra_prob = 0.8, base_inter_prob = 0.2, seed = 1)
-disease <- generate_category_graphs(
+patient <- generate_category_graphs(
   n_graphs = 15, n_nodes = 10, n_communities = 2,
   base_intra_prob = 0.5, base_inter_prob = 0.5, seed = 2)
-populations <- list(Control = control, Disease = disease)
+populations <- list(Control = control, Patient = patient)
 result <- identify_critical_links(
   populations, alpha = 0.05, method = "fisher",
   n_permutations = 200, seed = 42)

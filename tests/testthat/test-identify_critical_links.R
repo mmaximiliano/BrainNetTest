@@ -7,9 +7,9 @@ test_that("identify_critical_links works correctly", {
   set.seed(123)
   control_graphs <- generate_category_graphs(n_graphs = 10, n_nodes = 20, n_communities = 2,
                                              base_intra_prob = 0.8, base_inter_prob = 0.2, seed = 1)
-  disease_graphs <- generate_category_graphs(n_graphs = 10, n_nodes = 20, n_communities = 2,
+  patient_graphs <- generate_category_graphs(n_graphs = 10, n_nodes = 20, n_communities = 2,
                                              base_intra_prob = 0.6, base_inter_prob = 0.4, seed = 2)
-  populations <- list(Control = control_graphs, Disease = disease_graphs)
+  populations <- list(Control = control_graphs, Patient = patient_graphs)
   
   # Run the function
   result <- identify_critical_links(populations, alpha = 0.05, method = "fisher", adjust_method = "none")
@@ -73,9 +73,9 @@ test_that("one-shot p-values are exactly equal to while-loop (batch_size = 1)", 
   # Build deterministic prefix-sum data from a known setup
   control <- generate_category_graphs(n_graphs = 15, n_nodes = 10,
     n_communities = 2, base_intra_prob = 0.8, base_inter_prob = 0.2, seed = 10)
-  disease <- generate_category_graphs(n_graphs = 15, n_nodes = 10,
+  patient <- generate_category_graphs(n_graphs = 15, n_nodes = 10,
     n_communities = 2, base_intra_prob = 0.5, base_inter_prob = 0.5, seed = 20)
-  pops <- list(Control = control, Disease = disease)
+  pops <- list(Control = control, Patient = patient)
 
   # Run the full optimised function to extract internals.
   # We re-derive prefix sums the same way identify_critical_links does.
@@ -154,9 +154,9 @@ test_that("one-shot p-values are exactly equal to while-loop (batch_size > 1)", 
 
   control <- generate_category_graphs(n_graphs = 15, n_nodes = 10,
     n_communities = 2, base_intra_prob = 0.8, base_inter_prob = 0.2, seed = 10)
-  disease <- generate_category_graphs(n_graphs = 15, n_nodes = 10,
+  patient <- generate_category_graphs(n_graphs = 15, n_nodes = 10,
     n_communities = 2, base_intra_prob = 0.5, base_inter_prob = 0.5, seed = 20)
-  pops <- list(Control = control, Disease = disease)
+  pops <- list(Control = control, Patient = patient)
 
   # Run the actual function with different batch sizes; same seed -> same
   # permutation draws -> identical result apart from batch-size stepping.
@@ -217,9 +217,9 @@ test_that("identify_critical_links with batch_size = n_edges", {
 
   control <- generate_category_graphs(n_graphs = 10, n_nodes = 8,
     n_communities = 2, base_intra_prob = 0.8, base_inter_prob = 0.2, seed = 1)
-  disease <- generate_category_graphs(n_graphs = 10, n_nodes = 8,
+  patient <- generate_category_graphs(n_graphs = 10, n_nodes = 8,
     n_communities = 2, base_intra_prob = 0.4, base_inter_prob = 0.6, seed = 2)
-  pops <- list(Control = control, Disease = disease)
+  pops <- list(Control = control, Patient = patient)
 
   n_edges <- 8 * 7 / 2  # 28
 

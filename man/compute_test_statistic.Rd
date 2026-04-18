@@ -9,7 +9,7 @@ compute_test_statistic(populations, a = 1)
 \arguments{
 \item{populations}{A named list where each element is a list of adjacency
 matrices for a population. Example:
-\code{list(Control = list(G1, G2, ...), Schizophrenia = list(G1, G2, ...), Alzheimer = list(G1, G2, ...))}}
+\code{list(Control = list(G1, G2, ...), PatientA = list(G1, G2, ...), PatientB = list(G1, G2, ...))}}
 
 \item{a}{A normalization constant. Default is 1.}
 }
@@ -26,16 +26,16 @@ Control <- list(
   generate_random_graph(n_nodes = 5, edge_prob = 0.1),
   generate_random_graph(n_nodes = 5, edge_prob = 0.1)
 )
-Schizophrenia <- list(
+PatientA <- list(
   generate_random_graph(n_nodes = 5, edge_prob = 0.15),
   generate_random_graph(n_nodes = 5, edge_prob = 0.15)
 )
-Alzheimer <- list(
+PatientB <- list(
   generate_random_graph(n_nodes = 5, edge_prob = 0.2),
   generate_random_graph(n_nodes = 5, edge_prob = 0.2)
 )
 
-populations <- list(Control = Control, Schizophrenia = Schizophrenia, Alzheimer = Alzheimer)
+populations <- list(Control = Control, PatientA = PatientA, PatientB = PatientB)
 
 # Compute the test statistic T
 T_value <- compute_test_statistic(populations, a = 1)
