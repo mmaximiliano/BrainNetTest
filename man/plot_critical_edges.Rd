@@ -34,13 +34,14 @@ per-population central graphs unless \code{central_graphs} is supplied.}
 provides the edges to highlight in the final panel.}
 
 \item{communities}{Optional integer (or factor) vector of length
-\code{n_nodes} giving the community membership of every node. Used to color
-vertices consistently across panels. Default \code{NULL}.}
+\code{n_nodes} giving the community membership of every node. Used to
+color vertices consistently across panels. Default \code{NULL} (all
+vertices share the default \pkg{igraph} color).}
 
-\item{layout}{Optional layout for the graphs. Either an \code{n_nodes x 2}
-numeric matrix of vertex coordinates (recommended, so that all panels share
-the same node positions) or an \pkg{igraph} layout function such as
-\code{\link[igraph]{layout_with_fr}}. Default
+\item{layout}{Optional layout for the graphs. Either an
+\code{n_nodes x 2} numeric matrix of vertex coordinates (recommended, so
+that all panels share the same node positions) or an \pkg{igraph} layout
+function such as \code{\link[igraph]{layout_with_fr}}. Default
 \code{\link[igraph]{layout_in_circle}}.}
 
 \item{central_graphs}{Optional list of pre-computed central graphs (one per
@@ -48,8 +49,8 @@ population). If \code{NULL}, they are computed via
 \code{\link{compute_central_graph}}.}
 
 \item{reference}{Either an integer index or a name selecting which
-population's central graph is used as the background of the critical-edges
-panel. Default \code{1L} (the first population).}
+population's central graph is used as the background of the
+critical-edges panel. Default \code{1L} (the first population).}
 
 \item{threshold}{Numeric in \code{[0, 1]}. The reference central graph is
 binarised by \code{> threshold} for the critical-edges panel. Default
@@ -78,35 +79,39 @@ shown; otherwise vertex labels are suppressed.}
 \code{"Critical edges"}.}
 
 \item{mfrow}{Optional integer vector of length 2 giving the
-\code{c(nrow, ncol)} arrangement passed to \code{\link[graphics]{par}}. By
-default a near-square grid is chosen automatically (e.g.\ a \code{2 x 2}
-grid for two populations).}
+\code{c(nrow, ncol)} arrangement passed to \code{\link[graphics]{par}}.
+By default a near-square grid is chosen automatically (e.g.\ a
+\code{2 x 2} grid for two populations, matching the standard
+Control / Patient / Critical layout).}
 
 \item{...}{Additional arguments forwarded to
-\code{\link[igraph]{plot.igraph}}. \code{edge.width}, \code{vertex.color},
-\code{vertex.size}, \code{vertex.label} and \code{layout} are managed by
-this function and should not be passed via \code{...}.}
+\code{\link[igraph]{plot.igraph}}. Note that \code{edge.width},
+\code{vertex.color}, \code{vertex.size}, \code{vertex.label} and
+\code{layout} are managed by this function and should not be passed via
+\code{...}.}
 }
 \value{
-Invisibly returns \code{NULL}; called for its side effect of producing
-the multi-panel plot.
+Invisibly returns \code{NULL}; called for its side effect of
+  producing the multi-panel plot.
 }
 \description{
 Produces a multi-panel figure summarising the output of
 \code{\link{identify_critical_links}}: one panel per population showing the
-weighted central graph, plus a final panel that highlights the critical edges
-on a chosen reference central graph.
+weighted central graph, plus a final panel that highlights the critical
+edges on a chosen reference central graph. This is the canonical
+visualization of the \pkg{BrainNetTest} workflow and replaces the manual
+\pkg{igraph} plumbing required to build the same figure.
 }
 \details{
-The first \code{length(populations)} panels show the weighted central graph
-of each population, with edge widths proportional to the central-graph
-weights. The final panel binarises the chosen reference central graph at
-\code{threshold} and overlays the critical edges returned by
-\code{identify_critical_links()} in \code{critical_color}. Critical edges
-that are absent from the binarised reference graph are added so that they
-remain visible.
+The first \code{length(populations)} panels show the weighted
+  central graph of each population, with edge widths proportional to the
+  central-graph weights. The final panel binarises the chosen reference
+  central graph at \code{threshold} and overlays the critical edges
+  returned by \code{identify_critical_links()} in
+  \code{critical_color}. Critical edges that are absent from the binarised
+  reference graph are added so that they remain visible.
 
-The graphics state (\code{par(mfrow, mar, oma)}) is restored on exit.
+  The graphics state (\code{par(mfrow, mar, oma)}) is restored on exit.
 }
 \examples{
 \donttest{
@@ -132,6 +137,6 @@ plot_critical_edges(populations, result, communities = communities)
 }
 \seealso{
 \code{\link{identify_critical_links}},
-\code{\link{compute_central_graph}},
-\code{\link{get_critical_nodes}}.
+  \code{\link{compute_central_graph}},
+  \code{\link{get_critical_nodes}}.
 }

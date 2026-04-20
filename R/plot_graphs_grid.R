@@ -41,6 +41,9 @@ plot_graphs_grid <- function(graph_list, communities_list = NULL, nrow = NULL, n
   if (!requireNamespace("gridExtra", quietly = TRUE)) {
     stop("The 'gridExtra' package is required for this function. Please install it using install.packages('gridExtra').")
   }
+  if (!requireNamespace("ggplotify", quietly = TRUE)) {
+    stop("The 'ggplotify' package is required for this function. Please install it using install.packages('ggplotify').")
+  }
 
   num_graphs <- length(graph_list)
 
