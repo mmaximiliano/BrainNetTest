@@ -1,3 +1,12 @@
+# BrainNetTest 0.2.0
+
+* Removed `plot_graph_with_communities()` and `plot_graphs_grid()` to
+  streamline the API. The recommended plotting function is
+  `plot_critical_edges()`, which produces a multi-panel visualisation of
+  the analysis results.
+* Removed unused Suggests: `ggplotify`, `gridExtra`.
+* Removed unused imports: `grDevices::rainbow`, `graphics::legend`.
+
 # BrainNetTest 0.1.0
 
 * Initial CRAN submission.

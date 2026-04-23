@@ -6,16 +6,27 @@
 
 ## R CMD check results
 
-0 errors | 0 warnings | 1 note
+0 errors | 0 warnings | 2 notes
 
 * checking for future file timestamps ... NOTE
   unable to verify current time
 
-This NOTE is a transient network/clock check issue and not related to
-the package itself.
+* checking CRAN incoming feasibility ... NOTE
+  Days since last update: 2
 
-* This is a new submission.
+Both NOTEs are environmental and not related to the package itself.
+
+This update removes functions that were not yet in use by any downstream
+package, simplifying the API before the package gains users.
+
+## Changes in this version
+
+* Removed two unexported-quality plotting functions
+  (`plot_graph_with_communities()`, `plot_graphs_grid()`) that added
+  external dependencies (`ggplotify`, `gridExtra`) without providing
+  significant value over the primary `plot_critical_edges()` function.
+* Removed corresponding Suggests, unused imports, tests, and documentation.
 
 ## Downstream dependencies
 
-There are no downstream dependencies (new release).
+There are no downstream dependencies.

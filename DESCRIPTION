@@ -1,7 +1,7 @@
 Package: BrainNetTest
 Type: Package
 Title: Hypothesis Testing for Populations of Brain Networks
-Version: 0.1.0
+Version: 0.2.0
 Authors@R: c(
     person("Maximiliano", "Martino",
            email = "maxii.martino@gmail.com",
@@ -34,8 +34,6 @@ Imports:
     graphics,
     igraph
 Suggests:
-    ggplotify,
-    gridExtra,
     knitr,
     rmarkdown,
     testthat (>= 3.0.0)
