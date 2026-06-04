@@ -1,7 +1,7 @@
 Package: BrainNetTest
 Type: Package
 Title: Hypothesis Testing for Populations of Brain Networks
-Version: 0.2.0
+Version: 0.2.1
 Authors@R: c(
     person("Maximiliano", "Martino",
            email = "maxii.martino@gmail.com",
@@ -36,7 +36,7 @@ Imports:
 Suggests:
     knitr,
     rmarkdown,
-    testthat (>= 3.0.0)
+    testthat (>= 3.1.7)
 RoxygenNote: 7.3.3
 VignetteBuilder: knitr
 Config/testthat/edition: 3

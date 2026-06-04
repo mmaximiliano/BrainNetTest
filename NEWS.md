@@ -1,3 +1,14 @@
+# BrainNetTest 0.2.1
+
+* `compute_edge_pvalues()` now clamps every returned p-value to the valid
+  probability range `[0, 1]`. On platforms built without extended (long
+  double) precision, exact tests such as `fisher.test()` can return a value
+  fractionally greater than 1 due to floating-point rounding, which caused a
+  test failure under CRAN's noLD check. (Reported by the CRAN team.)
+* Added a regression test that mocks the underlying test to return an
+  out-of-range p-value, so the clamping is verified on every platform rather
+  than only on noLD builds.
+
 # BrainNetTest 0.2.0
 
 * Removed `plot_graph_with_communities()` and `plot_graphs_grid()` to

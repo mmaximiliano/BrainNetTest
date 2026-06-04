@@ -127,3 +127,33 @@ test_that("compute_edge_pvalues: prop with all-zero or all-present edges yields 
   pv2 <- compute_edge_pvalues(ec2, N, method = "prop")
   expect_equal(unname(pv2[1, 2]), 1.0)
 })
+
+test_that("compute_edge_pvalues clamps out-of-range test p-values into [0, 1]", {
+  # Regression test for the CRAN noLD failure
+  # (test-compute_edge_pvalues.R:114). On builds without extended (long
+  # double) precision, exact tests such as fisher.test() can return a p-value
+  # fractionally outside [0, 1] due to floating-point rounding in their
+  # internal summations. We emulate that here by mocking the underlying test,
+  # so the regression is caught on every platform rather than only on noLD
+  # ones. Without the clamp in compute_edge_pvalues(), these expectations fail.
+  skip_if_not_installed("testthat", "3.1.7")  # with_mocked_bindings()
+
+  ec <- array(0, dim = c(3, 3, 2))
+  ec[1, 2, ] <- c(2, 4); ec[2, 1, ] <- c(2, 4)
+  N <- c(6, 6)
+
+  # p-value slightly above 1: the observed noLD failure mode.
+  p_hi <- with_mocked_bindings(
+    compute_edge_pvalues(ec, N, method = "fisher"),
+    fisher.test = function(...) list(p.value = 1 + 1e-12)
+  )
+  expect_true(all(p_hi >= 0 & p_hi <= 1))
+  expect_true(isSymmetric(p_hi))
+
+  # p-value slightly below 0: defensive lower bound.
+  p_lo <- with_mocked_bindings(
+    compute_edge_pvalues(ec, N, method = "fisher"),
+    fisher.test = function(...) list(p.value = -1e-12)
+  )
+  expect_true(all(p_lo >= 0 & p_lo <= 1))
+})

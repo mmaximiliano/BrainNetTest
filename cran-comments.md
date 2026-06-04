@@ -16,16 +16,19 @@
 
 Both NOTEs are environmental and not related to the package itself.
 
-This update removes functions that were not yet in use by any downstream
-package, simplifying the API before the package gains users.
+This is a patch release that fixes the issue reported by the CRAN team on the
+noLD (no long double) check.
 
 ## Changes in this version
 
-* Removed two unexported-quality plotting functions
-  (`plot_graph_with_communities()`, `plot_graphs_grid()`) that added
-  external dependencies (`ggplotify`, `gridExtra`) without providing
-  significant value over the primary `plot_critical_edges()` function.
-* Removed corresponding Suggests, unused imports, tests, and documentation.
+* Fixed the noLD check failure in `compute_edge_pvalues()`. On builds without
+  extended (long double) precision, `fisher.test()` could return a p-value
+  fractionally greater than 1 due to floating-point rounding, which tripped a
+  `0 <= p <= 1` assertion in the package tests. P-values are now clamped to
+  `[0, 1]`.
+* Added a regression test (using `testthat::with_mocked_bindings()`) that
+  reproduces the out-of-range p-value on any platform, guarding against a
+  recurrence.
 
 ## Downstream dependencies
 

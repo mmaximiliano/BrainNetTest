@@ -114,6 +114,13 @@ compute_edge_pvalues <- function(edge_counts, N, method = "fisher", adjust_metho
         stop("Invalid method specified.")
       }
       
+      # Exact tests (notably fisher.test) can return p-values fractionally
+      # outside [0, 1] because of floating-point rounding in their internal
+      # summations. The extra slack is hidden by extended (long double)
+      # precision on most platforms but surfaces on builds without it, such as
+      # CRAN's noLD check. Clamp to a valid probability so downstream code and
+      # tests always see p in [0, 1].
+      p_value <- min(max(p_value, 0), 1)
       edge_pvalues[i, j] <- p_value
       edge_pvalues[j, i] <- p_value  # Symmetric matrix
     }
