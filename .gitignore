@@ -15,6 +15,9 @@
 *.tgz
 *.zip
 
+# devtools CRAN submission marker (consumed by use_github_release after acceptance)
+CRAN-SUBMISSION
+
 # Build/vignette outputs
 /doc/
 /Meta/
