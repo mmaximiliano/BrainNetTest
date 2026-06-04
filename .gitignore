@@ -1,0 +1,27 @@
+# History and data files
+.Rhistory
+.Rapp.history
+.RData
+.RDataTmp
+.Ruserdata
+
+# Session and user data
+.Rproj.user/
+*.Rproj
+
+# R CMD build / check artifacts
+*.Rcheck/
+*.tar.gz
+*.tgz
+*.zip
+
+# Build/vignette outputs
+/doc/
+/Meta/
+src/*.o
+src/*.so
+src/*.dll
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
