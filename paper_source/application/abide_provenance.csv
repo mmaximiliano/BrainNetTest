@@ -1,0 +1,2 @@
+"dataset","site","pipeline","strategy","derivative","atlas","n_control","n_autism","n_balanced_control","n_balanced_autism","n_nodes","n_edges","max_mean_fd","density","age_bin_width","fd_bin_width","package_version","r_version","connectomes_md5","downloaded"
+"ABIDE I (Preprocessed Connectomes Project)","NYU","cpac","filt_noglobal","rois_aal","AAL",98,73,55,55,114,6441,0.2,0.1,5,0.05,"1.0.0","R version 4.6.1 (2026-06-24)","d9badcafacd7317ef82a62d8262f1489","2026-07-13"

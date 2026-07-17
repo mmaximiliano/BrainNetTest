@@ -1,34 +1,27 @@
 # BrainNetTest
 
-<!-- badges: start -->
-<!-- badges: end -->
+**BrainNetTest** provides finite-sample inference for independent populations
+of aligned binary, undirected brain networks. Its main use is the comparison
+of subject-level functional or structural connectomes across clinical,
+behavioral, or demographic groups.
 
-**BrainNetTest** provides non-parametric hypothesis testing for populations of
-brain networks represented as graphs, following the L1-distance ANOVA
-framework of Fraiman and Fraiman (2018,
-[doi:10.1038/s41598-018-21688-0](https://doi.org/10.1038/s41598-018-21688-0)).
+The package separates two questions:
 
-The package includes:
+1. A whole-graph label-randomization test asks whether subject-level brain
+   networks are exchangeable across groups. Its L1 ANOVA score is targeted to
+   marginal edge-frequency shifts; it is not an omnibus test for every
+   topological change.
+2. Edge-wise Fisher exact tests identify marginal frequency differences across
+   the complete edge family. Holm adjustment is the default, so selected edges
+   have family-wise error control under arbitrary edge dependence.
 
-* `compute_central_graph()` and `compute_distance()` for building central
-  (mean) graphs and measuring Manhattan (L1) distance between adjacency
-  matrices.
-* `compute_test_statistic()` for the group test statistic T.
-* `identify_critical_links()` for a fast permutation-based identification of
-  the edges driving between-group differences, using a prefix-sum
-  decomposition that reduces the complexity from O(K * B * |E| * m) to
-  O(B * |E| * m).
-* `get_critical_nodes()` to summarise the critical edges at the node level.
-* `generate_category_graphs()` and `generate_community_graph()` to simulate
-  populations of community-structured graphs.
-* `plot_critical_edges()` for a multi-panel visualisation of the
-  per-population central graphs and the critical edges identified by
-  `identify_critical_links()`.
+Validated S3 objects provide a standard R workflow:
+
+`construct -> test -> print/summary -> extract -> plot`
 
 ## Installation
 
 ```r
-# From CRAN (once released)
 install.packages("BrainNetTest")
 
 # Development version
@@ -39,33 +32,81 @@ remotes::install_github("mmaximiliano/BrainNetTest")
 ## Quick example
 
 ```r
-library(BrainNetTest)
+library("BrainNetTest")
 
-set.seed(1)
-control <- generate_category_graphs(
-  n_graphs = 20, n_nodes = 10, n_communities = 2,
-  base_intra_prob = 0.8, base_inter_prob = 0.2, seed = 1)
-patient <- generate_category_graphs(
-  n_graphs = 20, n_nodes = 10, n_communities = 2,
-  base_intra_prob = 0.6, base_inter_prob = 0.4, seed = 2)
+group_a <- generate_category_graphs(
+  n_graphs = 20,
+  n_nodes = 10,
+  n_communities = 2,
+  base_intra_prob = 0.8,
+  base_inter_prob = 0.2,
+  seed = 1
+)
+group_b <- generate_category_graphs(
+  n_graphs = 20,
+  n_nodes = 10,
+  n_communities = 2,
+  base_intra_prob = 0.5,
+  base_inter_prob = 0.5,
+  seed = 2
+)
 
-populations <- list(Control = control, Patient = patient)
+networks <- brainnet_data(list(GroupA = group_a, GroupB = group_b))
+networks
 
-# Global test and critical-edge identification (permutation test)
-result <- identify_critical_links(
-  populations, alpha = 0.05, method = "fisher",
-  n_permutations = 1000, seed = 42)
+result <- brainnet_test(
+  networks,
+  n_permutations = 999,
+  adjust = "holm",
+  seed = 42
+)
 
-head(result$critical_edges)
-get_critical_nodes(result)
+result
+summary(result)
+selected_edges(result)
+selected_nodes(result)
+plot(result)
 ```
 
-## References
+`as.data.frame(result)` returns all tested edges, including group proportions,
+effect sizes, raw p-values, adjusted p-values, and selection decisions.
 
-Fraiman, D. and Fraiman, R. (2018) An ANOVA approach for statistical
+## Exploratory ablation
+
+```r
+result_with_ablation <- brainnet_test(
+  networks,
+  n_permutations = 999,
+  ablation = TRUE,
+  seed = 42
+)
+ablation_path(result_with_ablation)
+```
+
+The ablation path is descriptive. Its `descriptive_tail_fraction` is not a
+post-selection p-value, and failure to reject after removing an adaptively
+ordered prefix is not evidence of equivalence.
+
+## Scope
+
+Version 1.0 supports subject-level binary, undirected brain networks without
+self-loops, observed on the same labeled atlas. Atlas selection, registration,
+connectivity estimation, nuisance correction, thresholding, and quality
+control happen before this package is used. Weighted or directed graphs,
+missing regions, paired or clustered observations, and covariate-adjusted
+designs are not currently supported.
+
+The statistical contract also applies to other fields where each independent
+unit yields a network over the same ordered nodes. Selected edges are group
+associations under this contract; they are not, by themselves, causal
+connections or validated clinical biomarkers.
+
+## Reference
+
+Fraiman, D. and Fraiman, R. (2018). An ANOVA approach for statistical
 comparisons of brain networks. *Scientific Reports*, 8, 4746.
-<https://doi.org/10.1038/s41598-018-21688-0>
+<https://doi.org/10.1038/s41598-018-23152-5>
 
 ## License
 
-MIT (c) 2026 Maximiliano Martino, Daniel Fraiman.
+MIT (c) 2026 Maximiliano Martino and Daniel Fraiman.

@@ -1,0 +1,50 @@
+\documentclass{letter}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+
+\signature{Maximiliano Martino and Daniel Fraiman}
+\address{Universidad de San Andr\'es\\Argentina}
+
+\begin{document}
+\begin{letter}{Editors\\Journal of Statistical Software}
+
+\opening{Dear Editors,}
+
+Thank you for granting permission to resubmit a substantially revised version
+of our manuscript. We took the editorial assessment as a request for a
+software and inferential redesign, rather than a request for cosmetic changes.
+
+The revised manuscript is entitled ``BrainNetTest: Global and Edge-Wise
+Inference for Binary Brain Network Populations in R.'' The package now uses
+validated S3 input and result classes, standard print, summary, plot, and
+data-frame methods, and a deliberately smaller public API. Global
+randomization inference is separated from multiplicity-controlled edge
+inference. The prior adaptively stopped ``critical edge'' procedure is no
+longer presented as inferential; its retained prefix-sum path is explicitly
+descriptive and its computational gain is benchmarked.
+
+We also rebuilt the replication materials. The standalone
+\texttt{code-full.R} script regenerates every reported simulation and
+benchmark result, table, figure, and numeric macro, while a separate short
+\texttt{code.R} and \texttt{code.html}
+exercise a reduced study. Both scripts use only the installed package and
+relative paths. The included README maps all outputs, and the full run records
+session and provenance information.
+
+The manuscript is now organized around the clinical brain-network problem,
+statistical method, software contract, classes, workflows, real-data
+application, validation, and computational performance. The ABIDE case study
+compares autism and control resting-state connectomes in both the full cohort
+and a sex-, age-, and motion-balanced sensitivity sample. In both samples the
+observed global statistic is extreme under label randomization, while no
+individual connection survives strict multiplicity control. The manuscript
+therefore reports a preprocessing-conditional population association rather
+than a causal, diagnostic, or biomarker claim. The standalone application
+script and derived data make this analysis reproducible without access to raw
+images.
+
+A detailed point-by-point response accompanies this letter.
+
+\closing{Sincerely,}
+\end{letter}
+\end{document}

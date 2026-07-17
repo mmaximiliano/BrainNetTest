@@ -18,21 +18,37 @@ test_that("generate_random_graph respects edge_prob boundaries", {
 
   # edge_prob = 1 -> complete graph (off-diagonal)
   G1 <- generate_random_graph(n_nodes = 10, edge_prob = 1)
-  expect_equal(sum(G1), 10 * 9)   # all off-diagonal entries
+  expect_equal(sum(G1), 10 * 9) # all off-diagonal entries
   expect_equal(diag(G1), rep(0, 10))
 })
 
 test_that("generate_random_graph validates inputs", {
-  expect_error(generate_random_graph(n_nodes = 0, edge_prob = 0.1),
-               "positive integer")
-  expect_error(generate_random_graph(n_nodes = -5, edge_prob = 0.1),
-               "positive integer")
-  expect_error(generate_random_graph(n_nodes = c(5, 10), edge_prob = 0.1),
-               "positive integer")
-  expect_error(generate_random_graph(n_nodes = 10, edge_prob = -0.1),
-               "between 0 and 1")
-  expect_error(generate_random_graph(n_nodes = 10, edge_prob = 1.1),
-               "between 0 and 1")
-  expect_error(generate_random_graph(n_nodes = 10, edge_prob = "a"),
-               "numeric")
+  expect_error(
+    generate_random_graph(n_nodes = 0, edge_prob = 0.1),
+    "n_nodes"
+  )
+  expect_error(
+    generate_random_graph(n_nodes = -5, edge_prob = 0.1),
+    "n_nodes"
+  )
+  expect_error(
+    generate_random_graph(n_nodes = 2.5, edge_prob = 0.1),
+    "whole number"
+  )
+  expect_error(
+    generate_random_graph(n_nodes = c(5, 10), edge_prob = 0.1),
+    "n_nodes"
+  )
+  expect_error(
+    generate_random_graph(n_nodes = 10, edge_prob = -0.1),
+    "edge_prob"
+  )
+  expect_error(
+    generate_random_graph(n_nodes = 10, edge_prob = 1.1),
+    "edge_prob"
+  )
+  expect_error(
+    generate_random_graph(n_nodes = 10, edge_prob = "a"),
+    "edge_prob"
+  )
 })

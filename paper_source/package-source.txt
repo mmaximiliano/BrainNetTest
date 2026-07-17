@@ -1,0 +1,13 @@
+BrainNetTest source archive accompanying this submission
+
+File: BrainNetTest_1.0.0.tar.gz
+Bytes: 279105
+SHA-256: 905266d368c0be914f1d7cc10c06d1811d4f505ccfc5df2c60cd80d82e589f14
+
+The archive was produced from the repository root with:
+
+    R CMD build .
+
+It must be uploaded alongside the paper replication bundle. Rebuilding the
+archive can change its hash because package-build timestamps are embedded; the
+hash above identifies the exact upload artifact.

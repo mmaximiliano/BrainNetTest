@@ -1,143 +1,128 @@
 ---
-title: "Generating and Analyzing Brain Networks with Community Structures"
+title: "Community-Structured Brain Network Populations"
 author: "Maximiliano Martino, Daniel Fraiman"
-date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Generating and Analyzing Brain Networks with Community Structures}
+  %\VignetteIndexEntry{Community-Structured Brain Network Populations}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
 
 ```{r setup, include = FALSE}
-knitr::opts_chunk$set(
-  collapse = TRUE,
-  comment  = "#>"
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+```
+
+## Purpose
+
+This vignette demonstrates a complete three-group workflow on synthetic
+stochastic block model networks. The simulation is an API illustration, not
+evidence about a clinical population.
+
+```{r}
+library("BrainNetTest")
+```
+
+## Generating one graph
+
+`generate_community_graph()` supports one within-community probability per
+community and a common between-community probability.
+
+```{r}
+community_sizes <- c(5, 5)
+graph <- generate_community_graph(
+  n_nodes = 10,
+  n_communities = 2,
+  community_sizes = community_sizes,
+  intra_prob = c(0.85, 0.65),
+  inter_prob = 0.1,
+  seed = 1
 )
+
+isSymmetric(graph)
+all(diag(graph) == 0)
 ```
 
-## Overview
-
-This vignette shows the full `BrainNetTest` workflow on synthetic populations
-of brain networks with community (block) structure. We simulate two groups of
-graphs with different intra- and inter-community connection probabilities,
-run the global L1-distance ANOVA test, and identify the edges and nodes that
-drive the observed difference.
+## Simulating three independent groups
 
 ```{r}
-library(BrainNetTest)
+group_a <- generate_category_graphs(
+  n_graphs = 10,
+  n_nodes = 10,
+  n_communities = 2,
+  community_sizes = community_sizes,
+  base_intra_prob = c(0.85, 0.65),
+  base_inter_prob = 0.10,
+  seed = 11
+)
+group_b <- generate_category_graphs(
+  n_graphs = 10,
+  n_nodes = 10,
+  n_communities = 2,
+  community_sizes = community_sizes,
+  base_intra_prob = c(0.55, 0.65),
+  base_inter_prob = 0.25,
+  seed = 12
+)
+group_c <- generate_category_graphs(
+  n_graphs = 10,
+  n_nodes = 10,
+  n_communities = 2,
+  community_sizes = community_sizes,
+  base_intra_prob = c(0.30, 0.65),
+  base_inter_prob = 0.45,
+  seed = 13
+)
+
+networks <- brainnet_data(
+  list(GroupA = group_a, GroupB = group_b, GroupC = group_c),
+  node_labels = paste0("Region", seq_len(10)),
+  communities = rep(c("Module 1", "Module 2"), community_sizes)
+)
+summary(networks)
 ```
 
-## Generating a single community-structured graph
+## Omnibus analysis
 
-`generate_community_graph()` samples a symmetric binary adjacency matrix with
-a block-stochastic structure: edges within a community are drawn with
-probability `intra_prob`, edges between communities with `inter_prob`.
+For more than two groups, edge-wise Fisher tests are omnibus tests of equal
+edge frequency. `effect_range` reports the largest observed difference among
+group proportions, but does not make a pairwise inferential claim.
 
 ```{r}
-set.seed(42)
-G <- generate_community_graph(
-  n_nodes       = 40,
-  n_communities = 4,
-  intra_prob    = 0.8,
-  inter_prob    = 0.2)
+result <- brainnet_test(
+  networks,
+  n_permutations = 199,
+  adjust = "holm",
+  seed = 21
+)
 
-dim(G)
-mean(G[upper.tri(G)])
+result
+head(as.data.frame(result)[order(as.data.frame(result)$rank), ])
+selected_edges(result)
 ```
 
-### Visualising the network
+The global result and edge results answer related but distinct questions.
+Selected edges are determined only by their multiplicity-adjusted edge tests;
+they are not labeled as causes of a global rejection.
 
-A single community-structured adjacency matrix is best inspected directly
-with `igraph`. The package's own visualisation helper,
-`plot_critical_edges()`, is designed to summarise the *result* of an analysis
-(per-population central graphs plus the identified critical edges) and is
-illustrated at the end of this vignette.
+## Plotting the classed result
 
-## Simulating populations of graphs
+The `plot()` method uses central graphs and metadata stored in the result, so
+the original populations do not need to be passed again.
 
-`generate_category_graphs()` produces a list of graphs that share a common
-community structure but vary slightly in their edge probabilities across
-replicates, modelling natural between-subject variability.
+```{r plot, eval = requireNamespace("igraph", quietly = TRUE), fig.width=8, fig.height=8}
+plot(result, reference = "GroupA")
+```
+
+`selected_nodes()` counts incidences of selected edges. This is a descriptive
+summary and does not provide node-level error control.
 
 ```{r}
-control <- generate_category_graphs(
-  n_graphs             = 20,
-  n_nodes              = 20,
-  n_communities        = 2,
-  base_intra_prob      = 0.8,
-  base_inter_prob      = 0.2,
-  intra_prob_variation = 0.05,
-  inter_prob_variation = 0.05,
-  seed                 = 1)
-
-patient <- generate_category_graphs(
-  n_graphs             = 20,
-  n_nodes              = 20,
-  n_communities        = 2,
-  base_intra_prob      = 0.6,
-  base_inter_prob      = 0.4,
-  intra_prob_variation = 0.05,
-  inter_prob_variation = 0.05,
-  seed                 = 2)
-
-populations <- list(Control = control, Patient = patient)
-lengths(populations)
+selected_nodes(result)
 ```
 
-## Global test statistic
+## Interpretation limits
 
-```{r}
-T_obs <- compute_test_statistic(populations, a = 1)
-T_obs
-```
-
-## Identifying critical edges
-
-`identify_critical_links()` performs the full pipeline: marginal edge
-p-values, permutation null for `T`, and iterative edge removal. It returns
-the edges whose removal eliminates the group-level difference.
-
-```{r}
-result <- identify_critical_links(
-  populations,
-  alpha          = 0.05,
-  method         = "fisher",
-  n_permutations = 500,
-  seed           = 42)
-
-nrow(result$critical_edges)
-head(result$critical_edges)
-```
-
-### Critical nodes
-
-`get_critical_nodes()` aggregates the critical edges at the node level,
-reporting the *critical degree* (number of critical edges incident on each
-node):
-
-```{r}
-get_critical_nodes(result)
-```
-
-## Visualising the result
-
-`plot_critical_edges()` produces a multi-panel figure that summarises the
-analysis: one panel per population showing the (weighted) central graph,
-plus a final panel that highlights the critical edges on the chosen
-reference central graph. Communities can be passed in to color the vertices
-consistently across panels.
-
-```{r, eval = requireNamespace("igraph", quietly = TRUE), fig.width=7, fig.height=7}
-plot_critical_edges(
-  populations,
-  result,
-  communities = rep(seq_len(2), each = 10),
-  reference   = "Control")
-```
-
-## References
-
-Fraiman, D. and Fraiman, R. (2018) An ANOVA approach for statistical
-comparisons of brain networks. *Scientific Reports*, 8, 4746.
-<https://doi.org/10.1038/s41598-018-21688-0>
+The simulation changes marginal edge probabilities directly. Performance in
+this example should not be extrapolated to weighted networks, directed
+networks, estimated connectomes with preprocessing uncertainty, paired data,
+or alternatives that change only dependence between edges.

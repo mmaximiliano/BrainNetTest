@@ -1,34 +1,38 @@
 ## Test environments
 
-* Local: Windows 11 x64, R 4.4.3
-* win-builder (release and devel)
-* R-hub: ubuntu-latest, windows-latest, macos-latest
+* Local: macOS 26.5.2 arm64, R 4.6.1
+* GitHub Actions: R-devel, release, and oldrel on Ubuntu; R release on macOS
+  and Windows
+* R-hub: Linux, macOS, and Windows before submission
 
 ## R CMD check results
 
-0 errors | 0 warnings | 2 notes
+Local:
 
-* checking for future file timestamps ... NOTE
-  unable to verify current time
+* 0 errors
+* 0 warnings
+* 0 notes
 
-* checking CRAN incoming feasibility ... NOTE
-  Days since last update: 2
+## Version 1.0.0
 
-Both NOTEs are environmental and not related to the package itself.
+This release intentionally replaces the original unclassed API with validated
+S3 input and result objects.
 
-This is a patch release that fixes the issue reported by the CRAN team on the
-noLD (no long double) check.
+The statistical changes are substantive:
 
-## Changes in this version
+* permutation p-values now include ties and use the Monte Carlo plus-one
+  correction;
+* undirected distances count each edge once;
+* the global statistic uses two-sided randomization extremeness;
+* edge-level tests are separate from the global result and use Holm
+  multiplicity adjustment by default; and
+* the previous adaptively stopped “critical edge” result is replaced by an
+  explicitly descriptive ablation path.
 
-* Fixed the noLD check failure in `compute_edge_pvalues()`. On builds without
-  extended (long double) precision, `fisher.test()` could return a p-value
-  fractionally greater than 1 due to floating-point rounding, which tripped a
-  `0 <= p <= 1` assertion in the package tests. P-values are now clamped to
-  `[0, 1]`.
-* Added a regression test (using `testthat::with_mocked_bindings()`) that
-  reproduces the out-of-range p-value on any platform, guarding against a
-  recurrence.
+The package documentation includes a complete migration map in `NEWS.md`.
+
+The Fraiman and Fraiman (2018) DOI was corrected to
+<doi:10.1038/s41598-018-23152-5>.
 
 ## Downstream dependencies
 

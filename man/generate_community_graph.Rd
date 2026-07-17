@@ -20,7 +20,7 @@ Default is 100.}
 \item{n_communities}{An integer specifying the number of communities. Default is 4.}
 
 \item{community_sizes}{An integer vector specifying the sizes of each community.
-If NULL, communities are of equal size. Default is NULL.}
+If \code{NULL}, nodes are divided as evenly as possible. Default is \code{NULL}.}
 
 \item{intra_prob}{A numeric value between 0 and 1, or a numeric vector of
 length \code{n_communities}, specifying the probability of an edge existing
@@ -35,15 +35,18 @@ Default is NULL.}
 }
 \value{
 A symmetric binary adjacency matrix with no self-loops, representing
-  a brain network with community structure.
+a brain network with community structure.
 }
 \description{
 This function generates a random symmetric adjacency matrix representing
-a brain network with community structure. Nodes within the same community
-have a higher probability of being connected compared to nodes from different
-communities.
+a network with community structure. Users specify within-community and
+between-community probabilities independently.
 }
 \examples{
-# Generate a brain network with community structure
-G <- generate_community_graph(n_nodes = 100, n_communities = 4, intra_prob = 0.8, inter_prob = 0.2)
+graph <- generate_community_graph(
+  n_nodes = 20,
+  n_communities = 2,
+  intra_prob = 0.8,
+  inter_prob = 0.2
+)
 }

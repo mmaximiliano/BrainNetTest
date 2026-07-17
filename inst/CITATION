@@ -1,0 +1,27 @@
+citHeader("To cite BrainNetTest in publications, use:")
+
+bibentry(
+  bibtype = "Manual",
+  title = "BrainNetTest: Global and Edge-Wise Inference for Binary Brain Network Populations",
+  author = c(
+    person("Maximiliano", "Martino"),
+    person("Daniel", "Fraiman")
+  ),
+  year = "2026",
+  note = "R package version 1.0.0",
+  url = "https://CRAN.R-project.org/package=BrainNetTest"
+)
+
+bibentry(
+  bibtype = "Article",
+  title = "An ANOVA Approach for Statistical Comparisons of Brain Networks",
+  author = c(
+    person("Daniel", "Fraiman"),
+    person("Ricardo", "Fraiman")
+  ),
+  journal = "Scientific Reports",
+  year = "2018",
+  volume = "8",
+  pages = "4746",
+  doi = "10.1038/s41598-018-23152-5"
+)

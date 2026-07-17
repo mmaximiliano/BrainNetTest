@@ -1,17 +1,14 @@
-# R/generate_community_graph.R
-
 #' Generate a Random Symmetric Adjacency Matrix with Community Structure
 #'
 #' This function generates a random symmetric adjacency matrix representing
-#' a brain network with community structure. Nodes within the same community
-#' have a higher probability of being connected compared to nodes from different
-#' communities.
+#' a network with community structure. Users specify within-community and
+#' between-community probabilities independently.
 #'
 #' @param n_nodes An integer specifying the total number of nodes (brain regions).
 #'   Default is 100.
 #' @param n_communities An integer specifying the number of communities. Default is 4.
 #' @param community_sizes An integer vector specifying the sizes of each community.
-#'   If NULL, communities are of equal size. Default is NULL.
+#'   If `NULL`, nodes are divided as evenly as possible. Default is `NULL`.
 #' @param intra_prob A numeric value between 0 and 1, or a numeric vector of
 #'   length \code{n_communities}, specifying the probability of an edge existing
 #'   between nodes within the same community. If a scalar, the same probability
@@ -27,91 +24,79 @@
 #'
 #' @importFrom stats rbinom
 #' @examples
-#' # Generate a brain network with community structure
-#' G <- generate_community_graph(n_nodes = 100, n_communities = 4, intra_prob = 0.8, inter_prob = 0.2)
-generate_community_graph <- function(n_nodes = 100, n_communities = 4, community_sizes = NULL,
-                                     intra_prob = 0.8, inter_prob = 0.2, seed = NULL) {
+#' graph <- generate_community_graph(
+#'   n_nodes = 20,
+#'   n_communities = 2,
+#'   intra_prob = 0.8,
+#'   inter_prob = 0.2
+#' )
+generate_community_graph <- function(n_nodes = 100,
+                                     n_communities = 4,
+                                     community_sizes = NULL,
+                                     intra_prob = 0.8,
+                                     inter_prob = 0.2,
+                                     seed = NULL) {
+  n_nodes <- .assert_whole_number(n_nodes, "n_nodes", minimum = 2L)
+  n_communities <- .assert_whole_number(
+    n_communities,
+    "n_communities"
+  )
+  if (n_communities > n_nodes) {
+    stop("`n_communities` cannot exceed `n_nodes`.", call. = FALSE)
+  }
+  community_sizes <- .normalize_community_sizes(
+    n_nodes,
+    n_communities,
+    community_sizes
+  )
+  intra_prob <- .validate_probability_vector(
+    intra_prob,
+    "intra_prob",
+    n_communities
+  )
+  .assert_scalar_number(inter_prob, "inter_prob", lower = 0, upper = 1)
   if (!is.null(seed)) {
-    set.seed(seed)
+    .assert_whole_number(seed, "seed", minimum = 0L)
   }
 
-  if (!is.numeric(n_nodes) || length(n_nodes) != 1 || n_nodes <= 0) {
-    stop("n_nodes must be a positive integer.")
-  }
-  n_nodes <- as.integer(n_nodes)
-  
-  if (!is.numeric(n_communities) || length(n_communities) != 1 || n_communities <= 0) {
-    stop("n_communities must be a positive integer.")
-  }
-  n_communities <- as.integer(n_communities)
-  
-  if (is.null(community_sizes)) {
-    # If community sizes are not provided, divide nodes equally
-    base_size <- n_nodes %/% n_communities
-    remainder <- n_nodes %% n_communities
-    community_sizes <- rep(base_size, n_communities)
-    if (remainder > 0) {
-      community_sizes[1:remainder] <- community_sizes[1:remainder] + 1
-    }
-  } else {
-    if (length(community_sizes) != n_communities) {
-      stop("Length of community_sizes must equal n_communities.")
-    }
-    if (sum(community_sizes) != n_nodes) {
-      stop("Sum of community_sizes must equal n_nodes.")
-    }
-  }
+  .with_preserved_seed(seed, function() {
+    graph <- matrix(0L, nrow = n_nodes, ncol = n_nodes)
+    node_indices <- seq_len(n_nodes)
+    assignments <- rep.int(seq_len(n_communities), community_sizes)
 
-  if (!is.numeric(intra_prob) || any(intra_prob < 0) || any(intra_prob > 1)) {
-    stop("intra_prob must be numeric value(s) between 0 and 1.")
-  }
-  if (length(intra_prob) == 1L) {
-    intra_prob <- rep(intra_prob, n_communities)
-  } else if (length(intra_prob) != n_communities) {
-    stop("intra_prob must be a scalar or a vector of length n_communities.")
-  }
-  
-  if (!is.numeric(inter_prob) || inter_prob < 0 || inter_prob > 1) {
-    stop("inter_prob must be a numeric value between 0 and 1.")
-  }
-
-  # Initialize adjacency matrix
-  G <- matrix(0, nrow = n_nodes, ncol = n_nodes)
-
-  # Assign nodes to communities
-  node_indices <- 1:n_nodes
-  community_assignments <- rep(1:n_communities, times = community_sizes)
-
-  # Create community blocks
-  for (i in 1:n_communities) {
-    nodes_in_i <- node_indices[community_assignments == i]
-    # Edges within community i
-    if (length(nodes_in_i) > 1) {
-      G_intra <- rbinom(length(nodes_in_i) * (length(nodes_in_i) - 1) / 2, 1, intra_prob[i])
-      G_intra_matrix <- matrix(0, nrow = length(nodes_in_i), ncol = length(nodes_in_i))
-      G_intra_matrix[upper.tri(G_intra_matrix)] <- G_intra
-      G_intra_matrix <- G_intra_matrix + t(G_intra_matrix)
-      G[nodes_in_i, nodes_in_i] <- G_intra_matrix
-    }
-  }
-
-  # Create inter-community edges
-  if (n_communities >= 2L) {
-    for (i in 1:(n_communities - 1)) {
-      for (j in (i + 1):n_communities) {
-        nodes_in_i <- node_indices[community_assignments == i]
-        nodes_in_j <- node_indices[community_assignments == j]
-        # Edges between community i and community j
-        G_inter <- matrix(rbinom(length(nodes_in_i) * length(nodes_in_j), 1, inter_prob),
-                          nrow = length(nodes_in_i), ncol = length(nodes_in_j))
-        G[nodes_in_i, nodes_in_j] <- G_inter
-        G[nodes_in_j, nodes_in_i] <- t(G_inter)
+    for (community in seq_len(n_communities)) {
+      nodes <- node_indices[assignments == community]
+      if (length(nodes) > 1L) {
+        block <- matrix(0L, nrow = length(nodes), ncol = length(nodes))
+        block[upper.tri(block)] <- stats::rbinom(
+          sum(upper.tri(block)),
+          1L,
+          intra_prob[[community]]
+        )
+        graph[nodes, nodes] <- block + t(block)
       }
     }
-  }
 
-  # Remove self-loops
-  diag(G) <- 0
+    if (n_communities >= 2L) {
+      for (first in seq_len(n_communities - 1L)) {
+        for (second in seq.int(first + 1L, n_communities)) {
+          first_nodes <- node_indices[assignments == first]
+          second_nodes <- node_indices[assignments == second]
+          block <- matrix(
+            stats::rbinom(
+              length(first_nodes) * length(second_nodes),
+              1L,
+              inter_prob
+            ),
+            nrow = length(first_nodes),
+            ncol = length(second_nodes)
+          )
+          graph[first_nodes, second_nodes] <- block
+          graph[second_nodes, first_nodes] <- t(block)
+        }
+      }
+    }
 
-  return(G)
+    graph
+  })
 }

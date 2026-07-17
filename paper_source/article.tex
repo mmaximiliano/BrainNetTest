@@ -1,0 +1,902 @@
+\documentclass[article]{jss}\usepackage[]{graphicx}\usepackage[]{xcolor}
+% maxwidth is the original width if it is less than linewidth
+% otherwise use linewidth (to make sure the graphics do not exceed the margin)
+\makeatletter
+\def\maxwidth{ %
+  \ifdim\Gin@nat@width>\linewidth
+    \linewidth
+  \else
+    \Gin@nat@width
+  \fi
+}
+\makeatother
+
+\usepackage{Sweave}
+
+
+
+\usepackage{amsmath,amssymb,booktabs}
+\usepackage[section]{placeins}
+\newcommand{\class}[1]{\code{#1}}
+
+\author{
+  Maximiliano Martino\\Universidad de San Andr\'es
+  \And
+  Daniel Fraiman\\Universidad de San Andr\'es and CONICET
+}
+\Plainauthor{Maximiliano Martino, Daniel Fraiman}
+
+\title{\pkg{BrainNetTest}: Global and Edge-Wise Inference for Binary
+  Brain Network Populations in \proglang{R}}
+\Plaintitle{BrainNetTest: Global and Edge-Wise Inference for Binary Brain
+  Network Populations in R}
+\Shorttitle{\pkg{BrainNetTest}: Inference for Brain Network Populations}
+
+\Abstract{
+Clinical connectomics often compares one binary brain network per participant
+and asks both whether diagnostic groups differ globally and which connections
+carry the difference. We present \pkg{BrainNetTest}~1.0.0, an \proglang{R}
+package for populations of aligned, binary, undirected brain networks. A
+validated S3 input class enforces the brain-network analysis contract, and a
+classed result supplies standard \code{print()}, \code{summary()},
+\code{plot()}, and \code{as.data.frame()} methods. The global procedure is a
+finite-sample label-randomization test based on the edge-separable $L_1$
+analysis-of-variance score of Fraiman and Fraiman. Separate edge-wise Fisher
+tests use Holm family-wise error control by default. The implementation
+includes chunked matrix computation and prefix-sum updates for an optional
+descriptive ablation path. In prespecified simulations, the largest observed
+complete-null global rejection rate was \MaxGlobalNullRate{} and the largest
+Holm family-wise error rate was \MaxHolmNullFWER{}. Across four alternatives,
+mean Holm true-positive rate and precision were \MeanHolmTPR{} and
+\MeanHolmPrecision{}. In a real ABIDE resting-state fMRI application, the
+observed global statistic is extreme under autism-control label randomization
+in the full cohort and in a covariate-balanced sensitivity sample, while no
+single edge survives strict multiplicity control. The package source, tests,
+clinical application, and standalone replication scripts are distributed
+together.
+}
+
+\Keywords{\proglang{R}, brain connectomics, resting-state fMRI,
+  randomization test, edge-wise inference, clinical group comparison}
+\Plainkeywords{R, brain connectomics, resting-state fMRI, randomization test,
+  edge-wise inference, clinical group comparison}
+
+\Address{
+Maximiliano Martino\\
+Departamento de Matem\'atica y Ciencias\\
+Universidad de San Andr\'es\\
+Argentina\\
+E-mail: \email{maxii.martino@gmail.com}\\
+
+Daniel Fraiman\\
+Departamento de Matem\'atica y Ciencias\\
+Universidad de San Andr\'es and CONICET\\
+Argentina\\
+E-mail: \email{dfraiman@udesa.edu.ar}
+}
+
+
+
+\input{generated/results.tex}
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\begin{document}
+\maketitle
+
+\section{Introduction}
+
+Functional and structural connectomics represent each participant by a brain
+network whose nodes are atlas regions and whose edges encode estimated
+connections. Clinical studies then compare populations of these networks, for
+example participants with a diagnosis and matched controls. Two questions are
+central. First, is diagnosis associated with a global change in the spatial
+pattern of connections? Second, which individual connections differ after
+accounting for the large number of tested edges? The first question can reveal
+a distributed population effect even when the second has limited power; the
+second is needed before any particular connection is described as selected.
+
+The distinction matters in both software and interpretation in
+\proglang{R} \citep{R}. The
+network-based statistic identifies connected components of edge-wise effects
+under a component-forming threshold \citep{Zalesky2010}; the \pkg{NBR}
+package extends that framework to linear and mixed-effects designs
+\citep{GraciaTabuenca2020}. The \pkg{FIAR} package models directed effective
+connectivity from fMRI time series \citep{FIAR}, and \pkg{brainGraph} supports
+construction, graph-theoretic analysis, and visualization of brain MRI
+networks \citep{brainGraph}. The \pkg{NetworkComparisonTest} package instead
+compares networks estimated from tabular observations, including global
+strength and edge invariance \citep{vanBorkulo2021}. General graph
+infrastructure is provided by \pkg{igraph} \citep{igraph}. These tools address
+different stages or hypotheses from the present setting: independent clinical
+groups whose observations are themselves aligned binary brain networks.
+
+Fraiman and Fraiman proposed an analysis-of-variance score for samples of
+networks and studied both detection and subnetwork identification
+\citep{fraiman}. \pkg{BrainNetTest} implements a finite-sample randomization
+version of the global score and provides separate multiplicity-controlled edge
+inference. It also retains the edge-separable computational idea behind the
+original package, while restricting its statistical interpretation.
+Version~1.0.0 is a redesign around four goals:
+
+\begin{enumerate}
+  \item encode and validate the complete brain-network data contract before
+    computation;
+  \item expose results through familiar \proglang{R} classes and methods;
+  \item separate global, edge-level, and descriptive-ablation results without
+    conflating their inferential meanings; and
+  \item make the clinical application, simulations, and computational
+    benchmarks reproducible from standalone scripts.
+\end{enumerate}
+
+The paper follows a domain--software--method--application structure. Section
+~\ref{sec:contract} states the clinical analysis contract. Section
+~\ref{sec:design} presents the S3 classes and interface. Section
+~\ref{sec:methods} defines the statistical and computational contributions.
+Section~\ref{sec:workflow} gives executable workflows, and Section
+~\ref{sec:application} applies them to a real autism-control resting-state
+fMRI study. Sections~\ref{sec:validation} and \ref{sec:performance} report
+simulation validation and measured computational performance. Limitations are
+discussed in Section~\ref{sec:discussion}.
+
+\section{Brain-network analysis contract and clinical context}
+\label{sec:contract}
+
+\subsection{From images to network populations}
+
+An observation is one participant's binary, undirected brain network without
+self-loops, represented by a symmetric $p\times p$ adjacency matrix with zero
+diagonal. All participants must use the same labeled and ordered brain atlas.
+The input contains $m\geq2$ independent clinical, behavioral, or demographic
+groups and at least two observations per group. Sample sizes may be unequal.
+
+These matrices are downstream neuroimaging objects. Atlas selection,
+registration, connectivity estimation, nuisance adjustment, thresholding, and
+quality control occur before \pkg{BrainNetTest}. The package does not treat an
+estimated connection as free from upstream uncertainty. Users must also ensure
+that one participant contributes only one independent observation. Family
+structure, repeated scans, paired designs, or site clusters require restricted
+permutations or a model that is not implemented in version~1.0.0.
+
+Weighted or directed connections, missing regions, covariates, and paired or
+clustered samples are rejected rather than silently coerced. The same
+mathematical contract can be used outside neuroimaging whenever each
+independent unit yields an aligned binary network, but the software,
+documentation, and case study are designed around brain-network populations.
+
+\subsection{Two inferential questions}
+
+The global randomization null is exchangeability of whole participant
+networks with respect to group labels. In the standard independent-groups
+setting, this corresponds to equality of the group graph laws. However, the
+chosen score depends only on marginal edge frequencies. Therefore, the test is
+targeted to changes in the spatial pattern of edge occurrence and is not an
+omnibus detector of alternatives that alter only cross-edge dependence,
+motifs, degree dependence, or other topology while preserving every edge
+probability.
+
+Edge tests answer a separate clinical question: for each possible anatomical
+connection, are its presence probabilities equal among groups? Their decisions
+are not gated by the global result and are not an attribution or decomposition
+of global rejection. Selected edges are statistical group associations, not
+causal connections or validated diagnostic biomarkers.
+
+\section[Software design and R interface]{Software design and
+  \proglang{R} interface}
+\label{sec:design}
+
+\subsection{S3 data and result classes}
+
+The \code{brainnet\_data()} constructor checks the outer group structure,
+sample sizes, matrix types and dimensions, finite binary entries, symmetry,
+zero diagonals, and node ordering. It stores optional node labels and
+community metadata once. The resulting \class{brainnet\_data} object has
+\code{print()} and \code{summary()} methods that avoid printing individual
+matrices.
+
+The \code{brainnet\_test()} function returns a
+\class{brainnet\_result}. Its
+global component is compatible with \class{htest}; the full object also stores
+the complete edge family, central graphs, multiplicity settings, randomization
+metadata, the call, elapsed time, and optional ablation diagnostics. Standard
+methods and focused extractors provide the user interface:
+
+\begin{itemize}
+  \item \code{print()} and \code{summary()} report the global result,
+    multiplicity procedure, and selected-edge count;
+  \item \code{as.data.frame()} returns every tested edge with group
+    proportions, effect size, raw and adjusted p-values, and decision;
+  \item \code{selected\_edges()} and \code{selected\_nodes()} provide focused
+    views, with the node summary explicitly descriptive; and
+  \item \code{plot()} visualizes group central graphs and
+    multiplicity-controlled selected edges using \pkg{igraph}.
+\end{itemize}
+
+The version~1.0.0 source archive is distributed with the submission under the
+MIT license; its SHA-256 digest is recorded in
+\code{package-source.txt}. The archive is the software object reviewed by the
+replication scripts.
+
+\subsection{Comparison with related software}
+
+Table~\ref{tab:software} places \pkg{BrainNetTest} within the main
+\proglang{R} tools used for brain connectivity and network comparison.
+
+\begin{table}[t]
+\centering
+\small
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{llll}
+\toprule
+Software & Input unit & Primary target & Distinguishing scope\\
+\midrule
+\pkg{FIAR} & fMRI time series & effective connectivity & directed models\\
+\pkg{brainGraph} & connectivity matrices & graph analysis & MRI workflows\\
+\pkg{NBR} & edge outcomes & connected components & linear/mixed models\\
+\pkg{NetworkComparisonTest} & tabular samples & estimated-network invariance
+  & independent/paired\\
+\pkg{BrainNetTest} & subject brain networks & global plus edge marginals
+  & binary multi-group API\\
+\bottomrule
+\end{tabular}}
+\caption{Related \proglang{R} software for connectivity and network analysis.
+The packages operate at different stages of a neuroimaging workflow and target
+different hypotheses.}
+\label{tab:software}
+\end{table}
+
+\section{Statistical and computational engine}
+\label{sec:methods}
+
+\subsection{Central graphs and the global score}
+
+Let $\mathcal E=\{(i,j):1\leq i<j\leq p\}$ be the possible undirected edges.
+For edge $e$, write $p_{k,e}$ for its sample proportion in group $k$ and
+$p_e=\sum_kn_kp_{k,e}/n$ for the pooled proportion. Define
+\[
+d_{k,e}=2p_{k,e}(1-p_{k,e}),\qquad
+D_{k,e}=p_{k,e}+p_e-2p_{k,e}p_e.
+\]
+The package uses the unnormalized Fraiman score
+\begin{equation}
+T=\sqrt m\sum_{k=1}^m\sqrt{n_k}
+\left\{
+\frac{n_k}{n_k-1}\sum_{e\in\mathcal E}d_{k,e}
+-
+\frac{n}{n-1}\sum_{e\in\mathcal E}D_{k,e}
+\right\}.
+\label{eq:score}
+\end{equation}
+Every undirected edge is counted once. The positive asymptotic normalizer in
+the original formulation is unnecessary for randomization ordering and is not
+exposed as a user parameter.
+
+Because the sign under finite unbalanced and multi-group alternatives need not
+be fixed, version~1.0.0 predeclares the two-sided extremeness statistic
+$S=|T|$. Group labels are reassigned uniformly while preserving all sample
+sizes. If all $N$ distinct assignments are enumerated, including the observed
+assignment,
+\[
+p_{\mathrm{exact}} =
+\frac{1}{N}\sum_{\pi=1}^N
+\mathbb I\{|T_\pi|\geq|T_{\mathrm{obs}}|\}.
+\]
+Automatic exact enumeration is used when $N\leq10{,}000$. Otherwise, for $B$
+random assignments sampled with replacement from the complete fixed-size
+orbit (including the possibility of drawing the observed assignment),
+\begin{equation}
+p_{\mathrm{MC}} =
+\frac{1+\sum_{b=1}^B
+\mathbb I\{|T_b|\geq|T_{\mathrm{obs}}|\}}{B+1}.
+\label{eq:mc}
+\end{equation}
+The inclusive comparison handles the many ties induced by discrete graph
+statistics; the plus-one correction prevents invalid zero Monte Carlo
+p-values and supports finite-sample randomization validity
+\citep{PhipsonSmyth2010,HemerikGoeman2018}. The result reports the method,
+assignment count, ties, numerical tie tolerance, and attainable p-value
+resolution.
+
+\subsection{Multiplicity-controlled edge inference}
+
+For each $e\in\mathcal E$, an $m\times2$ table contains present and absent
+counts. The default is a two-sided Fisher exact test. All $|\mathcal E|$
+raw p-values form one prespecified family. Holm adjustment controls family-wise
+error under arbitrary dependence \citep{Holm1979}. The BY option controls the
+false discovery rate under general dependence \citep{BenjaminiYekutieli2001};
+BH is opt-in because its usual guarantee requires additional dependence
+conditions \citep{BenjaminiHochberg1995}.
+
+For two groups, the signed effect is $p_{2,e}-p_{1,e}$ using constructor order.
+For more groups, the package reports $\max_kp_{k,e}-\min_kp_{k,e}$ and the
+groups attaining the extrema. The omnibus test does not imply pairwise
+significance.
+
+\subsection{Edge-separable computation and ablation}
+
+Equation~\ref{eq:score} is a sum of additive edge contributions. For $n$
+graphs, $E=|\mathcal E|$ edges, and $B$ assignments, the implementation stores
+an $n\times E$ graph-edge matrix and processes assignments in chunks. Group
+counts are matrix cross-products. The leading arithmetic cost is
+$O(mBnE)$, not $O(mBE)$; chunking limits temporary $E\times B$ allocations.
+
+Edge separability also yields the package's main algorithmic optimization.
+A direct ranked-removal implementation recomputes a residual score for each
+of $K$ candidate prefixes and each random assignment, with leading cost
+$O(KmBnE)$. \pkg{BrainNetTest} computes every assignment's edge
+contributions once and obtains all residual scores by cumulative subtraction.
+When $K=E$, the path-update stage falls from $O(BE^2)$ repeated tail sums to
+$O(BE)$ prefix sums. Section~\ref{sec:performance} checks numerical identity
+and measures both the chunked global engine and this prefix-sum update.
+
+The optional ablation path sorts edges by raw p-value, decreasing absolute
+effect magnitude, and endpoints. The computational speedup is exact, but the
+statistical interpretation remains limited: because the order is selected
+from the observed labels, the returned
+\code{descriptive\_tail\_fraction} is not a post-selection p-value. No stopping
+set is returned, and non-rejection is not described as equivalence or
+statistical indistinguishability.
+
+\section{Software workflows}
+\label{sec:workflow}
+
+\subsection{Two groups}
+
+The following complete example creates two synthetic groups and validates the
+input. The constructor is the single entry point that enforces the analysis
+contract, and its \code{print()} and \code{summary()} methods describe the data
+without echoing any adjacency matrix.
+
+\begin{Schunk}
+\begin{Sinput}
+R> library("BrainNetTest")
+R> 
+R> group_a <- generate_category_graphs(
++    n_graphs = 20, n_nodes = 10, n_communities = 2,
++    base_intra_prob = 0.80, base_inter_prob = 0.10, seed = 1
++  )
+R> group_b <- generate_category_graphs(
++    n_graphs = 20, n_nodes = 10, n_communities = 2,
++    base_intra_prob = 0.45, base_inter_prob = 0.45, seed = 2
++  )
+R> 
+R> networks <- brainnet_data(list(GroupA = group_a, GroupB = group_b))
+R> networks
+\end{Sinput}
+\begin{Soutput}
+<brainnet_data>
+2 groups; 10 nodes; 40 graphs
+  GroupA: 20
+  GroupB: 20
+\end{Soutput}
+\begin{Sinput}
+R> summary(networks)
+\end{Sinput}
+\begin{Soutput}
+Brain-network populations
+  Nodes: 10
+  Groups: 2
+  GroupA: n = 20, mean density = 0.404
+  GroupB: n = 20, mean density = 0.444
+\end{Soutput}
+\end{Schunk}
+
+Passing the validated object to \code{brainnet_test()} runs both inferential
+layers and returns a classed \class{brainnet\_result}.
+
+\begin{Schunk}
+\begin{Sinput}
+R> result <- brainnet_test(
++    networks, n_permutations = 999, adjust = "holm", seed = 42
++  )
+R> result
+\end{Sinput}
+\begin{Soutput}
+<brainnet_result>
+Global permutation test: T = -29.32, p = 0.001 (Monte Carlo)
+Edge inference: fisher + Holm; 1 of 45 edges selected
+\end{Soutput}
+\begin{Sinput}
+R> head(selected_edges(result)[, c(
++    "node1", "node2", "risk_difference", "p_adjusted"
++  )])
+\end{Sinput}
+\begin{Soutput}
+  node1 node2 risk_difference  p_adjusted
+1     6     8           -0.65 0.001769117
+\end{Soutput}
+\end{Schunk}
+
+The printed result does not dump stored matrices. \code{as.data.frame(result)}
+returns the complete edge table, \code{summary(result)} adds the highest-ranked
+edges, and \code{plot(result)} draws the classed result (Figure~\ref{fig:plot}
+uses the three-group result below).
+
+\subsection{Three groups}
+
+Multi-group input uses the same constructor and method dispatch. Edge p-values
+are omnibus; effects are observed ranges.
+
+\begin{Schunk}
+\begin{Sinput}
+R> group_c <- generate_category_graphs(
++    n_graphs = 20, n_nodes = 10, n_communities = 2,
++    base_intra_prob = 0.25, base_inter_prob = 0.65, seed = 3
++  )
+R> three_groups <- brainnet_data(
++    list(GroupA = group_a, GroupB = group_b, GroupC = group_c)
++  )
+R> three_result <- brainnet_test(
++    three_groups, n_permutations = 999, adjust = "holm", seed = 43
++  )
+R> three_result
+\end{Sinput}
+\begin{Soutput}
+<brainnet_result>
+Global permutation test: T = -113.3, p = 0.001 (Monte Carlo)
+Edge inference: fisher + Holm; 32 of 45 edges selected
+\end{Soutput}
+\end{Schunk}
+
+The \code{plot()} method reuses the central graphs and selected edges stored in
+the result, so the original populations need not be supplied again
+(Figure~\ref{fig:plot}).
+
+\begin{figure}[t]
+\centering
+\begin{Schunk}
+\begin{Sinput}
+R> plot(three_result, reference = "GroupC")
+\end{Sinput}
+
+\includegraphics[width=0.75\textwidth]{figure/plot-1} \end{Schunk}
+\caption{The \code{plot()} method applied to the three-group result. The first
+three panels show each group central graph, with edge width encoding the
+empirical edge frequency; the final panel highlights the
+multiplicity-controlled selected edges in red over the \code{GroupC}
+central graph.}
+\label{fig:plot}
+\end{figure}
+\FloatBarrier
+
+\section{Clinical application: Autism and resting-state connectivity}
+\label{sec:application}
+
+Autism spectrum disorder has been associated with altered resting-state
+functional connectivity, but findings can be distributed across many
+connections and are sensitive to site, motion, preprocessing, and
+thresholding \citep{DiMartino2014}. We use the openly shared, preprocessed
+resting-state fMRI derivatives of ABIDE~I
+\citep{DiMartino2014,Craddock2013} to ask a clinically motivated question:
+does diagnosis group correspond to a different spatial pattern of binary
+functional connections?
+
+To avoid combining scanner sites, we use only the NYU sample and retain
+participants with mean framewise displacement below 0.2. For each participant
+we take mean time series from the AAL atlas
+\citep{TzourioMazoyer2002}, form the Pearson correlation matrix, and keep the
+strongest 10\% of edges. Proportional thresholding gives every network the
+same edge count and avoids density confounding \citep{vandenHeuvel2017};
+therefore the test concerns the anatomical distribution of edges, not total
+network density. The standalone \code{data-application.R} script downloads
+the public derivatives and records every construction choice.
+
+\begin{Schunk}
+\begin{Sinput}
+R> connectomes <- readRDS("application/abide_connectomes.rds")
+R> abide_full <- brainnet_data(
++    connectomes$populations,
++    node_labels = connectomes$node_labels
++  )
+R> abide_balanced <- brainnet_data(
++    connectomes$balanced_populations,
++    node_labels = connectomes$node_labels
++  )
+R> abide_full
+\end{Sinput}
+\begin{Soutput}
+<brainnet_data>
+2 groups; 114 nodes; 171 graphs
+  control: 98
+  autism: 73
+\end{Soutput}
+\begin{Sinput}
+R> abide_balanced
+\end{Sinput}
+\begin{Soutput}
+<brainnet_data>
+2 groups; 114 nodes; 110 graphs
+  control: 55
+  autism: 55
+\end{Soutput}
+\end{Schunk}
+
+\begin{Schunk}
+\begin{Sinput}
+R> abide_full_result <- brainnet_test(
++    abide_full, n_permutations = 999, adjust = "holm", seed = 42
++  )
+R> abide_balanced_result <- brainnet_test(
++    abide_balanced, n_permutations = 999, adjust = "holm", seed = 42
++  )
+R> abide_full_result
+\end{Sinput}
+\begin{Soutput}
+<brainnet_result>
+Global permutation test: T = -44.69, p = 0.001 (Monte Carlo)
+Edge inference: fisher + Holm; 0 of 6441 edges selected
+\end{Soutput}
+\begin{Sinput}
+R> abide_balanced_result
+\end{Sinput}
+\begin{Soutput}
+<brainnet_result>
+Global permutation test: T = -27.39, p = 0.01 (Monte Carlo)
+Edge inference: fisher + Holm; 0 of 6441 edges selected
+\end{Soutput}
+\end{Schunk}
+
+
+
+The full cohort contains 98 control and 73 autism
+participants. Sex composition and mean motion differ between these
+observational groups, so we also construct a deterministic 1:1 coarsened
+balance sample without using any network outcome: exact sex strata, five-year
+age bins, and 0.05 mean-displacement bins. This retains 55
+participants per group (49 male and 6 female in each); mean ages are
+14.25 and
+14.75 years, and mean framewise
+displacements are 0.062 and
+0.062.
+
+The observed whole-graph statistic is extreme under label randomization in the
+full cohort
+($T=-44.7$,
+$p=0.001$) and in the balanced sensitivity
+sample ($T=-27.4$,
+$p=0.01$). Thus, conditional on this
+site, preprocessing pipeline, atlas, and threshold, the data show a
+population-level association between diagnosis label and the spatial pattern
+of resting-state connections. Balancing the measured sex, age, and motion
+distributions does not remove that association. The balanced analysis of
+110 networks, 114 regions,
+6441 edge hypotheses, and
+999 random assignments completes in under one second on the reference system.
+
+Edge localization is more demanding. In the balanced sample,
+3 edges have raw p-values below 0.001, but none survives
+Holm family-wise control or BY false-discovery control at $\alpha=0.05$; the
+smallest Holm-adjusted p-value is
+1.000. The strongest observed differences are
+reported for anatomical context, not as selected clinical biomarkers.
+Figure~\ref{fig:abide} displays their anatomical distribution and edge-wise
+evidence.
+
+\begin{Schunk}
+\begin{Sinput}
+R> edges <- as.data.frame(abide_balanced_result)
+R> edges$region1 <- connectomes$node_labels[edges$node1]
+R> edges$region2 <- connectomes$node_labels[edges$node2]
+R> top_edges <- head(edges[order(edges$p_value), c(
++    "region1", "region2", "risk_difference", "p_adjusted"
++  )], 5)
+R> rownames(top_edges) <- NULL
+R> top_edges
+\end{Sinput}
+\begin{Soutput}
+         region1        region2 risk_difference p_adjusted
+1     Thalamus_L       Heschl_L       0.2545455          1
+2   Precentral_L  Frontal_Sup_L      -0.3272727          1
+3 Cingulum_Mid_R       Heschl_R      -0.2545455          1
+4 Parietal_Sup_L Temporal_Mid_R      -0.1818182          1
+5  Hippocampus_R Temporal_Mid_R       0.2727273          1
+\end{Soutput}
+\end{Schunk}
+
+\begin{figure}[t]
+\centering
+\begin{Schunk}
+
+\includegraphics[width=\textwidth]{figure/abide-clinical-1} \end{Schunk}
+\caption{ABIDE clinical-group results in the balanced sensitivity sample.
+Panel A shows autism-minus-control differences in empirical edge frequency
+(blue: less frequent in autism; red: more frequent), with AAL regions grouped
+into broad anatomical systems. Panel B shows the same
+6441 edges by effect and
+raw significance; the ten smallest raw p-values are circled. The global test
+detects a change in the distributed edge pattern, but no individual edge
+survives Holm or BY control.}
+\label{fig:abide}
+\end{figure}
+\FloatBarrier
+
+This real-world result is clinically relevant but not diagnostic or causal.
+It is consistent with a distributed change in functional network organization
+for this NYU sample, while strict edge-level control prevents unsupported
+claims about single connections. Unmeasured confounding, the selected
+preprocessing pipeline, atlas, and threshold remain possible explanations.
+The application therefore shows both the value and the limits of the package:
+it reports a preprocessing-conditional population association and states
+clearly when localization is not supported.
+
+\section{Prespecified simulation validation}
+\label{sec:validation}
+
+The inferential simulation cells and pass/fail criteria were frozen before the
+full run and are distributed in \code{simulation-design.md}; the separately
+disclosed prefix-sum timing benchmark was added during the brain-first
+manuscript restructuring and does not alter these cells. Every complete-null
+cell has
+\CompleteNullReps{} replications; each partial-null cell has
+\PartialNullReps{}. The complete-null gate required the one-sided 95\%
+Wilson upper limit for both global rejection and Holm family-wise error to be
+at most 0.065. This is an implementation tolerance, not a proof of exactness.
+
+\subsection{Complete null}
+
+The six cells include independent edges, unequal sample sizes, positive
+within-graph dependence from latent density, negative dependence from fixed
+density, and sparse/dense three-group settings. Observations remain
+independent between subjects. Table~\ref{tab:complete-null} and
+Figure~\ref{fig:complete-null} summarize the calibration results.
+
+\begin{table}[t]
+\centering
+\small
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{llllll}
+\toprule
+scenario & global\_rejection & global\_upper\_95 & holm\_fwer & holm\_upper\_95 & by\_fdr \\
+\midrule
+dense\_three\_group & 0.023 & 0.029 & 0.000 & 0.001 & 0.000 \\
+fixed\_density & 0.044 & 0.052 & 0.013 & 0.018 & 0.001 \\
+independent\_balanced & 0.046 & 0.054 & 0.010 & 0.014 & 0.002 \\
+independent\_unbalanced & 0.051 & 0.059 & 0.015 & 0.020 & 0.003 \\
+latent\_density & 0.040 & 0.048 & 0.006 & 0.010 & 0.001 \\
+sparse\_three\_group & 0.030 & 0.037 & 0.000 & 0.001 & 0.000 \\
+\bottomrule
+\end{tabular}}
+\caption{Complete-null calibration. Upper limits are one-sided 95\% Wilson bounds.}
+\label{tab:complete-null}
+\end{table}
+
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]
+  {generated/figures/complete_null_calibration.pdf}
+\caption{Global rejection and Holm family-wise error under the complete null.
+Vertical segments end at the prespecified one-sided 95\% upper bounds; the
+dashed line is $\alpha=0.05$.}
+\label{fig:complete-null}
+\end{figure}
+\FloatBarrier
+
+\subsection{Partial nulls and localization}
+
+Four alternatives cover localized positive shifts, scattered mixed-direction
+shifts, latent-density dependence among null edges, and three groups.
+Table~\ref{tab:partial-null} reports unconditional results, and
+Figure~\ref{fig:localization} compares localization rates; the separately
+labeled conditional table is included in the replication material.
+If \(R\) is the number selected, precision and false-discovery proportion
+divide by \(\max(R,1)\), so both are zero when no edge is selected.
+
+\begin{table}[t]
+\centering
+\small
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lllllllll}
+\toprule
+scenario & procedure & global\_power & tpr & precision & fdp & fwer & jaccard & mean\_selected \\
+\midrule
+latent\_dependent & BY & 0.995 & 0.150 & 0.548 & 0.004 & 0.005 & 0.150 & 0.906 \\
+localized\_positive & BY & 0.994 & 0.141 & 0.518 & 0.002 & 0.005 & 0.141 & 0.853 \\
+scattered\_mixed & BY & 0.998 & 0.144 & 0.539 & 0.001 & 0.001 & 0.144 & 0.865 \\
+three\_group & BY & 0.953 & 0.106 & 0.414 & 0.003 & 0.003 & 0.106 & 0.638 \\
+latent\_dependent & Holm & 0.995 & 0.202 & 0.728 & 0.008 & 0.010 & 0.202 & 1.224 \\
+localized\_positive & Holm & 0.994 & 0.192 & 0.711 & 0.004 & 0.008 & 0.192 & 1.161 \\
+scattered\_mixed & Holm & 0.998 & 0.198 & 0.750 & 0.003 & 0.005 & 0.198 & 1.192 \\
+three\_group & Holm & 0.953 & 0.171 & 0.676 & 0.008 & 0.011 & 0.171 & 1.038 \\
+\bottomrule
+\end{tabular}}
+\caption{Unconditional global power and edge-localization performance.}
+\label{tab:partial-null}
+\end{table}
+
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]
+  {generated/figures/localization_performance.pdf}
+\caption{Mean true-positive rate and precision for Holm and BY selections
+across the four partial-null alternatives.}
+\label{fig:localization}
+\end{figure}
+
+Global power ranged from 0.953 to 0.998. Holm true-positive rate ranged from 0.171 to 0.202, while precision ranged from 0.676 to 0.750 and family-wise error from 0.005 to 0.011. The unadjusted comparator increased true-positive rate to 0.599--0.659 but raised family-wise error to 0.370--0.520. Thus multiplicity control is effective but materially conservative at 15--20 observations per group.
+
+
+\FloatBarrier
+
+\subsection{Scope stress test and sensitivity}
+
+The weak-null stress cell gives both groups marginal edge probability 0.5 but
+uses perfectly dependent edges in one group and independent edges in the
+other. Whole-graph exchangeability is false, so its global rejection rate is
+not a Type-I error estimate for the package's global null. Every edge-marginal
+null is true, however, so Holm family-wise error remains a required check.
+This cell makes the distinction between the two inferential layers explicit.
+
+Observed global rejection was 0.065; this is descriptive because the whole-graph null is false. Holm family-wise error was 0.013, with one-sided 95\% upper bound 0.018.
+
+
+
+Sensitivity runs compare 99, 199, 999, and 4,999 random assignments on common
+data. Edge decisions are invariant to this setting because edge inference is
+separate from global randomization; global p-value resolution and elapsed time
+change as expected. Full cell-level results are in the replication tables.
+
+Global power was 0.998 with 99 assignments and 1.000 with 4,999; the mean number of Holm-selected edges remained 1.138 in every row. Median runtime rose from 0.012 to 0.026 seconds.
+
+
+
+\FloatBarrier
+\section{Computational performance}
+\label{sec:performance}
+
+\subsection{Chunked global randomization}
+
+The benchmark compares the chunked matrix engine with a direct loop over the
+same 499 assignment matrix. Equality of every assignment score is checked
+before timing is accepted. Each method is warmed up, measurement order is
+randomized, and fast calls are timed in calibrated batches.
+Table~\ref{tab:benchmark} reports medians over 10 repetitions; the largest measured
+median speedup was
+\LargestMeasuredSpeedup{}. Figure~\ref{fig:performance} shows scaling over the
+measured edge range.
+
+\begin{table}[t]
+\centering
+\small
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lllllll}
+\toprule
+n\_nodes & n\_edges & median\_optimized\_seconds & optimized\_iqr & median\_direct\_seconds & median\_speedup & input\_megabytes \\
+\midrule
+ 16.0000 &   120.0000 & 0.0009 & 0.0001 & 0.0174 & 19.0546 &  0.1207 \\
+ 32.0000 &   496.0000 & 0.0040 & 0.0004 & 0.0379 &  9.5315 &  0.2584 \\
+ 64.0000 &  2016.0000 & 0.0288 & 0.0029 & 0.1140 &  4.2772 &  0.8150 \\
+128.0000 &  8128.0000 & 0.1024 & 0.0117 & 0.4230 &  4.1230 &  3.0533 \\
+256.0000 & 32640.0000 & 0.4390 & 0.0498 & 1.7015 &  3.8508 & 12.0299 \\
+\bottomrule
+\end{tabular}}
+\caption{Measured global-engine runtime and input-object size summaries.}
+\label{tab:benchmark}
+\end{table}
+
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.75\textwidth]
+  {generated/figures/performance.pdf}
+\caption{Measured runtime for direct and chunked assignment-score
+implementations. Both axes are logarithmic.}
+\label{fig:performance}
+\end{figure}
+\FloatBarrier
+
+\subsection{Prefix-sum ablation updates}
+
+The second benchmark isolates the ranked-removal update optimized by the
+prefix-sum algorithm. For each of 99 fixed assignment rows, both
+implementations receive the same edge-contribution vector and fixed edge
+order. The direct implementation repeatedly sums every remaining tail; the
+optimized implementation obtains all residual scores by one cumulative sum.
+Every complete path is checked for numerical equality before timing.
+Table~\ref{tab:ablation-benchmark} and
+Figure~\ref{fig:ablation-performance} report the update-stage results.
+
+\begin{table}[t]
+\centering
+\small
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{llllll}
+\toprule
+n\_nodes & n\_edges & median\_prefix\_seconds & prefix\_iqr & median\_repeated\_tail\_seconds & median\_speedup \\
+\midrule
+16.00000 &  120.00000 & 0.00013 & 0.00001 & 0.01031 &  80.50680 \\
+24.00000 &  276.00000 & 0.00023 & 0.00001 & 0.04244 & 180.05183 \\
+32.00000 &  496.00000 & 0.00035 & 0.00001 & 0.10067 & 283.31047 \\
+40.00000 &  780.00000 & 0.00052 & 0.00001 & 0.23500 & 449.70640 \\
+48.00000 & 1128.00000 & 0.00073 & 0.00005 & 0.43100 & 591.05946 \\
+56.00000 & 1540.00000 & 0.00096 & 0.00002 & 0.73500 & 755.48817 \\
+64.00000 & 2016.00000 & 0.00125 & 0.00012 & 1.18500 & 952.61768 \\
+\bottomrule
+\end{tabular}}
+\caption{Measured runtime for repeated-tail and prefix-sum ablation updates. The contribution matrix is computed before both timings.}
+\label{tab:ablation-benchmark}
+\end{table}
+
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.75\textwidth]
+  {generated/figures/ablation_performance.pdf}
+\caption{Measured runtime of the ablation path-update stage. Both methods
+produce identical residual paths; both axes are logarithmic.}
+\label{fig:ablation-performance}
+\end{figure}
+\FloatBarrier
+
+Across the measured range, the largest median update-stage speedup was
+\LargestAblationSpeedup{}. This is deliberately not reported as an end-to-end
+speedup: edge ranking and the assignment-by-edge contribution calculation are
+common to both methods. Together, the two benchmarks show that the software
+engineering contribution covers both the main randomization engine and the
+iterative diagnostic inherited from the original package.
+
+The benchmarks do not extrapolate unobserved multi-day runtimes. Performance
+depends on hardware, BLAS, graph density, and the chosen edge test; full
+session information and raw timings are distributed.
+
+\section{Discussion}
+\label{sec:discussion}
+
+\pkg{BrainNetTest}~1.0.0 turns the Fraiman and Fraiman brain-network test into
+a validated clinical connectomics workflow. The classed interface makes
+malformed connectome populations fail early, standard methods make results
+inspectable without list plumbing, and the result records the randomization
+and multiplicity information needed for interpretation. Global inference,
+edge-level inference, and adaptive ablation now have distinct names and
+contracts.
+
+The ABIDE application demonstrates real-world use rather than only a simulated
+example. In both the full cohort and the sex-, age-, and motion-balanced
+sensitivity sample, the observed global statistic is extreme under
+autism-control label randomization. No individual edge survives strict
+multiplicity control. Clinically, this is a useful distinction: the data
+support a preprocessing-conditional population association, but they do not
+support a single-edge biomarker claim. The result is not causal or diagnostic,
+and it remains tied to the selected sample, preprocessing pipeline, atlas, and
+threshold.
+
+The computational contribution is also retained. Chunked matrix products
+accelerate randomization scores, while exact prefix-sum updates replace
+repeated edge-removal calculations. These are software-engineering
+improvements to a statistical workflow, not substitutes for inferential
+validation; Section~\ref{sec:performance} therefore reports both numerical
+identity and measured speed.
+
+The supported domain remains precise: aligned binary undirected brain networks
+from independent participants. The global score is sensitive to marginal
+edge-frequency patterns rather than every possible distributional change.
+Holm control can be conservative when thousands of connections are tested,
+while BY trades additional conservatism for false-discovery control under
+general dependence. The same mathematical contract can be useful outside
+neuroimaging, but brain-network population analysis is the package's primary
+application.
+
+Future work should add restricted randomization for family, site, paired, and
+longitudinal designs; covariate-adjusted edge models; principled support for
+weighted or directed networks; and external validation across clinical
+cohorts. Such extensions require new contracts and validation rather than
+coercion inside the current API.
+
+\section*{Computational details}
+
+The package requires \proglang{R}~4.0.0 or later and imports \pkg{stats},
+\pkg{graphics}, and \pkg{igraph} \citep{igraph}. Unit tests use \pkg{testthat}
+\citep{testthat}; the vignettes and this manuscript are built with \pkg{knitr}
+\citep{knitr} and \pkg{rmarkdown} \citep{rmarkdown}. The authoritative
+\code{code-full.R} script regenerates every reported simulation and benchmark
+result, table, figure, and numeric macro. The \code{data-application.R} script
+downloads the openly shared ABIDE derivatives used in
+Section~\ref{sec:application} and saves the derived binary connectomes that the
+manuscript reads; it is the only component that needs network access.
+A separate standalone \code{code.R} and generated \code{code.html} exercise a
+reduced pipeline within the reviewer-time guideline. Full
+\code{sessionInfo()} output is supplied in
+\code{generated/sessionInfo.txt}.
+
+\bibliography{refs}
+
+\end{document}

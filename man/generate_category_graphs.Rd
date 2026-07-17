@@ -24,7 +24,7 @@ generate_category_graphs(
 \item{n_communities}{An integer specifying the number of communities. Default is 4.}
 
 \item{community_sizes}{An integer vector specifying the sizes of each community.
-If NULL, communities are of equal size. Default is NULL.}
+If \code{NULL}, nodes are divided as evenly as possible. Default is \code{NULL}.}
 
 \item{base_intra_prob}{A numeric value between 0 and 1, or a numeric vector
 of length \code{n_communities}, specifying the base probability of an edge
@@ -45,7 +45,7 @@ Default is NULL.}
 }
 \value{
 A list of symmetric binary adjacency matrices with no self-loops, representing
-  brain networks with similar community structures.
+brain networks with similar community structures.
 }
 \description{
 This function generates a list of adjacency matrices representing brain networks
@@ -55,6 +55,8 @@ inter-community connection probabilities to reflect natural variability.
 }
 \examples{
 # Generate a set of 5 graphs for the Control category
-control_graphs <- generate_category_graphs(n_graphs = 5, n_nodes = 100, n_communities = 4,
-                                           base_intra_prob = 0.8, base_inter_prob = 0.2)
+control_graphs <- generate_category_graphs(
+  n_graphs = 5, n_nodes = 100, n_communities = 4,
+  base_intra_prob = 0.8, base_inter_prob = 0.2
+)
 }

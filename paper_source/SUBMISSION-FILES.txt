@@ -1,0 +1,67 @@
+JSS manuscript upload
+---------------------
+article.pdf
+article.Rnw
+article.tex
+figure/plot-1.pdf
+figure/abide-clinical-1.pdf
+refs.bib
+jss.cls
+jss.bst
+jsslogo.jpg
+Sweave.sty
+
+Cover letter and response
+-------------------------
+letter_editor.pdf
+letter_editor.tex
+response-to-editor.md
+
+Replication upload
+------------------
+README.md
+LICENSE.md
+code-full.R
+code.R
+code.html
+data-application.R
+verify.R
+simulation-design.md
+statistical-contract.md
+renv.lock
+package-source.txt
+reference/README.md
+application/abide_connectomes.rds
+application/abide_provenance.csv
+application/abide_subjects.csv
+generated/manifest.csv
+generated/replication_metadata.csv
+generated/results.tex
+generated/sessionInfo.txt
+generated/figures/complete_null_calibration.pdf
+generated/figures/localization_performance.pdf
+generated/figures/performance.pdf
+generated/figures/ablation_performance.pdf
+generated/tables/ablation_benchmark_replicates.csv
+generated/tables/ablation_benchmark_summary.csv
+generated/tables/benchmark_replicates.csv
+generated/tables/benchmark_summary.csv
+generated/tables/complete_null_replicates.csv
+generated/tables/complete_null_summary.csv
+generated/tables/partial_null_conditional_summary.csv
+generated/tables/partial_null_gate.csv
+generated/tables/partial_null_replicates.csv
+generated/tables/partial_null_summary.csv
+generated/tables/sensitivity_replicates.csv
+generated/tables/sensitivity_summary.csv
+generated/tables/weak_null_replicates.csv
+generated/tables/weak_null_summary.csv
+
+Separate software-source upload
+-------------------------------
+BrainNetTest_1.0.0.tar.gz
+
+Do not upload build intermediates such as *.aux, *.bbl, *.blg, *.fdb_latexmk,
+*.fls, *.log, *.out, code.md, code.Rmd, generated-quick/, the raw ABIDE
+download cache abide_cache/, or temporary brainnettest-generated-*
+directories.

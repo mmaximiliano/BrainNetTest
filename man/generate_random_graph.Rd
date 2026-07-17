@@ -21,5 +21,5 @@ a brain network. The adjacency matrix is binary, with edges present based
 on a specified probability.
 }
 \examples{
-G <- generate_random_graph(n_nodes = 10, edge_prob = 0.1)
+graph <- generate_random_graph(n_nodes = 10, edge_prob = 0.1)
 }

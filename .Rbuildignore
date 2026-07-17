@@ -1,10 +1,12 @@
 ^.*\.Rproj$
 ^\.Rproj\.user$
 ^LICENSE\.md$
-^README\.md$
 ^\.github$
 ^cran-comments\.md$
 ^doc$
 ^Meta$
 ^tests/testthat/Rplots\.pdf$
 ^CRAN-SUBMISSION$
+^paper_source$
+^tmp$
+^\.lintr$

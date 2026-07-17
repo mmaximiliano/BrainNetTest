@@ -1,7 +1,6 @@
 ---
 title: "Introduction to BrainNetTest"
 author: "Maximiliano Martino, Daniel Fraiman"
-date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Introduction to BrainNetTest}
@@ -10,118 +9,128 @@ vignette: >
 ---
 
 ```{r setup_intro, include = FALSE}
-knitr::opts_chunk$set(
-  collapse = TRUE,
-  comment  = "#>"
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+```
+
+## Scope
+
+`BrainNetTest` compares independent groups of subject-level binary,
+undirected brain networks observed on the same labeled atlas. Typical inputs
+are thresholded functional or structural connectomes, one per participant.
+The package deliberately separates:
+
+* a whole-graph label-randomization test, whose score is targeted to marginal
+  edge-frequency shifts; and
+* edge-wise tests with multiplicity adjustment.
+
+The global test is not omnibus for alternatives that preserve every edge's
+marginal probability while changing only dependence, motifs, or other
+topology. Weighted, directed, paired, clustered, and covariate-adjusted designs
+are outside the current contract.
+
+Atlas selection, image registration, connectivity estimation, nuisance
+correction, thresholding, and quality control are upstream analysis choices.
+They are not performed by `BrainNetTest`, and their uncertainty must be
+considered when results are interpreted. Selected edges describe statistical
+group associations; they are not automatically causal links or clinical
+biomarkers.
+
+## Constructing validated data
+
+```{r}
+library("BrainNetTest")
+
+group_a <- generate_category_graphs(
+  n_graphs = 12,
+  n_nodes = 8,
+  n_communities = 2,
+  base_intra_prob = 0.8,
+  base_inter_prob = 0.1,
+  seed = 1
 )
+group_b <- generate_category_graphs(
+  n_graphs = 12,
+  n_nodes = 8,
+  n_communities = 2,
+  base_intra_prob = 0.4,
+  base_inter_prob = 0.5,
+  seed = 2
+)
+
+networks <- brainnet_data(
+  list(GroupA = group_a, GroupB = group_b),
+  node_labels = paste0("Node", seq_len(8)),
+  communities = rep(c("Community 1", "Community 2"), each = 4)
+)
+networks
+summary(networks)
 ```
 
-## Overview
+The constructor rejects missing values, weighted or asymmetric matrices,
+self-loops, inconsistent dimensions, and inconsistent node ordering before
+any inferential computation begins.
 
-`BrainNetTest` implements the non-parametric L1-distance ANOVA test of Fraiman
-and Fraiman (2018) for comparing populations of brain networks represented as
-graphs. The package provides:
+## Graph summaries
 
-* utilities to build a central (mean) graph for a population and measure
-  Manhattan (L1) distances between adjacency matrices;
-* the group test statistic `T` and its permutation null distribution;
-* a fast procedure (`identify_critical_links`) that pinpoints the edges
-  driving between-group differences; and
-* helpers to simulate synthetic community-structured graphs and to visualise
-  networks.
-
-This vignette introduces the basic API on simple synthetic data. The companion
-vignette, *Generating and Analyzing Brain Networks with Community Structures*,
-shows the full pipeline on community-structured populations.
-
-## Installation
-
-```r
-# Release version (once on CRAN)
-install.packages("BrainNetTest")
-
-# Development version from GitHub
-# install.packages("remotes")
-remotes::install_github("mmaximiliano/BrainNetTest")
-```
-
-## A minimal example
+`central_graph()` is the element-wise average of a population. For undirected
+graphs, `graph_distance()` counts every upper-triangle edge exactly once.
 
 ```{r}
-library(BrainNetTest)
-set.seed(1)
+center_a <- central_graph(group_a)
+graph_distance(group_a[[1]], center_a)
 ```
 
-### Generating random graphs
-
-`generate_random_graph()` returns a symmetric binary adjacency matrix with no
-self-loops:
+## Global and edge-wise inference
 
 ```{r}
-G <- generate_random_graph(n_nodes = 10, edge_prob = 0.2)
-isSymmetric(G)
-all(diag(G) == 0)
+result <- brainnet_test(
+  networks,
+  n_permutations = 199,
+  edge_method = "fisher",
+  adjust = "holm",
+  seed = 42
+)
+
+result
+summary(result)
 ```
 
-### Central graph and Manhattan distance
+The global p-value uses inclusive ties and the Monte Carlo plus-one correction.
+When the number of fixed-size label assignments is at most 10,000,
+`exact = "auto"` exhaustively enumerates them.
 
-Given a population (list of adjacency matrices), the *central graph* is the
-entry-wise mean; `compute_distance()` returns the L1 (Manhattan) distance
-between two graphs:
+The edge table is a separate family of hypotheses. It is not a decomposition
+of the global result and is not gated on global rejection.
 
 ```{r}
-population <- replicate(
-  5, generate_random_graph(n_nodes = 10, edge_prob = 0.2),
-  simplify = FALSE)
-
-central <- compute_central_graph(population)
-compute_distance(population[[1]], central)
+head(as.data.frame(result))
+selected_edges(result)
+selected_nodes(result)
 ```
 
-### The group test statistic `T`
+Holm adjustment is the default because it controls family-wise error under
+arbitrary dependence among edge tests. BY is available for false-discovery
+rate control under arbitrary dependence. BH is opt-in because it requires
+additional positive-dependence assumptions.
 
-`compute_test_statistic()` aggregates within- and between-group Manhattan
-distances into the statistic `T`. Larger values indicate stronger evidence
-that the groups differ:
+## Exploratory ablation
 
 ```{r}
-control <- replicate(
-  15, generate_random_graph(n_nodes = 10, edge_prob = 0.20),
-  simplify = FALSE)
-patient <- replicate(
-  15, generate_random_graph(n_nodes = 10, edge_prob = 0.40),
-  simplify = FALSE)
-
-populations <- list(Control = control, Patient = patient)
-compute_test_statistic(populations, a = 1)
+result_with_ablation <- brainnet_test(
+  networks,
+  n_permutations = 99,
+  ablation = TRUE,
+  seed = 42
+)
+head(ablation_path(result_with_ablation))
 ```
 
-### Global test and critical edges
+The ablation ordering is selected from the same data. Consequently,
+`descriptive_tail_fraction` is not a post-selection p-value, and the path does
+not establish equivalence, minimality, necessity, or causality.
 
-`identify_critical_links()` combines the global permutation test with an
-iterative edge-removal procedure that returns the edges driving the observed
-difference:
+## Reference
 
-```{r}
-result <- identify_critical_links(
-  populations,
-  alpha          = 0.05,
-  method         = "fisher",
-  n_permutations = 200,
-  seed           = 42)
-
-head(result$critical_edges)
-```
-
-The `get_critical_nodes()` helper summarises this result at the node level:
-
-```{r}
-get_critical_nodes(result)
-```
-
-## References
-
-Fraiman, D. and Fraiman, R. (2018) An ANOVA approach for statistical
-comparisons of brain networks. *Scientific Reports*, 8, 4746.
-<https://doi.org/10.1038/s41598-018-21688-0>
-
+Fraiman D and Fraiman R (2018). "An ANOVA approach for statistical comparisons
+of brain networks." *Scientific Reports*, **8**, 4746.
+<https://doi.org/10.1038/s41598-018-23152-5>

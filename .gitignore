@@ -21,6 +21,18 @@ CRAN-SUBMISSION
 # Build/vignette outputs
 /doc/
 /Meta/
+/tmp/agent/
+/paper_source/*.aux
+/paper_source/*.bbl
+/paper_source/*.blg
+/paper_source/*.fdb_latexmk
+/paper_source/*.fls
+/paper_source/*.log
+/paper_source/*.out
+/paper_source/code.Rmd
+/paper_source/generated-quick/
+/paper_source/abide_cache/
+/paper_source/figure/
 src/*.o
 src/*.so
 src/*.dll
