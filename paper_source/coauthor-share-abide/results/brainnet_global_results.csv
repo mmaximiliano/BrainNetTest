@@ -1,0 +1,3 @@
+"sample","n_control","n_autism","n_nodes","n_edge_hypotheses","edges_per_network","statistic_T","global_p_value","random_assignments","permutation_design","balance_id_role","raw_p_below_0_001","holm_selected","by_selected"
+"full",98,73,114,6441,644,-44.6886532074444,0.001,999,"unrestricted independent-group label randomization","not applicable",10,0,0
+"balanced",55,55,114,6441,644,-27.392853838224,0.01,999,"unrestricted independent-group label randomization","audit-only stratified subsampling",3,0,0

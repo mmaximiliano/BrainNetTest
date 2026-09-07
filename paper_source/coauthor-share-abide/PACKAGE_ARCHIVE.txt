@@ -1,0 +1,12 @@
+BrainNetTest package archive included in this co-author bundle
+
+File: BrainNetTest_1.0.0.tar.gz
+Bytes: 279123
+SHA-256: 9d241b41303dd4fd6e0af74a7f4752cdbcedeee40aba66885e7c2b345585c0bb
+MD5: 2df138ce0233276e45730a055ea59da9
+Source commit: 695f534
+
+This is a fresh R CMD build from the same reviewed 1.0.0 source commit. It is
+not byte-identical to paper_source/package-source.txt because R package build
+timestamps are embedded in the tar archive. The R sources/API are the same;
+this file identifies the exact archive shared with the co-author.

@@ -12,6 +12,7 @@
 # R CMD build / check artifacts
 *.Rcheck/
 *.tar.gz
+!/paper_source/coauthor-share-abide/BrainNetTest_1.0.0.tar.gz
 *.tgz
 *.zip
 

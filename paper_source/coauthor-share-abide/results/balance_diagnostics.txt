@@ -1,0 +1,30 @@
+ABIDE balance diagnostics
+=========================
+
+   sample   group  n male female male_percent age_mean   age_sd age_min age_max
+     full  autism 73   64      9     87.67123 14.92163 7.085510    7.13   39.10
+     full control 98   72     26     73.46939 15.67402 6.219430    6.47   31.78
+ balanced  autism 55   49      6     89.09091 14.74609 5.643308    7.13   29.98
+ balanced control 55   49      6     89.09091 14.24915 5.472353    6.47   29.02
+    mean_fd mean_fd_sd mean_fd_min mean_fd_max
+ 0.07673552 0.04290343  0.02522553   0.1909341
+ 0.05459713 0.02912506  0.01611711   0.1895819
+ 0.06182604 0.02869587  0.02522553   0.1530317
+ 0.06174792 0.03208186  0.02309489   0.1895819
+
+Standardized mean differences (autism - control)
+   sample age_smd_autism_minus_control mean_fd_smd_autism_minus_control
+     full                   -0.1128605                      0.603764967
+ balanced                    0.0894030                      0.002566648
+
+Retention
+   group original_n balanced_n retained_percent
+  autism         73         55         75.34247
+ control         98         55         56.12245
+   total        171        110         64.32749
+
+Pairs verified: 55 
+Every pair has one subject per group: TRUE
+Every pair has exact sex stratum: TRUE
+Every pair shares 5-year age bin: TRUE
+Every pair shares 0.05 mean-FD bin: TRUE
