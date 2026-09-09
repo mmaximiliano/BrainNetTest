@@ -33,16 +33,6 @@ compute_central_graph <- function(graph_list) {
     }
   }
   
-  # Initialize a matrix of zeros
-  central_matrix <- matrix(0, nrow = n_nodes, ncol = n_nodes)
-  
-  # Sum all adjacency matrices
-  for (G in graph_list) {
-    central_matrix <- central_matrix + G
-  }
-  
-  # Average the summed matrix
-  central_matrix <- central_matrix / length(graph_list)
-  
-  return(central_matrix)
+  # Element-wise mean of the adjacency matrices
+  return(Reduce("+", graph_list) / length(graph_list))
 }

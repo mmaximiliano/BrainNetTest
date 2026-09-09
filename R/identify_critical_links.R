@@ -92,10 +92,13 @@ identify_critical_links <- function(populations,
   if (!is.null(seed)) set.seed(seed)
   if (!is.list(populations) || length(populations) < 2)
     stop("`populations` must be a list with at least 2 groups.")
-  if (batch_size  < 1L) stop("`batch_size` must be >= 1.")
-  if (n_permutations < 1L) stop("`n_permutations` must be >= 1.")
+  .check_populations(populations, binary = TRUE)
+  batch_size     <- .check_count(batch_size, "batch_size")
+  n_permutations <- .check_count(n_permutations, "n_permutations")
+  alpha          <- .check_proportion(alpha, "alpha")
+  a              <- .check_positive(a, "a")
 
-  Npop <- sapply(populations, length)
+  Npop <- lengths(populations)
   m    <- length(populations)
   n    <- sum(Npop)
 

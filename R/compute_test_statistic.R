@@ -35,12 +35,10 @@
 #' T_value <- compute_test_statistic(populations, a = 1)
 #' print(T_value)
 compute_test_statistic <- function(populations, a = 1) {
-  if (!is.list(populations) || length(populations) == 0) {
-    stop("populations must be a non-empty list.")
-  }
+  .check_populations(populations)
   
   m <- length(populations)  # Number of populations
-  n_i <- sapply(populations, length)  # Number of graphs in each population
+  n_i <- lengths(populations)  # Number of graphs in each population
   n <- sum(n_i)  # Total number of graphs
   
   if (any(n_i < 2)) {
@@ -82,8 +80,9 @@ compute_test_statistic <- function(populations, a = 1) {
     sum_term <- sum_term + sqrt(n_i[i]) * (term1 - term2)
   }
   
-  # Compute the test statistic T
+  # Compute the test statistic T.  sum_term inherits a population name from
+  # the named vectors it is built from; T is a scalar, so drop it.
   T <- (sqrt(m) / a) * sum_term
   
-  return(T)
+  return(unname(T))
 }

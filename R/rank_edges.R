@@ -32,7 +32,7 @@
 #' # Compute edge frequencies
 #' frequencies <- compute_edge_frequencies(populations)
 #' edge_counts <- frequencies$edge_counts
-#' N <- sapply(populations, length)
+#' N <- lengths(populations)
 #' 
 #' # Compute p-values for edge differences
 #' edge_pvalues <- compute_edge_pvalues(edge_counts, N)
@@ -53,8 +53,11 @@ rank_edges <- function(edge_pvalues) {
     p_value = p_values
   )
   
-  # Order by p-value ascending (most significant first)
+  # Order by p-value ascending (most significant first).  Row names are reset
+  # so that the returned ranking reads 1, 2, 3, ... rather than carrying the
+  # positions the edges happened to occupy before sorting.
   edge_df <- edge_df[order(edge_df$p_value, decreasing = FALSE), ]
+  rownames(edge_df) <- NULL
   
   return(edge_df)
 }

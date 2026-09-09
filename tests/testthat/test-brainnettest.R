@@ -28,6 +28,34 @@ test_that("compute_central_graph of a singleton returns that graph", {
   expect_equal(compute_central_graph(list(G)), G)
 })
 
+test_that("compute_central_graph equals Reduce('+', .) / length(.)", {
+  # The implementation is written as Reduce("+", x) / length(x); pin that
+  # against the accumulate-into-a-zero-matrix form it replaced, including the
+  # cases where the two could differ in attributes or storage mode.
+  named <- matrix(c(0, 1, 1, 0), 2, 2,
+                  dimnames = list(c("a", "b"), c("a", "b")))
+  other <- matrix(c(0, 1, 1, 0), 2, 2,
+                  dimnames = list(c("x", "y"), c("x", "y")))
+  plain <- matrix(c(0, 1, 1, 0), 2, 2)
+
+  cases <- list(
+    plain        = list(plain, plain),
+    first_named  = list(named, plain),
+    second_named = list(plain, named),
+    conflicting  = list(named, other),
+    singleton    = list(named),
+    integer      = list(matrix(1L, 2, 2), matrix(0L, 2, 2)),
+    logical      = list(plain == 1, plain == 1)
+  )
+
+  for (nm in names(cases)) {
+    x <- cases[[nm]]
+    expect_identical(compute_central_graph(x),
+                     Reduce("+", x) / length(x),
+                     info = nm)
+  }
+})
+
 # ---------------------------------------------------------------------------
 # compute_distance
 # ---------------------------------------------------------------------------
@@ -96,6 +124,24 @@ test_that("compute_test_statistic validates inputs", {
   expect_error(
     compute_test_statistic(list(A = list(G), B = list(G, G))),
     "at least two graphs")
+  # Populations must be lists of square, equally sized matrices
+  expect_error(compute_test_statistic(list(A = 1, B = 2)),
+               "non-empty list of adjacency matrices")
+  expect_error(
+    compute_test_statistic(list(A = list(G, G), B = list(matrix(0, 3, 4)))),
+    "not square")
+  expect_error(
+    compute_test_statistic(list(A = list(G, G), B = list(matrix(0, 2, 2)))),
+    "same vertex set")
+})
+
+test_that("compute_test_statistic returns an unnamed scalar", {
+  set.seed(4)
+  A <- replicate(5, generate_random_graph(6, 0.3), simplify = FALSE)
+  B <- replicate(5, generate_random_graph(6, 0.6), simplify = FALSE)
+  T_value <- compute_test_statistic(list(Control = A, Patient = B), a = 1)
+  # T is a scalar; it used to carry the first population's name.
+  expect_null(names(T_value))
 })
 
 
@@ -123,7 +169,7 @@ test_that("pipeline works end-to-end for m = 3 populations", {
   expect_equal(dim(fr$edge_counts)[3], 3L)
 
   # Fisher and chi-squared both admit m = 3 via the m x 2 contingency table
-  N <- sapply(pops, length)
+  N <- lengths(pops)
   for (mm in c("fisher", "chi.squared")) {
     p <- suppressWarnings(compute_edge_pvalues(fr$edge_counts, N, method = mm))
     expect_true(isSymmetric(p), info = paste("method =", mm))

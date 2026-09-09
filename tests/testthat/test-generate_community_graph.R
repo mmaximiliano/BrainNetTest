@@ -66,6 +66,19 @@ test_that("generate_community_graph validates inputs", {
                "scalar or a vector")
 })
 
+test_that("generate_community_graph rejects non-integer sizes and counts", {
+  # n_nodes = 0.7 used to return a degenerate 0 x 0 matrix, and
+  # n_communities = 0.7 failed with "missing value where TRUE/FALSE needed".
+  expect_error(generate_community_graph(n_nodes = 0.7), "positive integer")
+  expect_error(generate_community_graph(n_nodes = 10, n_communities = 0.7),
+               "positive integer")
+  expect_error(generate_community_graph(n_nodes = 10, n_communities = 2,
+                                        community_sizes = c(2.5, 7.5)),
+               "positive integers")
+  expect_error(generate_community_graph(n_nodes = 4, n_communities = 5),
+               "must not exceed")
+})
+
 test_that("generate_community_graph works with n_communities = 1", {
   # Regression: n_communities = 1 previously triggered `1:(n_communities-1)`
   # which is `1:0`, corrupting the inter-community loop.

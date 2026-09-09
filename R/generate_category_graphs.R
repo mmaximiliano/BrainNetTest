@@ -41,10 +41,13 @@ generate_category_graphs <- function(n_graphs = 10, n_nodes = 100, n_communities
     set.seed(seed)
   }
   
-  if (!is.numeric(n_graphs) || length(n_graphs) != 1 || n_graphs <= 0) {
-    stop("n_graphs must be a positive integer.")
+  n_graphs      <- .check_count(n_graphs, "n_graphs")
+  n_nodes       <- .check_count(n_nodes, "n_nodes")
+  n_communities <- .check_count(n_communities, "n_communities")
+  if (n_communities > n_nodes) {
+    stop("n_communities (", n_communities, ") must not exceed n_nodes (",
+         n_nodes, ").")
   }
-  n_graphs <- as.integer(n_graphs)
   
   # Validate probabilities and variations
   if (!is.numeric(base_intra_prob) || any(base_intra_prob < 0) || any(base_intra_prob > 1)) {
@@ -67,9 +70,11 @@ generate_category_graphs <- function(n_graphs = 10, n_nodes = 100, n_communities
     remainder <- n_nodes %% n_communities
     community_sizes <- rep(base_size, n_communities)
     if (remainder > 0) {
-      community_sizes[1:remainder] <- community_sizes[1:remainder] + 1
+      community_sizes[seq_len(remainder)] <-
+        community_sizes[seq_len(remainder)] + 1
     }
   } else {
+    community_sizes <- .check_counts(community_sizes, "community_sizes")
     if (length(community_sizes) != n_communities) {
       stop("Length of community_sizes must equal n_communities.")
     }
@@ -81,7 +86,7 @@ generate_category_graphs <- function(n_graphs = 10, n_nodes = 100, n_communities
   # List to store generated graphs
   graph_list <- vector("list", n_graphs)
   
-  for (g in 1:n_graphs) {
+  for (g in seq_len(n_graphs)) {
     # Apply slight variations to probabilities
     intra_prob <- base_intra_prob + runif(length(base_intra_prob),
                                           -intra_prob_variation, intra_prob_variation)

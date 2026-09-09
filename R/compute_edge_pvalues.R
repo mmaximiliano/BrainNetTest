@@ -40,7 +40,7 @@
 #' # Compute edge frequencies
 #' frequencies <- compute_edge_frequencies(populations)
 #' edge_counts <- frequencies$edge_counts
-#' N <- sapply(populations, length)
+#' N <- lengths(populations)
 #'
 #' # Compute p-values for edge differences
 #' edge_pvalues <- compute_edge_pvalues(edge_counts, N)
@@ -51,12 +51,13 @@ compute_edge_pvalues <- function(edge_counts, N, method = "fisher", adjust_metho
   num_populations <- dim(edge_counts)[3]
   edge_pvalues <- matrix(1, nrow = n_nodes, ncol = n_nodes)
   
-  # For each pair of nodes (edge)
-  for (i in 1:(n_nodes - 1)) {
-    for (j in (i + 1):n_nodes) {
+  # For each pair of nodes (edge).  seq_len() rather than 1:(n_nodes - 1) so
+  # that a single-node network yields no edges instead of a reversed sequence.
+  for (i in seq_len(n_nodes - 1L)) {
+    for (j in (i + 1L):n_nodes) {
       # Build contingency table
       counts <- matrix(0, nrow = num_populations, ncol = 2)
-      for (k in 1:num_populations) {
+      for (k in seq_len(num_populations)) {
         counts[k, 1] <- edge_counts[i, j, k]                # Edge present
         counts[k, 2] <- N[k] - edge_counts[i, j, k]         # Edge absent
       }

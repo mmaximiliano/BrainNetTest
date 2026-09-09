@@ -35,15 +35,12 @@ generate_community_graph <- function(n_nodes = 100, n_communities = 4, community
     set.seed(seed)
   }
 
-  if (!is.numeric(n_nodes) || length(n_nodes) != 1 || n_nodes <= 0) {
-    stop("n_nodes must be a positive integer.")
+  n_nodes       <- .check_count(n_nodes, "n_nodes")
+  n_communities <- .check_count(n_communities, "n_communities")
+  if (n_communities > n_nodes) {
+    stop("n_communities (", n_communities, ") must not exceed n_nodes (",
+         n_nodes, ").")
   }
-  n_nodes <- as.integer(n_nodes)
-  
-  if (!is.numeric(n_communities) || length(n_communities) != 1 || n_communities <= 0) {
-    stop("n_communities must be a positive integer.")
-  }
-  n_communities <- as.integer(n_communities)
   
   if (is.null(community_sizes)) {
     # If community sizes are not provided, divide nodes equally
@@ -51,9 +48,11 @@ generate_community_graph <- function(n_nodes = 100, n_communities = 4, community
     remainder <- n_nodes %% n_communities
     community_sizes <- rep(base_size, n_communities)
     if (remainder > 0) {
-      community_sizes[1:remainder] <- community_sizes[1:remainder] + 1
+      community_sizes[seq_len(remainder)] <-
+        community_sizes[seq_len(remainder)] + 1
     }
   } else {
+    community_sizes <- .check_counts(community_sizes, "community_sizes")
     if (length(community_sizes) != n_communities) {
       stop("Length of community_sizes must equal n_communities.")
     }
@@ -79,11 +78,11 @@ generate_community_graph <- function(n_nodes = 100, n_communities = 4, community
   G <- matrix(0, nrow = n_nodes, ncol = n_nodes)
 
   # Assign nodes to communities
-  node_indices <- 1:n_nodes
-  community_assignments <- rep(1:n_communities, times = community_sizes)
+  node_indices <- seq_len(n_nodes)
+  community_assignments <- rep(seq_len(n_communities), times = community_sizes)
 
   # Create community blocks
-  for (i in 1:n_communities) {
+  for (i in seq_len(n_communities)) {
     nodes_in_i <- node_indices[community_assignments == i]
     # Edges within community i
     if (length(nodes_in_i) > 1) {
@@ -97,8 +96,8 @@ generate_community_graph <- function(n_nodes = 100, n_communities = 4, community
 
   # Create inter-community edges
   if (n_communities >= 2L) {
-    for (i in 1:(n_communities - 1)) {
-      for (j in (i + 1):n_communities) {
+    for (i in seq_len(n_communities - 1L)) {
+      for (j in (i + 1L):n_communities) {
         nodes_in_i <- node_indices[community_assignments == i]
         nodes_in_j <- node_indices[community_assignments == j]
         # Edges between community i and community j
