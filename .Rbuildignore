@@ -13,4 +13,5 @@
 ^tmp$
 ^paper_source$
 ^.*\.tar\.gz$
+^.*\.zip$
 ^\.DS_Store$
