@@ -140,4 +140,4 @@ plot_critical_edges(
 
 Fraiman, D. and Fraiman, R. (2018) An ANOVA approach for statistical
 comparisons of brain networks. *Scientific Reports*, 8, 4746.
-<https://doi.org/10.1038/s41598-018-21688-0>
+<https://doi.org/10.1038/s41598-018-23152-5>

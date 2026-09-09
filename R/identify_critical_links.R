@@ -59,7 +59,7 @@
 #' @references
 #' Fraiman, D. and Fraiman, R. (2018) An ANOVA approach for statistical
 #' comparisons of brain networks. \emph{Scientific Reports}, 8, 4746.
-#' \doi{10.1038/s41598-018-21688-0}.
+#' \doi{10.1038/s41598-018-23152-5}.
 #'
 #' @seealso \code{\link{compute_test_statistic}},
 #'   \code{\link{compute_edge_pvalues}}, \code{\link{get_critical_nodes}}.

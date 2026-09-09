@@ -1,34 +1,38 @@
 ## Test environments
 
-* Local: Windows 11 x64, R 4.4.3
+* Local: macOS 26.6.2, aarch64-apple-darwin, R 4.6.1
 * win-builder (release and devel)
 * R-hub: ubuntu-latest, windows-latest, macos-latest
 
 ## R CMD check results
 
-0 errors | 0 warnings | 2 notes
+0 errors | 0 warnings | 1 note
 
-* checking for future file timestamps ... NOTE
-  unable to verify current time
+* checking HTML version of manual ... NOTE
+  Skipping checking math rendering: package 'V8' unavailable
 
-* checking CRAN incoming feasibility ... NOTE
-  Days since last update: 2
-
-Both NOTEs are environmental and not related to the package itself.
-
-This is a patch release that fixes the issue reported by the CRAN team on the
-noLD (no long double) check.
+The NOTE is environmental: the check machine has no V8 installation, so the
+math-rendering check is skipped. It is unrelated to the package.
 
 ## Changes in this version
 
-* Fixed the noLD check failure in `compute_edge_pvalues()`. On builds without
-  extended (long double) precision, `fisher.test()` could return a p-value
-  fractionally greater than 1 due to floating-point rounding, which tripped a
-  `0 <= p <= 1` assertion in the package tests. P-values are now clamped to
-  `[0, 1]`.
-* Added a regression test (using `testthat::with_mocked_bindings()`) that
-  reproduces the out-of-range p-value on any platform, guarding against a
-  recurrence.
+This release responds to reviewer feedback on a manuscript describing the
+package, and corrects a reference error.
+
+* The DOI cited for Fraiman and Fraiman (2018) was wrong in DESCRIPTION, the
+  README, NEWS and both vignettes. It resolved to an unrelated article. The
+  correct DOI is `10.1038/s41598-018-23152-5`.
+* Count arguments are now validated, so mistakes such as
+  `generate_category_graphs(0.7)` report which argument is wrong instead of
+  failing inside the numerical code or returning a degenerate 0 x 0 matrix.
+  Fractional counts and non-binary adjacency matrices are rejected rather than
+  silently truncated or rounded.
+* `compute_edge_pvalues()` no longer subscripts out of bounds for single-node
+  networks.
+* `compute_test_statistic()` returns an unnamed scalar and `rank_edges()`
+  resets the row names of its result. Neither attribute was documented.
+* `.Rbuildignore` now excludes the manuscript sources; the 0.2.1 tarball
+  included them by accident, which is why it was substantially larger.
 
 ## Downstream dependencies
 

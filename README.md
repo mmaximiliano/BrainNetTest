@@ -6,7 +6,7 @@
 **BrainNetTest** provides non-parametric hypothesis testing for populations of
 brain networks represented as graphs, following the L1-distance ANOVA
 framework of Fraiman and Fraiman (2018,
-[doi:10.1038/s41598-018-21688-0](https://doi.org/10.1038/s41598-018-21688-0)).
+[doi:10.1038/s41598-018-23152-5](https://doi.org/10.1038/s41598-018-23152-5)).
 
 The package includes:
 
@@ -28,7 +28,7 @@ The package includes:
 ## Installation
 
 ```r
-# From CRAN (once released)
+# From CRAN
 install.packages("BrainNetTest")
 
 # Development version
@@ -64,7 +64,7 @@ get_critical_nodes(result)
 
 Fraiman, D. and Fraiman, R. (2018) An ANOVA approach for statistical
 comparisons of brain networks. *Scientific Reports*, 8, 4746.
-<https://doi.org/10.1038/s41598-018-21688-0>
+<https://doi.org/10.1038/s41598-018-23152-5>
 
 ## License
 

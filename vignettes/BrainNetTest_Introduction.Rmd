@@ -37,7 +37,7 @@ shows the full pipeline on community-structured populations.
 ## Installation
 
 ```r
-# Release version (once on CRAN)
+# Release version
 install.packages("BrainNetTest")
 
 # Development version from GitHub
@@ -123,5 +123,5 @@ get_critical_nodes(result)
 
 Fraiman, D. and Fraiman, R. (2018) An ANOVA approach for statistical
 comparisons of brain networks. *Scientific Reports*, 8, 4746.
-<https://doi.org/10.1038/s41598-018-21688-0>
+<https://doi.org/10.1038/s41598-018-23152-5>
 
