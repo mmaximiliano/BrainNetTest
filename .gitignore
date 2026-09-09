@@ -28,3 +28,13 @@ src/*.dll
 # OS / editor cruft
 .DS_Store
 Thumbs.db
+
+# Manuscript and JSS submission materials.
+# This repository tracks the R package only. The Journal of Statistical
+# Software manuscript, its replication scripts and the generated upload
+# bundle live here on disk but are versioned separately.
+JSS_paper/
+JSS_submission/
+
+# Agent working notes and scratch artifacts
+tmp/
