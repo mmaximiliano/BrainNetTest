@@ -27,14 +27,15 @@
 #'
 #' The estimate is a proportion out of `n_permutations` draws, so it cannot
 #' resolve below 1 / n_permutations; report that bound rather than a
-#' misleading zero.
+#' misleading zero. The bound is rounded to two significant digits so that,
+#' say, 3000 replicates read "< 0.00033" rather than "< 0.0003333333".
 #'
 #' @noRd
 #' @keywords internal
 .format_pvalue <- function(p, n_permutations) {
   if (is.na(p)) return("NA")
   eps <- 1 / n_permutations
-  if (p < eps) paste0("< ", format(eps, scientific = FALSE))
+  if (p < eps) paste0("< ", format(signif(eps, 2), scientific = FALSE))
   else format(round(p, 4), nsmall = 4, scientific = FALSE)
 }
 

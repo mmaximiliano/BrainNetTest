@@ -18,9 +18,10 @@ Description: Non-parametric hypothesis testing for populations of brain
     extending it with procedures for edge-level inference and identification
     of the specific connections driving group differences. In particular, it
     provides utilities to compute central (mean) graphs, pairwise Manhattan
-    distances between adjacency matrices, the group test statistic T, and a
-    fast permutation procedure to identify the critical edges that drive
-    between-group differences. Helper functions to generate synthetic
+    distances between adjacency matrices, the group test statistic T and its
+    permutation p-value, and a fast permutation procedure to identify the
+    critical edges that drive between-group differences. Helper functions to
+    generate synthetic
     community-structured graphs and to visualise brain networks with
     communities are also included.
 License: MIT + file LICENSE

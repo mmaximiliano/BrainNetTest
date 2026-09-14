@@ -23,7 +23,9 @@ Default \code{getOption("digits")}.}
 \description{
 Compact report of an \code{\link{identify_critical_links}} analysis: the
 populations compared, the outcome of the global test, and the size of the
-critical set together with its most significant edges.
+critical set together with its most significant edges. Use
+\code{\link{summary.critical_links}} for the call, the analysis settings
+and the node-level view as well.
 }
 \examples{
 \donttest{

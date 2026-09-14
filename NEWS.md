@@ -1,5 +1,21 @@
 # BrainNetTest 0.2.2
 
+* New function `global_test()` runs the permutation test for a difference
+  between populations on its own: it returns the observed statistic T, the
+  proportion of label permutations with a smaller statistic (the p-value),
+  and the permutation null distribution, as an object of class
+  `"global_test"` with a `print()` method. Until now this test was only
+  available as the first step of `identify_critical_links()`. It takes the
+  populations, `n_permutations` and an optional `seed`; the normalisation
+  constant `a` is fixed at 1, since the p-value does not depend on it. The
+  statistic is on the scale of `compute_test_statistic()`, and with the same
+  populations, `n_permutations` and `seed` the p-value is exactly the one
+  `identify_critical_links()` records. The input must be binary, as for
+  `identify_critical_links()`.
+* The permutation machinery shared by `global_test()` and
+  `identify_critical_links()` (edge-wise decomposition of T and the
+  matrix-product null) now lives in one set of internal helpers. Results are
+  unchanged.
 * `identify_critical_links()` now returns an object of class
   `"critical_links"` with `print()`, `summary()` and `plot()` methods, so the
   result reports itself instead of having to be picked apart by hand.

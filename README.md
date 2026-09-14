@@ -13,7 +13,9 @@ The package includes:
 * `compute_central_graph()` and `compute_distance()` for building central
   (mean) graphs and measuring Manhattan (L1) distance between adjacency
   matrices.
-* `compute_test_statistic()` for the group test statistic T.
+* `compute_test_statistic()` for the group test statistic T, and
+  `global_test()` for its permutation p-value: the test of whether the
+  populations differ at all.
 * `identify_critical_links()` for a fast permutation-based identification of
   the edges driving between-group differences, using a prefix-sum
   decomposition that reduces the complexity from O(K * B * |E| * m) to
@@ -53,7 +55,10 @@ patient <- generate_category_graphs(
 
 populations <- list(Control = control, Patient = patient)
 
-# Global test and critical-edge identification (permutation test)
+# Do the populations differ at all? Statistic T and its permutation p-value
+global_test(populations, n_permutations = 1000, seed = 42)
+
+# Which edges are responsible? Global test plus critical-edge identification
 result <- identify_critical_links(
   populations, alpha = 0.05, method = "fisher",
   n_permutations = 1000, seed = 42)

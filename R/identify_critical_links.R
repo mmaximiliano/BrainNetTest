@@ -121,8 +121,6 @@ identify_critical_links <- function(populations,
                    n_permutations = n_permutations, a = a, seed = seed)
 
   Npop <- lengths(populations)
-  m    <- length(populations)
-  n    <- sum(Npop)
 
   make_key <- function(i, j) paste(i, j, sep = "-")
 
@@ -136,55 +134,10 @@ identify_critical_links <- function(populations,
     return(.critical_links(NULL, list(), populations, NA_real_, 0L,
                            settings, cl))
 
-  .edge_deltas <- function(edge_counts) {
-    n_nodes <- dim(edge_counts)[1]
-    idx     <- which(upper.tri(matrix(0, n_nodes, n_nodes)), arr.ind = TRUE)
-    if (nrow(idx) == 0L)
-      return(list(indices = idx, deltas = numeric(0)))
-
-    counts <- do.call(cbind, lapply(seq_len(m),
-                     function(k) edge_counts[ , , k][idx]))
-    if (!is.matrix(counts))
-      counts <- matrix(counts, nrow = 1L)
-
-    p_mat <- sweep(counts, 2, Npop, "/")
-    p_tot <- rowSums(counts) / n
-    Ptot  <- matrix(p_tot, nrow = nrow(counts), ncol = m)
-
-    d_mat <- 2 * p_mat * (1 - p_mat)
-    D_mat <- p_mat + Ptot - 2 * p_mat * Ptot
-
-    coef_d <- sqrt(Npop) * (Npop / (Npop - 1))
-    coef_D <- sqrt(Npop) * (n    / (n    - 1))
-
-    delta  <- (sqrt(m) / a) *
-              (d_mat %*% coef_d - D_mat %*% coef_D)[, 1]
-
-    list(indices = idx, deltas = delta)
-  }
-
-  .edge_deltas_matrix <- function(counts_list) {
-    E   <- nrow(counts_list[[1]])
-    B   <- ncol(counts_list[[1]])
-
-    p_list  <- lapply(seq_len(m), function(k) counts_list[[k]] / Npop[k])
-    C_total <- Reduce("+", counts_list)
-    p_tot   <- C_total / n
-
-    coef_d <- sqrt(Npop) * (Npop / (Npop - 1))
-    coef_D <- sqrt(Npop) * (n    / (n    - 1))
-
-    delta_mat <- matrix(0, nrow = E, ncol = B)
-    for (k in seq_len(m)) {
-      pk  <- p_list[[k]]
-      d_k <- 2 * pk * (1 - pk)
-      D_k <- pk + p_tot - 2 * pk * p_tot
-      delta_mat <- delta_mat + coef_d[k] * d_k - coef_D[k] * D_k
-    }
-    (sqrt(m) / a) * delta_mat
-  }
-
-  obs_delta_info <- .edge_deltas(freq$edge_counts)
+  ## Edge-wise decomposition of T (Section 3 of the paper) and the vectorised
+  ## permutation null; the helpers live in R/permutation-null.R and are shared
+  ## with global_test().
+  obs_delta_info <- .observed_edge_deltas(freq$edge_counts, Npop, a)
 
   key_all   <- make_key(obs_delta_info$indices[, 1], obs_delta_info$indices[, 2])
   map_idx   <- match(make_key(edge_df$node1, edge_df$node2), key_all)
@@ -193,29 +146,14 @@ identify_critical_links <- function(populations,
   prefix_obs <- cumsum(delta_ord)
   T0         <- sum(obs_delta_info$deltas)
 
-  all_graphs <- unlist(populations, recursive = FALSE)
-  ut_idx     <- obs_delta_info$indices
-  X <- do.call(rbind, lapply(all_graphs, function(A) A[ut_idx]))
-  storage.mode(X) <- "double"
-
-  perm_mat <- replicate(n_permutations, sample.int(n))
-  cumNpop  <- c(0L, cumsum(Npop))
-  W_list <- lapply(seq_len(m), function(k) {
-    rows    <- (cumNpop[k] + 1L):cumNpop[k + 1L]
-    idx_all <- as.vector(perm_mat[rows, , drop = FALSE])
-    rep_id  <- rep(seq_len(n_permutations), each = Npop[k])
-    lin_idx <- (rep_id - 1L) * n + idx_all
-    W <- matrix(tabulate(lin_idx, nbins = n * n_permutations),
-                nrow = n, ncol = n_permutations)
-    storage.mode(W) <- "double"
-    W
-  })
-
-  C_list      <- lapply(W_list, function(W) crossprod(X, W))
-  delta_all   <- .edge_deltas_matrix(C_list)
+  X           <- .graph_edge_matrix(populations, obs_delta_info$indices)
+  C_list      <- .permuted_edge_counts(X, Npop, n_permutations)
+  delta_all   <- .permuted_edge_deltas(C_list, Npop, a)
   perm_deltas <- t(delta_all[map_idx, , drop = FALSE])
 
-  T_perm0     <- rowSums(perm_deltas)
+  ## Summed in the same (upper-triangle) order as in global_test(), so that
+  ## the two functions evaluate bit-identical statistics on the same draws.
+  T_perm0     <- colSums(delta_all)
   prefix_perm <- t(apply(perm_deltas, 1, cumsum))
 
   initial_p <- mean(T_perm0 < T0)

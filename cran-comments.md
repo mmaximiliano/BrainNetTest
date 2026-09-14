@@ -19,6 +19,14 @@ math-rendering check is skipped. It is unrelated to the package.
 This release responds to reviewer feedback on a manuscript describing the
 package, and corrects a reference error.
 
+* New exported function `global_test()`: the permutation test for a
+  difference between populations on its own, returning the statistic, the
+  p-value and the null distribution as a classed object with a `print()`
+  method. It was previously available only as the first step of
+  `identify_critical_links()`.
+* `identify_critical_links()` returns an object of class `"critical_links"`
+  with `print()`, `summary()` and `plot()` methods. The three components it
+  had before keep their names and positions.
 * The DOI cited for Fraiman and Fraiman (2018) was wrong in DESCRIPTION, the
   README, NEWS and both vignettes. It resolved to an unrelated article. The
   correct DOI is `10.1038/s41598-018-23152-5`.
