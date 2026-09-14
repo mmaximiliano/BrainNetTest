@@ -32,6 +32,7 @@ Depends:
 Imports:
     stats,
     graphics,
+    utils,
     igraph
 Suggests:
     knitr,

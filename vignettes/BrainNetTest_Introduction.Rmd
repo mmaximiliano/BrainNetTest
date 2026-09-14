@@ -110,10 +110,20 @@ result <- identify_critical_links(
   n_permutations = 200,
   seed           = 42)
 
-head(result$critical_edges)
+result
 ```
 
-The `get_critical_nodes()` helper summarises this result at the node level:
+The result is a `critical_links` object. Printing it, as above, gives a
+compact report; `summary()` adds the settings the analysis ran with and the
+node-level ranking:
+
+```{r}
+summary(result)
+```
+
+The individual components remain available, `result$critical_edges` being the
+ranked table of critical edges. The `get_critical_nodes()` helper summarises
+the result at the node level on its own:
 
 ```{r}
 get_critical_nodes(result)

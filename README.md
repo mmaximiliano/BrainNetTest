@@ -18,6 +18,8 @@ The package includes:
   the edges driving between-group differences, using a prefix-sum
   decomposition that reduces the complexity from O(K * B * |E| * m) to
   O(B * |E| * m).
+  The result is a `critical_links` object with `print()`, `summary()` and
+  `plot()` methods.
 * `get_critical_nodes()` to summarise the critical edges at the node level.
 * `generate_category_graphs()` and `generate_community_graph()` to simulate
   populations of community-structured graphs.
@@ -56,6 +58,8 @@ result <- identify_critical_links(
   populations, alpha = 0.05, method = "fisher",
   n_permutations = 1000, seed = 42)
 
+result                  # compact report
+summary(result)         # settings and node-level ranking
 head(result$critical_edges)
 get_critical_nodes(result)
 ```

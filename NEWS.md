@@ -1,5 +1,19 @@
 # BrainNetTest 0.2.2
 
+* `identify_critical_links()` now returns an object of class
+  `"critical_links"` with `print()`, `summary()` and `plot()` methods, so the
+  result reports itself instead of having to be picked apart by hand.
+  `print()` gives the populations compared, the global-test result and the
+  most significant critical edges; `summary()` adds the call, the settings the
+  analysis ran with, and the node-level ranking from `get_critical_nodes()`;
+  `plot()` is a method interface to `plot_critical_edges()` and takes the
+  original populations as its second argument.
+* The returned object gained three components alongside the existing three:
+  `p_value` (the permutation p-value of the global test on the unmodified
+  data, which was previously computed and discarded), `n_edges` and
+  `settings`, plus the matched `call`. `critical_edges`, `edges_removed` and
+  `modified_populations` keep their names, positions and contents, so existing
+  code that extracts them is unaffected.
 * Corrected the DOI given for Fraiman and Fraiman (2018) throughout the
   package. The previous value, `10.1038/s41598-018-21688-0`, resolves to an
   unrelated article; the correct one is `10.1038/s41598-018-23152-5`.

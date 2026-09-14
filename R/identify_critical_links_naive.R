@@ -18,6 +18,7 @@ identify_critical_links_naive <- function(populations,
                                           a              = 1,
                                           seed           = NULL) {
 
+  cl <- match.call()
   if (!is.null(seed)) set.seed(seed)
   if (!is.list(populations) || length(populations) < 2)
     stop("`populations` must be a list with at least 2 groups.")
@@ -26,6 +27,10 @@ identify_critical_links_naive <- function(populations,
   n_permutations <- .check_count(n_permutations, "n_permutations")
   alpha          <- .check_proportion(alpha, "alpha")
   a              <- .check_positive(a, "a")
+
+  settings <- list(alpha = alpha, method = method,
+                   adjust_method = adjust_method, batch_size = batch_size,
+                   n_permutations = n_permutations, a = a, seed = seed)
 
   ## 0. Metadata ------------------------------------------------------------
   Npop <- lengths(populations)
@@ -40,9 +45,8 @@ identify_critical_links_naive <- function(populations,
   edge_df    <- rank_edges(edge_pvals)
   n_edges    <- nrow(edge_df)
   if (n_edges == 0L)
-    return(list(critical_edges       = NULL,
-                edges_removed        = list(),
-                modified_populations = populations))
+    return(.critical_links(NULL, list(), populations, NA_real_, 0L,
+                           settings, cl))
 
   ## Helper: permutation p-value for the current populations ----------------
   .permutation_pvalue <- function(pops, Npop_vec, n_total, n_perm, a_val) {
@@ -66,9 +70,8 @@ identify_critical_links_naive <- function(populations,
     warning("Initial test is not significant (p = ",
             round(initial_p, 4),
             "). Populations may be identical or differences too small to detect.")
-    return(list(critical_edges       = NULL,
-                edges_removed        = list(),
-                modified_populations = populations))
+    return(.critical_links(NULL, list(), populations, initial_p, n_edges,
+                           settings, cl))
   }
 
   ## 3. Iterative edge removal (naive: full recomputation each step) ------
@@ -102,7 +105,6 @@ identify_critical_links_naive <- function(populations,
                     else
                       NULL
 
-  list(critical_edges       = critical_edges,
-       edges_removed        = edges_removed,
-       modified_populations = populations)
+  .critical_links(critical_edges, edges_removed, populations, initial_p,
+                  n_edges, settings, cl)
 }
