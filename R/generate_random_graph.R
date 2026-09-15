@@ -17,11 +17,10 @@
 #' @examples
 #' G <- generate_random_graph(n_nodes = 10, edge_prob = 0.1)
 generate_random_graph <- function(n_nodes, edge_prob = 0.1) {
-  if (!is.numeric(n_nodes) || length(n_nodes) != 1 || n_nodes <= 0) {
-    stop("n_nodes must be a positive integer.")
-  }
+  n_nodes <- .check_count(n_nodes, "n_nodes")
   
-  if (!is.numeric(edge_prob) || edge_prob < 0 || edge_prob > 1) {
+  if (!is.numeric(edge_prob) || length(edge_prob) != 1 ||
+      edge_prob < 0 || edge_prob > 1) {
     stop("edge_prob must be a numeric value between 0 and 1.")
   }
   

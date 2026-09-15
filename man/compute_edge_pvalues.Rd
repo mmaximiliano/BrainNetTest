@@ -49,7 +49,7 @@ populations <- list(Control = control_graphs, Patient = patient_graphs)
 # Compute edge frequencies
 frequencies <- compute_edge_frequencies(populations)
 edge_counts <- frequencies$edge_counts
-N <- sapply(populations, length)
+N <- lengths(populations)
 
 # Compute p-values for edge differences
 edge_pvalues <- compute_edge_pvalues(edge_counts, N)

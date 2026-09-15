@@ -79,7 +79,7 @@ test_that("one-shot p-values are exactly equal to while-loop (batch_size = 1)", 
 
   # Run the full optimised function to extract internals.
   # We re-derive prefix sums the same way identify_critical_links does.
-  Npop <- sapply(pops, length)
+  Npop <- lengths(pops)
   m    <- length(pops); n_total <- sum(Npop)
   freq <- compute_edge_frequencies(pops)
   ep   <- compute_edge_pvalues(freq$edge_counts, Npop, method = "fisher")
@@ -246,6 +246,56 @@ test_that("identify_critical_links validates inputs", {
                "batch_size")
   expect_error(identify_critical_links(pops_ok, n_permutations = 0),
                "n_permutations")
+  expect_error(identify_critical_links(pops_ok, batch_size = 1.5),
+               "batch_size")
+  expect_error(identify_critical_links(pops_ok, n_permutations = 10.5),
+               "n_permutations")
+  expect_error(identify_critical_links(pops_ok, alpha = 0), "alpha")
+  expect_error(identify_critical_links(pops_ok, alpha = 1), "alpha")
+  expect_error(identify_critical_links(pops_ok, a = 0), "`a`")
+})
+
+test_that("identify_critical_links rejects malformed populations", {
+  G <- matrix(0L, 4, 4)
+
+  expect_error(
+    identify_critical_links(list(A = list(G, G), B = list())),
+    "non-empty list of adjacency matrices")
+  expect_error(
+    identify_critical_links(list(A = list(G, G), B = list(G, "x"))),
+    "not a numeric matrix")
+  expect_error(
+    identify_critical_links(list(A = list(G, G), B = list(matrix(0, 4, 5)))),
+    "not square")
+  expect_error(
+    identify_critical_links(list(A = list(G, G), B = list(matrix(0L, 3, 3)))),
+    "same vertex set")
+
+  # Weighted input would be silently rounded by fisher.test(), so the
+  # documented binary requirement is enforced instead.
+  W <- matrix(0, 4, 4); W[1, 2] <- W[2, 1] <- 0.5
+  expect_error(identify_critical_links(list(A = list(G, G), B = list(W, W))),
+               "not binary")
+  NAmat <- G; NAmat[1, 2] <- NA
+  expect_error(
+    identify_critical_links(list(A = list(G, G), B = list(NAmat, NAmat))),
+    "not binary")
+})
+
+test_that("the pipeline tolerates single-node networks", {
+  # A one-node network has no edges at all; compute_edge_pvalues() used to
+  # build a reversed loop index and subscript out of bounds.
+  G <- matrix(0, 1, 1)
+  pops <- list(A = list(G, G), B = list(G, G))
+
+  pvals <- compute_edge_pvalues(compute_edge_frequencies(pops)$edge_counts,
+                                lengths(pops))
+  expect_equal(dim(pvals), c(1L, 1L))
+  expect_equal(nrow(rank_edges(pvals)), 0L)
+
+  result <- identify_critical_links(pops, n_permutations = 10)
+  expect_null(result$critical_edges)
+  expect_length(result$edges_removed, 0L)
 })
 
 test_that("identify_critical_links is deterministic given a seed", {

@@ -35,14 +35,27 @@
 #' @param seed Optional integer seed for reproducibility of the permutation
 #'   replicates. Default \code{NULL}.
 #'
-#' @return A \code{list} with three components: \code{critical_edges} (a
-#'   \code{data.frame} with columns \code{node1}, \code{node2}, \code{p_value},
-#'   listing the edges removed until the test became non-significant, ordered
-#'   from most to least significant; \code{NULL} if the global test was not
-#'   significant), \code{edges_removed} (a list of length-2 integer vectors
-#'   giving the \code{(i, j)} indices of the removed edges, in removal order),
-#'   and \code{modified_populations} (the input \code{populations} with the
-#'   critical edges zeroed out in every graph).
+#' @return An object of class \code{"critical_links"}: a \code{list} with the
+#'   components
+#'   \describe{
+#'     \item{critical_edges}{a \code{data.frame} with columns \code{node1},
+#'       \code{node2}, \code{p_value}, listing the edges removed until the test
+#'       became non-significant, ordered from most to least significant;
+#'       \code{NULL} if the global test was not significant.}
+#'     \item{edges_removed}{a list of length-2 integer vectors giving the
+#'       \code{(i, j)} indices of the removed edges, in removal order.}
+#'     \item{modified_populations}{the input \code{populations} with the
+#'       critical edges zeroed out in every graph.}
+#'     \item{p_value}{the permutation \eqn{p} value of the global test on the
+#'       unmodified data, \code{NA} when there were no candidate edges.}
+#'     \item{n_edges}{the number of candidate edges considered.}
+#'     \item{settings}{the arguments the analysis ran with.}
+#'     \item{call}{the matched call.}
+#'   }
+#'   Methods are provided for \code{\link[=print.critical_links]{print}},
+#'   \code{\link[=summary.critical_links]{summary}} and
+#'   \code{\link[=plot.critical_links]{plot}}. The first three components are
+#'   unchanged from earlier versions, so code that extracts them keeps working.
 #'
 #' @details The implementation exploits the fact that T decomposes as a sum of
 #'   per-edge contributions \eqn{\Delta_e}. Removing an edge e is equivalent
@@ -59,9 +72,11 @@
 #' @references
 #' Fraiman, D. and Fraiman, R. (2018) An ANOVA approach for statistical
 #' comparisons of brain networks. \emph{Scientific Reports}, 8, 4746.
-#' \doi{10.1038/s41598-018-21688-0}.
+#' \doi{10.1038/s41598-018-23152-5}.
 #'
-#' @seealso \code{\link{compute_test_statistic}},
+#' @seealso \code{\link{print.critical_links}},
+#'   \code{\link{summary.critical_links}}, \code{\link{plot.critical_links}},
+#'   \code{\link{compute_test_statistic}},
 #'   \code{\link{compute_edge_pvalues}}, \code{\link{get_critical_nodes}}.
 #'
 #' @export
@@ -78,6 +93,8 @@
 #' result <- identify_critical_links(
 #'   populations, alpha = 0.05, method = "fisher",
 #'   n_permutations = 200, seed = 42)
+#' result
+#' summary(result)
 #' head(result$critical_edges)
 #' }
 identify_critical_links <- function(populations,
@@ -89,15 +106,21 @@ identify_critical_links <- function(populations,
                                     a              = 1,
                                     seed           = NULL) {
 
+  cl <- match.call()
   if (!is.null(seed)) set.seed(seed)
   if (!is.list(populations) || length(populations) < 2)
     stop("`populations` must be a list with at least 2 groups.")
-  if (batch_size  < 1L) stop("`batch_size` must be >= 1.")
-  if (n_permutations < 1L) stop("`n_permutations` must be >= 1.")
+  .check_populations(populations, binary = TRUE)
+  batch_size     <- .check_count(batch_size, "batch_size")
+  n_permutations <- .check_count(n_permutations, "n_permutations")
+  alpha          <- .check_proportion(alpha, "alpha")
+  a              <- .check_positive(a, "a")
 
-  Npop <- sapply(populations, length)
-  m    <- length(populations)
-  n    <- sum(Npop)
+  settings <- list(alpha = alpha, method = method,
+                   adjust_method = adjust_method, batch_size = batch_size,
+                   n_permutations = n_permutations, a = a, seed = seed)
+
+  Npop <- lengths(populations)
 
   make_key <- function(i, j) paste(i, j, sep = "-")
 
@@ -108,59 +131,13 @@ identify_critical_links <- function(populations,
   edge_df    <- rank_edges(edge_pvals)
   n_edges    <- nrow(edge_df)
   if (n_edges == 0L)
-    return(list(critical_edges       = NULL,
-                edges_removed        = list(),
-                modified_populations = populations))
+    return(.critical_links(NULL, list(), populations, NA_real_, 0L,
+                           settings, cl))
 
-  .edge_deltas <- function(edge_counts) {
-    n_nodes <- dim(edge_counts)[1]
-    idx     <- which(upper.tri(matrix(0, n_nodes, n_nodes)), arr.ind = TRUE)
-    if (nrow(idx) == 0L)
-      return(list(indices = idx, deltas = numeric(0)))
-
-    counts <- do.call(cbind, lapply(seq_len(m),
-                     function(k) edge_counts[ , , k][idx]))
-    if (!is.matrix(counts))
-      counts <- matrix(counts, nrow = 1L)
-
-    p_mat <- sweep(counts, 2, Npop, "/")
-    p_tot <- rowSums(counts) / n
-    Ptot  <- matrix(p_tot, nrow = nrow(counts), ncol = m)
-
-    d_mat <- 2 * p_mat * (1 - p_mat)
-    D_mat <- p_mat + Ptot - 2 * p_mat * Ptot
-
-    coef_d <- sqrt(Npop) * (Npop / (Npop - 1))
-    coef_D <- sqrt(Npop) * (n    / (n    - 1))
-
-    delta  <- (sqrt(m) / a) *
-              (d_mat %*% coef_d - D_mat %*% coef_D)[, 1]
-
-    list(indices = idx, deltas = delta)
-  }
-
-  .edge_deltas_matrix <- function(counts_list) {
-    E   <- nrow(counts_list[[1]])
-    B   <- ncol(counts_list[[1]])
-
-    p_list  <- lapply(seq_len(m), function(k) counts_list[[k]] / Npop[k])
-    C_total <- Reduce("+", counts_list)
-    p_tot   <- C_total / n
-
-    coef_d <- sqrt(Npop) * (Npop / (Npop - 1))
-    coef_D <- sqrt(Npop) * (n    / (n    - 1))
-
-    delta_mat <- matrix(0, nrow = E, ncol = B)
-    for (k in seq_len(m)) {
-      pk  <- p_list[[k]]
-      d_k <- 2 * pk * (1 - pk)
-      D_k <- pk + p_tot - 2 * pk * p_tot
-      delta_mat <- delta_mat + coef_d[k] * d_k - coef_D[k] * D_k
-    }
-    (sqrt(m) / a) * delta_mat
-  }
-
-  obs_delta_info <- .edge_deltas(freq$edge_counts)
+  ## Edge-wise decomposition of T (Section 3 of the paper) and the vectorised
+  ## permutation null; the helpers live in R/permutation-null.R and are shared
+  ## with global_test().
+  obs_delta_info <- .observed_edge_deltas(freq$edge_counts, Npop, a)
 
   key_all   <- make_key(obs_delta_info$indices[, 1], obs_delta_info$indices[, 2])
   map_idx   <- match(make_key(edge_df$node1, edge_df$node2), key_all)
@@ -169,29 +146,14 @@ identify_critical_links <- function(populations,
   prefix_obs <- cumsum(delta_ord)
   T0         <- sum(obs_delta_info$deltas)
 
-  all_graphs <- unlist(populations, recursive = FALSE)
-  ut_idx     <- obs_delta_info$indices
-  X <- do.call(rbind, lapply(all_graphs, function(A) A[ut_idx]))
-  storage.mode(X) <- "double"
-
-  perm_mat <- replicate(n_permutations, sample.int(n))
-  cumNpop  <- c(0L, cumsum(Npop))
-  W_list <- lapply(seq_len(m), function(k) {
-    rows    <- (cumNpop[k] + 1L):cumNpop[k + 1L]
-    idx_all <- as.vector(perm_mat[rows, , drop = FALSE])
-    rep_id  <- rep(seq_len(n_permutations), each = Npop[k])
-    lin_idx <- (rep_id - 1L) * n + idx_all
-    W <- matrix(tabulate(lin_idx, nbins = n * n_permutations),
-                nrow = n, ncol = n_permutations)
-    storage.mode(W) <- "double"
-    W
-  })
-
-  C_list      <- lapply(W_list, function(W) crossprod(X, W))
-  delta_all   <- .edge_deltas_matrix(C_list)
+  X           <- .graph_edge_matrix(populations, obs_delta_info$indices)
+  C_list      <- .permuted_edge_counts(X, Npop, n_permutations)
+  delta_all   <- .permuted_edge_deltas(C_list, Npop, a)
   perm_deltas <- t(delta_all[map_idx, , drop = FALSE])
 
-  T_perm0     <- rowSums(perm_deltas)
+  ## Summed in the same (upper-triangle) order as in global_test(), so that
+  ## the two functions evaluate bit-identical statistics on the same draws.
+  T_perm0     <- colSums(delta_all)
   prefix_perm <- t(apply(perm_deltas, 1, cumsum))
 
   initial_p <- mean(T_perm0 < T0)
@@ -199,9 +161,8 @@ identify_critical_links <- function(populations,
     warning("Initial test is not significant (p = ",
             round(initial_p, 4),
             "). Populations may be identical or differences too small to detect.")
-    return(list(critical_edges       = NULL,
-                edges_removed        = list(),
-                modified_populations = populations))
+    return(.critical_links(NULL, list(), populations, initial_p, n_edges,
+                           settings, cl))
   }
 
   batch_steps <- seq(batch_size, n_edges, by = batch_size)
@@ -229,7 +190,6 @@ identify_critical_links <- function(populations,
 
   critical_edges <- if (k_removed > 0) edge_df[seq_len(k_removed), ] else NULL
 
-  list(critical_edges       = critical_edges,
-       edges_removed        = edges_removed,
-       modified_populations = populations)
+  .critical_links(critical_edges, edges_removed, populations, initial_p,
+                  n_edges, settings, cl)
 }

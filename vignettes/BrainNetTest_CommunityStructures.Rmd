@@ -106,8 +106,7 @@ result <- identify_critical_links(
   n_permutations = 500,
   seed           = 42)
 
-nrow(result$critical_edges)
-head(result$critical_edges)
+result
 ```
 
 ### Critical nodes
@@ -128,10 +127,14 @@ plus a final panel that highlights the critical edges on the chosen
 reference central graph. Communities can be passed in to color the vertices
 consistently across panels.
 
+Because the result is a `critical_links` object, `plot()` dispatches to that
+function. The populations have to be passed in, since the object stores the
+*modified* populations, from which the critical edges have been removed.
+
 ```{r, eval = requireNamespace("igraph", quietly = TRUE), fig.width=7, fig.height=7}
-plot_critical_edges(
-  populations,
+plot(
   result,
+  populations,
   communities = rep(seq_len(2), each = 10),
   reference   = "Control")
 ```
@@ -140,4 +143,4 @@ plot_critical_edges(
 
 Fraiman, D. and Fraiman, R. (2018) An ANOVA approach for statistical
 comparisons of brain networks. *Scientific Reports*, 8, 4746.
-<https://doi.org/10.1038/s41598-018-21688-0>
+<https://doi.org/10.1038/s41598-018-23152-5>

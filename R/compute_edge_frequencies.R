@@ -39,8 +39,10 @@
 #' edge_counts_control <- frequencies$edge_counts[,,1]
 #' print(edge_counts_control)
 compute_edge_frequencies <- function(populations) {
+  .check_populations(populations)
+  
   num_populations <- length(populations)
-  N <- sapply(populations, length)
+  N <- lengths(populations)
   
   # Assuming all graphs have the same dimensions
   n_nodes <- nrow(populations[[1]][[1]])

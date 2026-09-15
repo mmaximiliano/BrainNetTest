@@ -6,18 +6,22 @@
 **BrainNetTest** provides non-parametric hypothesis testing for populations of
 brain networks represented as graphs, following the L1-distance ANOVA
 framework of Fraiman and Fraiman (2018,
-[doi:10.1038/s41598-018-21688-0](https://doi.org/10.1038/s41598-018-21688-0)).
+[doi:10.1038/s41598-018-23152-5](https://doi.org/10.1038/s41598-018-23152-5)).
 
 The package includes:
 
 * `compute_central_graph()` and `compute_distance()` for building central
   (mean) graphs and measuring Manhattan (L1) distance between adjacency
   matrices.
-* `compute_test_statistic()` for the group test statistic T.
+* `compute_test_statistic()` for the group test statistic T, and
+  `global_test()` for its permutation p-value: the test of whether the
+  populations differ at all.
 * `identify_critical_links()` for a fast permutation-based identification of
   the edges driving between-group differences, using a prefix-sum
   decomposition that reduces the complexity from O(K * B * |E| * m) to
   O(B * |E| * m).
+  The result is a `critical_links` object with `print()`, `summary()` and
+  `plot()` methods.
 * `get_critical_nodes()` to summarise the critical edges at the node level.
 * `generate_category_graphs()` and `generate_community_graph()` to simulate
   populations of community-structured graphs.
@@ -28,7 +32,7 @@ The package includes:
 ## Installation
 
 ```r
-# From CRAN (once released)
+# From CRAN
 install.packages("BrainNetTest")
 
 # Development version
@@ -51,11 +55,16 @@ patient <- generate_category_graphs(
 
 populations <- list(Control = control, Patient = patient)
 
-# Global test and critical-edge identification (permutation test)
+# Do the populations differ at all? Statistic T and its permutation p-value
+global_test(populations, n_permutations = 1000, seed = 42)
+
+# Which edges are responsible? Global test plus critical-edge identification
 result <- identify_critical_links(
   populations, alpha = 0.05, method = "fisher",
   n_permutations = 1000, seed = 42)
 
+result                  # compact report
+summary(result)         # settings and node-level ranking
 head(result$critical_edges)
 get_critical_nodes(result)
 ```
@@ -64,7 +73,7 @@ get_critical_nodes(result)
 
 Fraiman, D. and Fraiman, R. (2018) An ANOVA approach for statistical
 comparisons of brain networks. *Scientific Reports*, 8, 4746.
-<https://doi.org/10.1038/s41598-018-21688-0>
+<https://doi.org/10.1038/s41598-018-23152-5>
 
 ## License
 

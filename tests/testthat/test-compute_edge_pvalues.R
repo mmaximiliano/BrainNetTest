@@ -18,7 +18,7 @@ test_that("compute_edge_pvalues returns a symmetric matrix with valid p-values",
   pops <- list(A = ctrl, B = dis)
   freq <- compute_edge_frequencies(pops)
 
-  pvals <- compute_edge_pvalues(freq$edge_counts, sapply(pops, length))
+  pvals <- compute_edge_pvalues(freq$edge_counts, lengths(pops))
   expect_equal(dim(pvals), c(6, 6))
   expect_true(isSymmetric(pvals))
   expect_true(all(pvals >= 0 & pvals <= 1))
@@ -32,7 +32,7 @@ test_that("compute_edge_pvalues: identical populations yield p >= alpha mostly",
     base_intra_prob = 0.5, base_inter_prob = 0.5, seed = 1)
   pops <- list(A = g[1:10], B = g[11:20])
   freq <- compute_edge_frequencies(pops)
-  pvals <- compute_edge_pvalues(freq$edge_counts, sapply(pops, length))
+  pvals <- compute_edge_pvalues(freq$edge_counts, lengths(pops))
   # With 10+10 samples drawn from the same process, no edge should be strongly
   # significant; all p-values must be valid probabilities.
   expect_true(all(pvals >= 0 & pvals <= 1))
@@ -46,7 +46,7 @@ test_that("compute_edge_pvalues supports all three test methods", {
     base_intra_prob = 0.1, base_inter_prob = 0.1, seed = 2)
   pops <- list(A = ctrl, B = dis)
   freq <- compute_edge_frequencies(pops)
-  N <- sapply(pops, length)
+  N <- lengths(pops)
 
   p_fisher <- compute_edge_pvalues(freq$edge_counts, N, method = "fisher")
   p_chisq  <- suppressWarnings(
@@ -82,7 +82,7 @@ test_that("compute_edge_pvalues: adjust_method BH reduces significance", {
     base_intra_prob = 0.2, base_inter_prob = 0.2, seed = 2)
   pops <- list(A = ctrl, B = dis)
   freq <- compute_edge_frequencies(pops)
-  N    <- sapply(pops, length)
+  N    <- lengths(pops)
 
   p_raw <- compute_edge_pvalues(freq$edge_counts, N, adjust_method = "none")
   p_bh  <- compute_edge_pvalues(freq$edge_counts, N, adjust_method = "BH")
@@ -105,7 +105,7 @@ test_that("compute_edge_pvalues returns a symmetric matrix for all adjust_method
     base_intra_prob = 0.3, base_inter_prob = 0.6, seed = 2)
   pops <- list(A = ctrl, B = dis)
   freq <- compute_edge_frequencies(pops)
-  N    <- sapply(pops, length)
+  N    <- lengths(pops)
 
   for (adj in c("none", "BH", "bonferroni", "holm", "BY")) {
     p <- compute_edge_pvalues(freq$edge_counts, N, adjust_method = adj)

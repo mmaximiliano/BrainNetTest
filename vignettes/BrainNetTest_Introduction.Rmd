@@ -24,7 +24,7 @@ graphs. The package provides:
 
 * utilities to build a central (mean) graph for a population and measure
   Manhattan (L1) distances between adjacency matrices;
-* the group test statistic `T` and its permutation null distribution;
+* the group test statistic `T` and its permutation test (`global_test`);
 * a fast procedure (`identify_critical_links`) that pinpoints the edges
   driving between-group differences; and
 * helpers to simulate synthetic community-structured graphs and to visualise
@@ -37,7 +37,7 @@ shows the full pipeline on community-structured populations.
 ## Installation
 
 ```r
-# Release version (once on CRAN)
+# Release version
 install.packages("BrainNetTest")
 
 # Development version from GitHub
@@ -96,11 +96,30 @@ populations <- list(Control = control, Patient = patient)
 compute_test_statistic(populations, a = 1)
 ```
 
-### Global test and critical edges
+### The global test
 
-`identify_critical_links()` combines the global permutation test with an
-iterative edge-removal procedure that returns the edges driving the observed
-difference:
+`compute_test_statistic()` returns only the observed value. `global_test()`
+assesses it: it permutes the group labels across the pooled sample, keeping
+the group sizes, recomputes `T` for each permutation, and reports the
+proportion of permutations with a statistic smaller than the observed one as
+the p-value. The normalisation constant `a` is fixed at 1; the p-value does
+not depend on it.
+
+```{r}
+gt <- global_test(populations, n_permutations = 500, seed = 42)
+gt
+```
+
+The permutation null distribution is kept in `gt$null_distribution`, so it
+can be inspected or plotted. With `B` permutations the p-value cannot resolve
+below `1 / B`, which is how an estimate of zero is reported.
+
+### Critical edges
+
+Once a difference is established, `identify_critical_links()` looks for the
+edges responsible. It runs the same global test first and then iteratively
+removes edges, ranked by their marginal p-values, until the populations are no
+longer distinguishable:
 
 ```{r}
 result <- identify_critical_links(
@@ -110,10 +129,20 @@ result <- identify_critical_links(
   n_permutations = 200,
   seed           = 42)
 
-head(result$critical_edges)
+result
 ```
 
-The `get_critical_nodes()` helper summarises this result at the node level:
+The result is a `critical_links` object. Printing it, as above, gives a
+compact report; `summary()` adds the settings the analysis ran with and the
+node-level ranking:
+
+```{r}
+summary(result)
+```
+
+The individual components remain available, `result$critical_edges` being the
+ranked table of critical edges. The `get_critical_nodes()` helper summarises
+the result at the node level on its own:
 
 ```{r}
 get_critical_nodes(result)
@@ -123,5 +152,5 @@ get_critical_nodes(result)
 
 Fraiman, D. and Fraiman, R. (2018) An ANOVA approach for statistical
 comparisons of brain networks. *Scientific Reports*, 8, 4746.
-<https://doi.org/10.1038/s41598-018-21688-0>
+<https://doi.org/10.1038/s41598-018-23152-5>
 

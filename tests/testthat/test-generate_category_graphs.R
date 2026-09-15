@@ -90,6 +90,40 @@ test_that("generate_category_graphs validates inputs", {
     "Sum of community_sizes")
 })
 
+test_that("generate_category_graphs rejects non-integer sizes and counts", {
+  # A single unnamed argument lands on n_graphs and used to fail deep inside
+  # the generator with "attempt to select less than one element".
+  expect_error(generate_category_graphs(0.7), "positive integer")
+
+  expect_error(
+    generate_category_graphs(n_graphs = 2.5, n_nodes = 10, n_communities = 2),
+    "positive integer")
+  expect_error(
+    generate_category_graphs(n_graphs = 3, n_nodes = 0.7, n_communities = 2),
+    "positive integer")
+  expect_error(
+    generate_category_graphs(n_graphs = 3, n_nodes = 10,
+                             n_communities = 0.7),
+    "positive integer")
+  expect_error(
+    generate_category_graphs(n_graphs = 3, n_nodes = 10, n_communities = 2,
+                             community_sizes = c(2.5, 7.5)),
+    "positive integers")
+  expect_error(
+    generate_category_graphs(n_graphs = "three", n_nodes = 10,
+                             n_communities = 2),
+    "positive integer")
+  expect_error(
+    generate_category_graphs(n_graphs = NA, n_nodes = 10, n_communities = 2),
+    "positive integer")
+})
+
+test_that("generate_category_graphs rejects more communities than nodes", {
+  expect_error(
+    generate_category_graphs(n_graphs = 2, n_nodes = 4, n_communities = 5),
+    "must not exceed")
+})
+
 test_that("generate_category_graphs supports vector base_intra_prob", {
   set.seed(1)
   g <- generate_category_graphs(n_graphs = 4, n_nodes = 20, n_communities = 2,

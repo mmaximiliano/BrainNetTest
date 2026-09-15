@@ -48,14 +48,27 @@ replicates used to approximate the null distribution of T. Default
 replicates. Default \code{NULL}.}
 }
 \value{
-A \code{list} with three components: \code{critical_edges} (a
-  \code{data.frame} with columns \code{node1}, \code{node2}, \code{p_value},
-  listing the edges removed until the test became non-significant, ordered
-  from most to least significant; \code{NULL} if the global test was not
-  significant), \code{edges_removed} (a list of length-2 integer vectors
-  giving the \code{(i, j)} indices of the removed edges, in removal order),
-  and \code{modified_populations} (the input \code{populations} with the
-  critical edges zeroed out in every graph).
+An object of class \code{"critical_links"}: a \code{list} with the
+  components
+  \describe{
+    \item{critical_edges}{a \code{data.frame} with columns \code{node1},
+      \code{node2}, \code{p_value}, listing the edges removed until the test
+      became non-significant, ordered from most to least significant;
+      \code{NULL} if the global test was not significant.}
+    \item{edges_removed}{a list of length-2 integer vectors giving the
+      \code{(i, j)} indices of the removed edges, in removal order.}
+    \item{modified_populations}{the input \code{populations} with the
+      critical edges zeroed out in every graph.}
+    \item{p_value}{the permutation \eqn{p} value of the global test on the
+      unmodified data, \code{NA} when there were no candidate edges.}
+    \item{n_edges}{the number of candidate edges considered.}
+    \item{settings}{the arguments the analysis ran with.}
+    \item{call}{the matched call.}
+  }
+  Methods are provided for \code{\link[=print.critical_links]{print}},
+  \code{\link[=summary.critical_links]{summary}} and
+  \code{\link[=plot.critical_links]{plot}}. The first three components are
+  unchanged from earlier versions, so code that extracts them keeps working.
 }
 \description{
 Iteratively identifies the edges that drive the observed difference between
@@ -92,15 +105,19 @@ populations <- list(Control = control, Patient = patient)
 result <- identify_critical_links(
   populations, alpha = 0.05, method = "fisher",
   n_permutations = 200, seed = 42)
+result
+summary(result)
 head(result$critical_edges)
 }
 }
 \references{
 Fraiman, D. and Fraiman, R. (2018) An ANOVA approach for statistical
 comparisons of brain networks. \emph{Scientific Reports}, 8, 4746.
-\doi{10.1038/s41598-018-21688-0}.
+\doi{10.1038/s41598-018-23152-5}.
 }
 \seealso{
-\code{\link{compute_test_statistic}},
+\code{\link{print.critical_links}},
+  \code{\link{summary.critical_links}}, \code{\link{plot.critical_links}},
+  \code{\link{compute_test_statistic}},
   \code{\link{compute_edge_pvalues}}, \code{\link{get_critical_nodes}}.
 }

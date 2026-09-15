@@ -36,3 +36,11 @@ test_that("generate_random_graph validates inputs", {
   expect_error(generate_random_graph(n_nodes = 10, edge_prob = "a"),
                "numeric")
 })
+
+test_that("generate_random_graph rejects non-integer n_nodes", {
+  # These used to return a degenerate 0 x 0 matrix instead of erroring.
+  expect_error(generate_random_graph(0.7), "positive integer")
+  expect_error(generate_random_graph(n_nodes = 9.5, edge_prob = 0.1),
+               "positive integer")
+  expect_error(generate_random_graph(n_nodes = NA), "positive integer")
+})

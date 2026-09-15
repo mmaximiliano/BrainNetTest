@@ -8,3 +8,10 @@
 ^Meta$
 ^tests/testthat/Rplots\.pdf$
 ^CRAN-SUBMISSION$
+^JSS_paper$
+^JSS_submission$
+^tmp$
+^paper_source$
+^.*\.tar\.gz$
+^.*\.zip$
+^\.DS_Store$

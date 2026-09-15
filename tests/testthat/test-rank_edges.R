@@ -33,6 +33,17 @@ test_that("rank_edges only reports upper-triangle edges (i < j)", {
   expect_equal(nrow(edf), 5 * 4 / 2)
 })
 
+test_that("rank_edges returns consecutive row names", {
+  pv <- matrix(1, 4, 4)
+  pv[1, 2] <- pv[2, 1] <- 0.90
+  pv[1, 3] <- pv[3, 1] <- 0.10
+  pv[2, 4] <- pv[4, 2] <- 0.01
+  edf <- rank_edges(pv)
+  # Sorting used to leave the pre-sort positions as row names, so the ranking
+  # printed as e.g. 31, 39, 41 instead of 1, 2, 3.
+  expect_identical(rownames(edf), as.character(seq_len(nrow(edf))))
+})
+
 test_that("rank_edges handles the 2-node degenerate case", {
   pv <- matrix(c(1, 0.02, 0.02, 1), 2, 2)
   edf <- rank_edges(pv)
