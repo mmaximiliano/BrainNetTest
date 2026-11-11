@@ -4,6 +4,12 @@
 #'
 #' This function ranks edges based on their p-values obtained from statistical tests,
 #' ordering them from lowest to highest p-value (most to least significant).
+#' Values differing by at most 64 machine epsilons relative to the smallest
+#' value in a tie group are treated as numerical ties. Tied edges are ordered
+#' by their second endpoint, then their first endpoint (upper-triangle order).
+#' This removes floating-point noise from the ordering without rounding small
+#' p-values to zero. The returned p-values are unchanged; this tolerance is
+#' used only for ranking, not for significance thresholds.
 #'
 #' @param edge_pvalues A square matrix of p-values for each edge, typically obtained from \code{compute_edge_pvalues}.
 #' @return A data frame with edges and their corresponding p-values, ordered from most significant.
@@ -53,10 +59,23 @@ rank_edges <- function(edge_pvalues) {
     p_value = p_values
   )
   
-  # Order by p-value ascending (most significant first).  Row names are reset
-  # so that the returned ranking reads 1, 2, 3, ... rather than carrying the
-  # positions the edges happened to occupy before sorting.
-  edge_df <- edge_df[order(edge_df$p_value, decreasing = FALSE), ]
+  # Anchor every tie group at its smallest p-value, so a chain of close
+  # neighbours cannot join values whose total separation exceeds tolerance.
+  # Keep the original upper-triangle endpoint order within each group.
+  ord <- order(p_values)
+  groups <- integer(length(p_values))
+  group <- 0L
+  anchor <- NA_real_
+  for (i in ord) {
+    value <- p_values[i]
+    if (group == 0L || !is.finite(value) || !is.finite(anchor) ||
+        value - anchor > 64 * .Machine$double.eps * abs(anchor)) {
+      group <- group + 1L
+      anchor <- value
+    }
+    groups[i] <- group
+  }
+  edge_df <- edge_df[order(groups, edge_df$node2, edge_df$node1), ]
   rownames(edge_df) <- NULL
   
   return(edge_df)
