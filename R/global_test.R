@@ -25,7 +25,9 @@
 #'   \code{\link{identify_critical_links}}.
 #' @param method Marginal edge test used for U when \code{criterion =
 #'   "combined"}: \code{"fisher"} (default), \code{"chi.squared"} or
-#'   \code{"prop"}, as in \code{\link{compute_edge_pvalues}}.
+#'   \code{"prop"}, as in \code{\link{compute_edge_pvalues}}. The
+#'   \code{"prop"} method requires exactly two populations. The method is
+#'   validated for both criteria, including when the graphs have no edges.
 #'
 #' @return An object of class \code{"global_test"}: a \code{list} with the
 #'   components
@@ -118,6 +120,7 @@ global_test <- function(populations, n_permutations = 1000, seed = NULL,
   n_nodes        <- .check_populations(populations, binary = TRUE)
   n_permutations <- .check_count(n_permutations, "n_permutations")
   criterion      <- match.arg(criterion)
+  method         <- .check_edge_method(method, length(populations))
 
   group_sizes <- lengths(populations)
   if (any(group_sizes < 2))

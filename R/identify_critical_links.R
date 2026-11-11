@@ -19,7 +19,8 @@
 #'   for the iterative edge-removal stopping rule. Default \code{0.05}.
 #' @param method Character string selecting the marginal edge test used to
 #'   rank candidate edges. One of \code{"fisher"} (default),
-#'   \code{"chi.squared"}, or \code{"prop"}. See
+#'   \code{"chi.squared"}, or \code{"prop"}. The \code{"prop"} method
+#'   requires exactly two populations. See
 #'   \code{\link{compute_edge_pvalues}}.
 #' @param adjust_method Character string passed to \code{\link[stats]{p.adjust}}
 #'   for multiplicity correction of the marginal p-values. Default
@@ -155,6 +156,7 @@ identify_critical_links <- function(populations,
   alpha          <- .check_proportion(alpha, "alpha")
   a              <- .check_positive(a, "a")
   criterion      <- match.arg(criterion)
+  method         <- .check_edge_method(method, length(populations))
 
   settings <- list(alpha = alpha, method = method,
                    adjust_method = adjust_method, batch_size = batch_size,

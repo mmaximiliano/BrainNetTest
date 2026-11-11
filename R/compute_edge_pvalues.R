@@ -8,6 +8,8 @@
 #' @param edge_counts An array of edge counts from \code{compute_edge_frequencies}.
 #' @param N A vector of sample sizes for each population.
 #' @param method The statistical test method to use: "fisher", "chi.squared", or "prop". Default is "fisher".
+#'   The "prop" method requires exactly two populations. The method is
+#'   validated even when the graphs have no edges.
 #' @param adjust_method The method for p-value adjustment for multiple testing. Default is "none".
 #' @importFrom stats fisher.test chisq.test prop.test p.adjust
 #' @return A matrix of p-values for each edge.
@@ -45,6 +47,7 @@
 compute_edge_pvalues <- function(edge_counts, N, method = "fisher", adjust_method = "none") {
   n_nodes <- dim(edge_counts)[1]
   num_populations <- dim(edge_counts)[3]
+  method <- .check_edge_method(method, num_populations)
   edge_pvalues <- matrix(1, nrow = n_nodes, ncol = n_nodes)
   
   # For each pair of nodes (edge).  seq_len() rather than 1:(n_nodes - 1) so
@@ -94,8 +97,6 @@ compute_edge_pvalues <- function(edge_counts, N, method = "fisher", adjust_metho
         }
       } else if (method == "prop") {
         # Use prop.test for two populations
-        if (num_populations != 2) stop("prop.test is only implemented for two populations.")
-        
         # Check for zero values that might cause issues
         x <- c(edge_counts[i, j, 1], edge_counts[i, j, 2])
         n <- c(N[1], N[2])
