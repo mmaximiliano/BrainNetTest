@@ -26,7 +26,8 @@
 #'   \code{"none"}.
 #' @param batch_size Positive integer giving the number of edges to drop per
 #'   iteration. Larger values speed up the procedure at the cost of coarser
-#'   resolution. Default \code{1}.
+#'   resolution. A batch larger than the remaining candidate set removes all
+#'   remaining edges. Default \code{1}.
 #' @param n_permutations Positive integer giving the number of permutation
 #'   replicates used to approximate the null distribution of T. Default
 #'   \code{1000}.
@@ -232,7 +233,7 @@ identify_critical_links <- function(populations,
                            settings, cl))
   }
 
-  batch_steps <- seq(batch_size, n_edges, by = batch_size)
+  batch_steps <- seq(min(batch_size, n_edges), n_edges, by = batch_size)
   if (length(batch_steps) == 0L || batch_steps[length(batch_steps)] != n_edges)
     batch_steps <- c(batch_steps, n_edges)
 
