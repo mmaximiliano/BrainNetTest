@@ -1,0 +1,66 @@
+name: Prepare source release artifacts
+
+on:
+  workflow_dispatch:
+    inputs:
+      commit:
+        description: Full 40-character lowercase source commit SHA
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      R_KEEP_PKG_SOURCE: 'yes'
+      NOT_CRAN: 'true'
+    steps:
+      - name: Validate the requested commit
+        env:
+          RELEASE_COMMIT: ${{ inputs.commit }}
+        run: |
+          [[ "$RELEASE_COMMIT" =~ ^[0-9a-f]{40}$ ]] || {
+            echo 'Supply an exact 40-character lowercase commit SHA.' >&2
+            exit 2
+          }
+      - name: Check out the preparation tool
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Check out the requested source
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.commit }}
+          path: candidate
+          persist-credentials: false
+      - uses: r-lib/actions/setup-pandoc@v2
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: release
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          working-directory: candidate
+          extra-packages: any::rcmdcheck
+          needs: check
+      - name: Build, check, and record provenance
+        id: artifacts
+        working-directory: candidate
+        env:
+          RELEASE_COMMIT: ${{ inputs.commit }}
+          RELEASE_TOOL_COMMIT: ${{ github.sha }}
+        run: |
+          bash ../.github/scripts/prepare-release.sh "$RELEASE_COMMIT" \
+            "$RUNNER_TEMP/BrainNetTest-release"
+      - name: Retain archives, check logs, and metadata
+        if: always() && steps.artifacts.outcome != 'skipped'
+        uses: actions/upload-artifact@v4
+        with:
+          name: BrainNetTest-source-${{ inputs.commit }}
+          path: ${{ runner.temp }}/BrainNetTest-release
+          if-no-files-found: warn
+          retention-days: 30
