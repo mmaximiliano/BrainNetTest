@@ -6,7 +6,8 @@
 #' populations of brain networks originate from the same distribution.
 #'
 #' @param populations A named list where each element is a list of adjacency
-#'   matrices for a population. Example:
+#'   matrices for a population. Every group must have the same number of
+#'   graphs; unequal group sizes are not supported by the current T test. Example:
 #'   \code{list(Control = list(G1, G2, ...), PatientA = list(G1, G2, ...), PatientB = list(G1, G2, ...))}
 #' @param a A normalization constant. Default is 1.
 #'
@@ -44,6 +45,7 @@ compute_test_statistic <- function(populations, a = 1) {
   if (any(n_i < 2)) {
     stop("Each population must have at least two graphs.")
   }
+  .check_equal_group_sizes(n_i)
   
   # Compute central graphs for each population
   central_graphs <- lapply(populations, compute_central_graph)

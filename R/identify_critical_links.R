@@ -118,6 +118,12 @@
 #'   \code{\link{compute_edge_pvalues}}, \code{\link{get_critical_nodes}}.
 #'
 #' @export
+#' @section Equal group sizes:
+#'   The current T test requires the same number of graphs in every group.
+#'   With unequal group sizes, a real difference can move T away from the
+#'   rejection tail. Such designs are rejected until a revised test is
+#'   validated. The package does not drop observations to balance groups.
+#'
 #' @examples
 #' \donttest{
 #' set.seed(1)
@@ -162,6 +168,7 @@ identify_critical_links <- function(populations,
                    criterion = criterion)
 
   Npop <- lengths(populations)
+  .check_equal_group_sizes(Npop)
 
   make_key <- function(i, j) paste(i, j, sep = "-")
 
