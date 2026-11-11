@@ -11,6 +11,10 @@
 #' @param a A normalization constant. Default is 1.
 #'
 #' @return A numeric value representing the test statistic T.
+#' @details This function returns a statistic, not a normal-score test or a
+#'   p-value. Distances count both matrix triangles, so T is twice its value
+#'   under an upper-triangle-only distance convention. For permutation
+#'   inference and its assumptions, see \code{\link{global_test}}.
 #' @export
 #'
 #' @importFrom stats rbinom

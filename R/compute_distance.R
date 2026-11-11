@@ -9,6 +9,10 @@
 #' @param M A square adjacency matrix representing the central brain network.
 #'
 #' @return A numeric value representing the Manhattan distance between G and M.
+#' @details The distance is \code{sum(abs(G - M))} over all matrix entries.
+#'   For symmetric matrices with zero diagonal, each undirected edge is
+#'   counted twice. This convention also sets the scale of the reported T
+#'   statistic; using only the upper triangle would divide both values by two.
 #' @export
 #'
 #' @importFrom stats rbinom

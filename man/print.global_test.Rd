@@ -20,8 +20,8 @@ Default \code{getOption("digits")}.}
 \description{
 Reports the populations compared, the observed statistic and the
 permutation \eqn{p} value of a \code{\link{global_test}} analysis. An
-estimate of zero is reported as being below \eqn{1/B}, the resolution of
-\eqn{B} permutation replicates.
+estimate at the resolution limit \eqn{1/(B+1)} is marked as the minimum
+for \eqn{B} permutation replicates.
 }
 \examples{
 control <- generate_category_graphs(n_graphs = 20, n_nodes = 10,

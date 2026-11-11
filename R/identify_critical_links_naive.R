@@ -3,8 +3,8 @@
 # ---------------------------------------------------------------------------
 # This function recomputes the test statistic T from scratch after every edge
 # removal and regenerates the full permutation null at each step.  Its
-# complexity is O(K * B * |E| * m) -- the "naive" baseline described in the
-# paper.  It is kept internally for benchmarking and as a correctness
+# distance-based complexity is O(K * B * |E| * m * n), where n is the total
+# number of graphs. It is kept internally for benchmarking and as a correctness
 # reference for the optimised `identify_critical_links()`; it is NOT exported.
 #
 #' @noRd

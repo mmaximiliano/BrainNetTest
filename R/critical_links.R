@@ -25,10 +25,8 @@
 
 #' Format a permutation p value for display
 #'
-#' The estimate is a proportion out of `n_permutations` draws, so it cannot
-#' resolve below 1 / n_permutations; report that bound rather than a
-#' misleading zero. The bound is rounded to two significant digits so that,
-#' say, 3000 replicates read "< 0.00033" rather than "< 0.0003333333".
+#' The observed value is counted among B + 1 values, so the minimum p-value
+#' is 1 / (B + 1). Mark that minimum and round it to two significant digits.
 #'
 #' @noRd
 #' @keywords internal
