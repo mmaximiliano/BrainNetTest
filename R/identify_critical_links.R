@@ -13,8 +13,8 @@
 #'
 #' @param populations A named \code{list} with at least two elements. Each
 #'   element is itself a list of square, binary, symmetric adjacency matrices
-#'   (zero diagonal, no self-loops). All graphs must share the same number of
-#'   nodes.
+#'   (zero diagonal, no self-loops), with at least two graphs per population.
+#'   All graphs must have at least one node and share the same number of nodes.
 #' @param alpha Numeric significance level used both for the global test and
 #'   for the iterative edge-removal stopping rule. Default \code{0.05}.
 #' @param method Character string selecting the marginal edge test used to
@@ -147,9 +147,7 @@ identify_critical_links <- function(populations,
 
   cl <- match.call()
   if (!is.null(seed)) set.seed(seed)
-  if (!is.list(populations) || length(populations) < 2)
-    stop("`populations` must be a list with at least 2 groups.")
-  .check_populations(populations, binary = TRUE)
+  .check_inference_populations(populations)
   batch_size     <- .check_count(batch_size, "batch_size")
   n_permutations <- .check_count(n_permutations, "n_permutations")
   alpha          <- .check_proportion(alpha, "alpha")

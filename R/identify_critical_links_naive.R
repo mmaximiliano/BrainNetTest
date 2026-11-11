@@ -20,9 +20,7 @@ identify_critical_links_naive <- function(populations,
 
   cl <- match.call()
   if (!is.null(seed)) set.seed(seed)
-  if (!is.list(populations) || length(populations) < 2)
-    stop("`populations` must be a list with at least 2 groups.")
-  .check_populations(populations, binary = TRUE)
+  .check_inference_populations(populations)
   batch_size     <- .check_count(batch_size, "batch_size")
   n_permutations <- .check_count(n_permutations, "n_permutations")
   alpha          <- .check_proportion(alpha, "alpha")
