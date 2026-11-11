@@ -11,8 +11,8 @@ generate_category_graphs(
   community_sizes = NULL,
   base_intra_prob = 0.8,
   base_inter_prob = 0.2,
-  intra_prob_variation = 0.05,
-  inter_prob_variation = 0.05,
+  intra_prob_variation = 0,
+  inter_prob_variation = 0,
   seed = NULL
 )
 }
@@ -34,11 +34,15 @@ sets the base probability for the corresponding community. Default is 0.8.}
 \item{base_inter_prob}{A numeric value between 0 and 1 specifying the base probability
 of an edge existing between nodes from different communities. Default is 0.2.}
 
-\item{intra_prob_variation}{A numeric value specifying the maximum variation to apply
-to the intra-community probability for each graph. Default is 0.05.}
+\item{intra_prob_variation}{A numeric value \eqn{v \ge 0}. If positive, the
+within-community probability of each community is shifted, in every graph, by an
+amount drawn uniformly from \eqn{[-v, v]}, independently for each community and
+each graph (and truncated to \eqn{[0, 1]}). Default is 0: no variation, all
+graphs share the same probabilities.}
 
-\item{inter_prob_variation}{A numeric value specifying the maximum variation to apply
-to the inter-community probability for each graph. Default is 0.05.}
+\item{inter_prob_variation}{A numeric value \eqn{v \ge 0}. If positive, the
+between-community probability of every graph is shifted by an amount drawn
+uniformly from \eqn{[-v, v]}, independently for each graph. Default is 0.}
 
 \item{seed}{An optional integer for setting the random seed to ensure reproducibility.
 Default is NULL.}
@@ -49,9 +53,11 @@ A list of symmetric binary adjacency matrices with no self-loops, representing
 }
 \description{
 This function generates a list of adjacency matrices representing brain networks
-belonging to the same category (e.g., Control group). The generated graphs have
-similar community structures but vary slightly in their intra-community and
-inter-community connection probabilities to reflect natural variability.
+belonging to the same category (e.g., Control group). Every graph has the same
+community structure, and each edge is an independent Bernoulli variable with the
+within- or between-community probability. By default all graphs share the same
+probabilities; optionally, the probabilities of each graph can be shifted at random
+(see \code{intra_prob_variation} and \code{inter_prob_variation}).
 }
 \examples{
 # Generate a set of 5 graphs for the Control category

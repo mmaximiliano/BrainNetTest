@@ -1,3 +1,18 @@
+# BrainNetTest 0.3.0
+
+* **Combined stopping criterion.** `identify_critical_links()` and `global_test()` gain an argument `criterion`.
+  - `"combined"`, the new default, evaluates the global statistic T together with the local statistic U, the smallest marginal p-value of the remaining edges, in one permutation test. The two statistics come from the same permutations, so no correction for using two statistics is needed.
+  - T adds the contributions of all edges, so it dilutes a difference concentrated in a few edges. The combined criterion recovers such differences: a single strongly altered edge is detected, where T alone may miss it in large networks. When the difference is spread over many edges it behaves as T alone.
+  - `"original"` keeps T alone, as in earlier versions.
+  - For two populations and Fisher's test, the marginal p-values of the permutation replicates are read from a precomputed table of the hypergeometric distribution. With other tests or more populations, each distinct vector of edge counts is tested once, which is slower.
+* **p-values counted among B + 1 values.** All permutation p-values now count the observed data as one more element of the set of B + 1 values: p = (1 + #{b : T_b <= T_obs}) / (B + 1) (Phipson and Smyth, 2010). This guarantees P(p <= alpha) <= alpha under the null hypothesis, and p is never below 1 / (B + 1).
+  - Up to 0.2.2 the p-value was #{b : T_b < T_obs} / B. With `criterion = "original"` and the same seed, results can therefore differ slightly from those versions, usually by one edge at the boundary.
+* **New components in the `global_test()` result:** `p_value_global` and `p_value_local` (the p-values of T and of U on their own), `local_statistic` (the observed U) and `criterion`.
+* **Print and summary methods.** They report the criterion. A p-value equal to 1 / (B + 1), the smallest attainable, is printed as "(minimum)".
+* **`method` argument in `global_test()`.** It selects the marginal test used for U.
+* **No per-graph variation by default in `generate_category_graphs()`.** The defaults of `intra_prob_variation` and `inter_prob_variation` change from 0.05 to 0, so by default every graph is drawn with the same within- and between-community probabilities and all edges are independent. A positive value still shifts the probabilities of each graph by a uniform random amount in [-v, v]. Code that relied on the old defaults must now pass 0.05 explicitly.
+* **Bug fix.** `identify_critical_links()` no longer mishandles the permutation replicates when there is a single candidate edge.
+
 # BrainNetTest 0.2.2
 
 * New function `global_test()` runs the permutation test for a difference

@@ -34,6 +34,12 @@
 #'   (see \code{\link{compute_test_statistic}}). Default \code{1}.
 #' @param seed Optional integer seed for reproducibility of the permutation
 #'   replicates. Default \code{NULL}.
+#' @param criterion Character string selecting the test used at every step
+#'   of the procedure. \code{"combined"} (default) evaluates T together with
+#'   the local statistic U, the smallest marginal p-value of the remaining
+#'   edges, in one permutation test, so that differences concentrated in a
+#'   few edges are not diluted; \code{"original"} uses T alone, as in
+#'   versions up to 0.2.2. See Details.
 #'
 #' @return An object of class \code{"critical_links"}: a \code{list} with the
 #'   components
@@ -47,7 +53,8 @@
 #'     \item{modified_populations}{the input \code{populations} with the
 #'       critical edges zeroed out in every graph.}
 #'     \item{p_value}{the permutation \eqn{p} value of the global test on the
-#'       unmodified data, \code{NA} when there were no candidate edges.}
+#'       unmodified data (combined or original, according to
+#'       \code{criterion}), \code{NA} when there were no candidate edges.}
 #'     \item{n_edges}{the number of candidate edges considered.}
 #'     \item{settings}{the arguments the analysis ran with.}
 #'     \item{call}{the matched call.}
@@ -69,10 +76,41 @@
 #'   labels across the pooled sample of all graphs, while preserving the
 #'   original group sizes (sampling without replacement).
 #'
+#'   All p-values treat the observed data as one more element of the set of
+#'   \eqn{B + 1} values: \eqn{p = (1 + \#\{b : T_b \le T_{obs}\}) / (B + 1)},
+#'   so that \eqn{P(p \le \alpha) \le \alpha} under the null hypothesis and
+#'   \eqn{p \ge 1 / (B + 1)} (Phipson and Smyth, 2010).
+#'
+#'   With \code{criterion = "combined"}, the global p-value of T and the
+#'   local p-value of U are computed for the observed data and for every
+#'   replicate, among the same \eqn{B + 1} values; \eqn{Q_j} is the smaller of
+#'   the two, and the combined p-value is the proportion of the \eqn{B + 1}
+#'   values of Q that are at most \eqn{Q_0}, the observed one. Because both
+#'   statistics come from the same permutations, no correction for using two
+#'   statistics is needed. After removing the first s ranked edges, U is the
+#'   marginal p-value of the next edge in the ranking. For two populations and
+#'   Fisher's test, the marginal p-values of the replicates are read from a
+#'   precomputed table of the hypergeometric distribution; otherwise each
+#'   distinct vector of edge counts is tested once, which is slower. The
+#'   combined criterion stores an |E| x B matrix of p-values in addition to the
+#'   matrix of contributions to T.
+#'
+#'   With \code{criterion = "original"} and the same seed, the critical edges
+#'   can differ slightly from those of versions up to 0.2.2, which estimated the
+#'   p-value as \eqn{\#\{b : T_b < T_{obs}\} / B}.
+#'
 #' @references
 #' Fraiman, D. and Fraiman, R. (2018) An ANOVA approach for statistical
 #' comparisons of brain networks. \emph{Scientific Reports}, 8, 4746.
 #' \doi{10.1038/s41598-018-23152-5}.
+#'
+#' Phipson, B. and Smyth, G. K. (2010) Permutation p-values should never be
+#' zero: calculating exact p-values when permutations are randomly drawn.
+#' \emph{Statistical Applications in Genetics and Molecular Biology}, 9(1),
+#' Article 39. \doi{10.2202/1544-6115.1585}.
+#'
+#' Westfall, P. H. and Young, S. S. (1993) \emph{Resampling-Based Multiple
+#' Testing}. Wiley, New York.
 #'
 #' @seealso \code{\link{print.critical_links}},
 #'   \code{\link{summary.critical_links}}, \code{\link{plot.critical_links}},
@@ -104,7 +142,8 @@ identify_critical_links <- function(populations,
                                     batch_size     = 1,
                                     n_permutations = 1000,
                                     a              = 1,
-                                    seed           = NULL) {
+                                    seed           = NULL,
+                                    criterion      = c("combined", "original")) {
 
   cl <- match.call()
   if (!is.null(seed)) set.seed(seed)
@@ -115,10 +154,12 @@ identify_critical_links <- function(populations,
   n_permutations <- .check_count(n_permutations, "n_permutations")
   alpha          <- .check_proportion(alpha, "alpha")
   a              <- .check_positive(a, "a")
+  criterion      <- match.arg(criterion)
 
   settings <- list(alpha = alpha, method = method,
                    adjust_method = adjust_method, batch_size = batch_size,
-                   n_permutations = n_permutations, a = a, seed = seed)
+                   n_permutations = n_permutations, a = a, seed = seed,
+                   criterion = criterion)
 
   Npop <- lengths(populations)
 
@@ -154,9 +195,35 @@ identify_critical_links <- function(populations,
   ## Summed in the same (upper-triangle) order as in global_test(), so that
   ## the two functions evaluate bit-identical statistics on the same draws.
   T_perm0     <- colSums(delta_all)
-  prefix_perm <- t(apply(perm_deltas, 1, cumsum))
+  ## B x |E| prefix sums (apply() drops to a vector when there is one edge)
+  prefix_perm <- if (n_edges == 1L) perm_deltas else t(apply(perm_deltas, 1, cumsum))
 
-  initial_p <- mean(T_perm0 < T0)
+  B  <- n_permutations
+  Po <- c(0, prefix_obs)
+  ## T after removing the first s ranked edges, observed value first, then the
+  ## B permutation replicates (s = 0: no edge removed).
+  T_after <- function(s) {
+    if (s == 0L) c(T0, T_perm0) else c(T0 - Po[s + 1L], T_perm0 - prefix_perm[, s])
+  }
+
+  if (criterion == "combined") {
+    ## Local statistic U = smallest marginal p value of the remaining edges,
+    ## in the observed data and in every replicate (same permutations as T).
+    ## Row s + 1 of U_after holds U after removing the first s ranked edges.
+    obs_counts <- do.call(cbind, lapply(seq_along(Npop), function(k)
+      freq$edge_counts[, , k][obs_delta_info$indices]))
+    if (!is.matrix(obs_counts)) obs_counts <- matrix(obs_counts, nrow = 1L)
+    pv <- .marginal_pvalues(obs_counts, C_list, Npop, method)
+    U_after <- rbind(cbind(.suffix_min(pv$obs[map_idx]),
+                           apply(pv$perm[map_idx, , drop = FALSE], 2, .suffix_min)),
+                     1)
+    rm(pv)
+    p_at <- function(s) .combined_pvalue(T_after(s), U_after[s + 1L, ])
+  } else {
+    p_at <- function(s) .plus_one_pvalue(T_after(s))
+  }
+
+  initial_p <- p_at(0L)
   if (initial_p > alpha) {
     warning("Initial test is not significant (p = ",
             round(initial_p, 4),
@@ -169,12 +236,21 @@ identify_critical_links <- function(populations,
   if (length(batch_steps) == 0L || batch_steps[length(batch_steps)] != n_edges)
     batch_steps <- c(batch_steps, n_edges)
 
-  delta_vec  <- T_perm0 - T0
-  R_at_steps <- sweep(prefix_perm[, batch_steps, drop = FALSE],
-                      2, prefix_obs[batch_steps])
-  p_at_steps <- colMeans(R_at_steps > delta_vec)
-
-  nonsig_idx <- which(p_at_steps > alpha)[1]
+  if (criterion == "original") {
+    ## All steps at once: T values after every batch of removals, compared
+    ## with the observed value of the same step.
+    T_obs_steps  <- T0 - prefix_obs[batch_steps]
+    T_perm_steps <- T_perm0 - prefix_perm[, batch_steps, drop = FALSE]
+    p_at_steps   <- (1 + colSums(sweep(T_perm_steps, 2, T_obs_steps, "<="))) / (B + 1)
+    nonsig_idx   <- which(p_at_steps > alpha)[1]
+  } else {
+    ## The ranks of T and U change with every step, so the combined p value is
+    ## evaluated step by step until it exceeds alpha.
+    nonsig_idx <- NA_integer_
+    for (b in seq_along(batch_steps)) {
+      if (p_at(batch_steps[b]) > alpha) { nonsig_idx <- b; break }
+    }
+  }
   k_removed  <- if (is.na(nonsig_idx)) n_edges else batch_steps[nonsig_idx]
 
   edges_removed <- vector("list", k_removed)

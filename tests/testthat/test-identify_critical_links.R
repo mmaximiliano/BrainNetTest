@@ -70,11 +70,16 @@ test_that("one-shot p-values are exactly equal to while-loop (batch_size = 1)", 
   skip_on_cran()
   set.seed(42)
 
-  # Build deterministic prefix-sum data from a known setup
+  # Build deterministic prefix-sum data from a known setup (per-graph variation
+  # 0.05, the default before 0.3.0, so that the data are those of earlier versions;
+  # with exact ties between T_b and T_obs the two reference rules can differ by
+  # floating-point rounding)
   control <- generate_category_graphs(n_graphs = 15, n_nodes = 10,
-    n_communities = 2, base_intra_prob = 0.8, base_inter_prob = 0.2, seed = 10)
+    n_communities = 2, base_intra_prob = 0.8, base_inter_prob = 0.2,
+    intra_prob_variation = 0.05, inter_prob_variation = 0.05, seed = 10)
   patient <- generate_category_graphs(n_graphs = 15, n_nodes = 10,
-    n_communities = 2, base_intra_prob = 0.5, base_inter_prob = 0.5, seed = 20)
+    n_communities = 2, base_intra_prob = 0.5, base_inter_prob = 0.5,
+    intra_prob_variation = 0.05, inter_prob_variation = 0.05, seed = 20)
   pops <- list(Control = control, Patient = patient)
 
   # Run the full optimised function to extract internals.
@@ -351,7 +356,8 @@ test_that("identify_critical_links agrees with naive implementation on small dat
   # Use the same seed inside both; Monte Carlo noise is small with B=500
   # but deltas are identical between implementations by construction, so
   # disagreement must stay within a small tolerance in k_removed.
-  fast  <- identify_critical_links(pops, n_permutations = 500, seed = 321)
+  fast  <- identify_critical_links(pops, n_permutations = 500, seed = 321,
+                                   criterion = "original")
   slow  <- naive(pops, n_permutations = 500, seed = 321)
 
   k_fast <- if (is.null(fast$critical_edges)) 0 else nrow(fast$critical_edges)

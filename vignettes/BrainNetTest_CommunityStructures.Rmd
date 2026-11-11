@@ -57,8 +57,10 @@ illustrated at the end of this vignette.
 ## Simulating populations of graphs
 
 `generate_category_graphs()` produces a list of graphs that share a common
-community structure but vary slightly in their edge probabilities across
-replicates, modelling natural between-subject variability.
+community structure: each edge is present independently with the within- or
+between-community probability, the same for every graph. (The arguments
+`intra_prob_variation` and `inter_prob_variation` can add a random shift of the
+probabilities of each graph; they are 0 by default.)
 
 ```{r}
 control <- generate_category_graphs(
@@ -67,8 +69,6 @@ control <- generate_category_graphs(
   n_communities        = 2,
   base_intra_prob      = 0.8,
   base_inter_prob      = 0.2,
-  intra_prob_variation = 0.05,
-  inter_prob_variation = 0.05,
   seed                 = 1)
 
 patient <- generate_category_graphs(
@@ -77,8 +77,6 @@ patient <- generate_category_graphs(
   n_communities        = 2,
   base_intra_prob      = 0.6,
   base_inter_prob      = 0.4,
-  intra_prob_variation = 0.05,
-  inter_prob_variation = 0.05,
   seed                 = 2)
 
 populations <- list(Control = control, Patient = patient)

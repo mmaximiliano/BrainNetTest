@@ -30,7 +30,8 @@ identify_critical_links_naive <- function(populations,
 
   settings <- list(alpha = alpha, method = method,
                    adjust_method = adjust_method, batch_size = batch_size,
-                   n_permutations = n_permutations, a = a, seed = seed)
+                   n_permutations = n_permutations, a = a, seed = seed,
+                   criterion = "original")
 
   ## 0. Metadata ------------------------------------------------------------
   Npop <- lengths(populations)
@@ -61,7 +62,7 @@ identify_critical_links_naive <- function(populations,
       names(perm_pops) <- names(pops)
       T_perm[b] <- compute_test_statistic(perm_pops, a = a_val)
     }
-    mean(T_perm < T_obs)
+    (1 + sum(T_perm <= T_obs)) / (n_perm + 1)   # observed value counted, as in Eq. (pvalue)
   }
 
   ## 2. Global test ---------------------------------------------------------

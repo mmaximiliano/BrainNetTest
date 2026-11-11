@@ -30,8 +30,6 @@ control_graphs <- generate_category_graphs(
   n_communities = 2,
   base_intra_prob = 0.8,
   base_inter_prob = 0.2,
-  intra_prob_variation = 0.05,
-  inter_prob_variation = 0.05,
   seed = 1
 )
 patient_graphs <- generate_category_graphs(
@@ -40,8 +38,6 @@ patient_graphs <- generate_category_graphs(
   n_communities = 2,
   base_intra_prob = 0.6,
   base_inter_prob = 0.4,
-  intra_prob_variation = 0.05,
-  inter_prob_variation = 0.05,
   seed = 2
 )
 populations <- list(Control = control_graphs, Patient = patient_graphs)
