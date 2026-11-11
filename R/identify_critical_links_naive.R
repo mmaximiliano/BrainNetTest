@@ -50,8 +50,10 @@ identify_critical_links_naive <- function(populations,
                            settings, cl))
 
   ## Helper: permutation p-value for the current populations ----------------
-  .permutation_pvalue <- function(pops, Npop_vec, n_total, n_perm, a_val) {
-    T_obs      <- compute_test_statistic(pops, a = a_val)
+  .permutation_pvalue <- function(pops, Npop_vec, n_total, n_perm, edges) {
+    ## Normalisation is immaterial to ranks; keep a = 1 to avoid artificial
+    ## underflow/overflow, as in the optimised implementation.
+    T_obs      <- compute_test_statistic(pops, a = 1)
     all_graphs <- unlist(pops, recursive = FALSE)
     T_perm     <- numeric(n_perm)
     for (b in seq_len(n_perm)) {
@@ -60,13 +62,16 @@ identify_critical_links_naive <- function(populations,
       perm_pops <- lapply(seq_along(Npop_vec), function(k)
         all_graphs[perm_idx[(cumN[k] + 1L):cumN[k + 1L]]])
       names(perm_pops) <- names(pops)
-      T_perm[b] <- compute_test_statistic(perm_pops, a = a_val)
+      T_perm[b] <- compute_test_statistic(perm_pops, a = 1)
     }
-    (1 + sum(T_perm <= T_obs)) / (n_perm + 1)   # observed value counted, as in Eq. (pvalue)
+    ## The reference sums both triangles, hence twice the allowance used
+    ## for the same number of retained candidates by the optimised path.
+    .plus_one_pvalue(c(T_obs, T_perm),
+      2 * .statistic_tolerance(Npop_vec, edges))
   }
 
   ## 2. Global test ---------------------------------------------------------
-  initial_p <- .permutation_pvalue(populations, Npop, n, n_permutations, a)
+  initial_p <- .permutation_pvalue(populations, Npop, n, n_permutations, n_edges)
   if (initial_p > alpha) {
     warning("Initial test is not significant (p = ",
             round(initial_p, 4),
@@ -97,7 +102,8 @@ identify_critical_links_naive <- function(populations,
     k_removed <- batch_end
 
     ## Recompute T and permutation null FROM SCRATCH -----------------------
-    p_k      <- .permutation_pvalue(populations, Npop, n, n_permutations, a)
+    p_k <- .permutation_pvalue(populations, Npop, n, n_permutations,
+                              n_edges - k_removed)
     continue <- (p_k <= alpha)
   }
 

@@ -31,7 +31,9 @@
 #'   components
 #'   \describe{
 #'     \item{statistic}{the observed value of T, computed with normalisation
-#'       constant \code{a = 1}.}
+#'       constant \code{a = 1}. Numerical comparisons use the
+#'       permutation-symmetric floating-point allowance described in
+#'       \code{\link{identify_critical_links}}.}
 #'     \item{p_value}{the permutation \eqn{p} value of the chosen
 #'       \code{criterion}, computed among the \eqn{B + 1} values that include
 #'       the observed one; \code{NA} when the graphs have a single node and
@@ -132,7 +134,7 @@ global_test <- function(populations, n_permutations = 1000, seed = NULL,
 
   freq  <- compute_edge_frequencies(populations)
   obs   <- .observed_edge_deltas(freq$edge_counts, group_sizes, a = 1)
-  T_obs <- both_triangles * sum(obs$deltas)
+  T_obs <- both_triangles * colSums(matrix(obs$deltas, ncol = 1L))[1L]
 
   if (nrow(obs$indices) == 0L) {
     ## A single node: no edges, every distance is zero and T is identically 0.
@@ -143,7 +145,9 @@ global_test <- function(populations, n_permutations = 1000, seed = NULL,
     C_list  <- .permuted_edge_counts(X, group_sizes, n_permutations)
     T_perm  <- both_triangles *
                colSums(.permuted_edge_deltas(C_list, group_sizes, a = 1))
-    p_global <- .plus_one_pvalue(c(T_obs, T_perm))
+    tolerance <- both_triangles *
+      .statistic_tolerance(group_sizes, nrow(obs$indices))
+    p_global <- .plus_one_pvalue(c(T_obs, T_perm), tolerance)
     p_local  <- U_obs <- NA_real_
     p_value  <- p_global
     if (criterion == "combined") {
@@ -154,7 +158,7 @@ global_test <- function(populations, n_permutations = 1000, seed = NULL,
       U_all   <- c(min(pv$obs), apply(pv$perm, 2, min))
       U_obs   <- U_all[1L]
       p_local <- .plus_one_pvalue(U_all)
-      p_value <- .combined_pvalue(c(T_obs, T_perm), U_all)
+      p_value <- .combined_pvalue(c(T_obs, T_perm), U_all, tolerance)
     }
   }
 

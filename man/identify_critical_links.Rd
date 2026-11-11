@@ -123,6 +123,15 @@ The implementation exploits the fact that T decomposes as a sum of
   With \code{criterion = "original"} and the same seed, the critical edges
   can differ slightly from those of versions up to 0.2.2, which estimated the
   p-value as \eqn{\#\{b : T_b < T_{obs}\} / B}.
+
+  Numerical comparisons include a conservative floating-point allowance
+  derived from the number of retained edges, group sizes and bounds on the
+  unsigned terms of T. The same allowance is applied to every assignment.
+  The cumulative sums are evaluated in reverse order to avoid cancellation
+  when a large removed prefix leaves a small remainder. Local p-values use
+  only a relative allowance of eight machine epsilons, with no absolute
+  floor. Inference uses \code{a = 1} internally: any positive normalisation
+  gives the same ranks.
 }
 \examples{
 \donttest{

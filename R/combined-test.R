@@ -76,11 +76,37 @@
 ## Combined p value from the B + 1 values (observed first) of T and U:
 ## Q_j = min(rank of T_j, rank of U_j) / (B + 1), ties taking the largest rank,
 ## and p = #{j : Q_j <= Q_0} / (B + 1).
-.combined_pvalue <- function(T_all, U_all) {
-  Q <- pmin(rank(T_all, ties.method = "max"), rank(U_all, ties.method = "max"))
+.combined_pvalue <- function(T_all, U_all, tolerance = 0) {
+  if (length(T_all) != length(U_all))
+    stop("T and U must contain the same observed and permuted assignments.")
+  Q <- pmin(.permutation_ranks(T_all, tolerance), .permutation_ranks(U_all))
   mean(Q <= Q[1L])
 }
 
 ## p value of a statistic for which small values are evidence against H0,
 ## from its B + 1 values (observed first): #{j : x_j <= x_0} / (B + 1).
-.plus_one_pvalue <- function(x_all) mean(x_all <= x_all[1L])
+.plus_one_pvalue <- function(x_all, tolerance = 0) {
+  margin <- .comparison_margin(x_all, tolerance)
+  mean(x_all <= x_all[1L] + margin[1L])
+}
+
+## Extend each empirical left tail only by its numerical error allowance.
+## With zero allowance these are the usual largest ranks for exact ties.
+## Applying the SAME rule to all B+1 assignments is permutation equivariant;
+## the final exact rank of the integer Q values therefore remains a valid
+## randomization calibration. No observed-only rounding is used.
+.permutation_ranks <- function(x, tolerance = 0) {
+  margin <- .comparison_margin(x, tolerance)
+  findInterval(x + margin, sort(x))
+}
+
+.comparison_margin <- function(x, tolerance = 0) {
+  if (!length(x) || any(!is.finite(x)))
+    stop("Permutation statistics must be non-empty and finite.")
+  if (!(length(tolerance) %in% c(1L, length(x))) ||
+      any(!is.finite(tolerance)) || any(tolerance < 0))
+    stop("Numerical tolerances must be finite and non-negative.")
+  ## A few ulps for ordinary evaluation/multiplication, with NO absolute
+  ## floor: e.g. distinct Fisher p-values of 1e-100 and 2e-100 stay distinct.
+  tolerance + 8 * .Machine$double.eps * abs(x)
+}
