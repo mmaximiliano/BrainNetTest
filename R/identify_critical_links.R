@@ -214,9 +214,12 @@ identify_critical_links <- function(populations,
       freq$edge_counts[, , k][obs_delta_info$indices]))
     if (!is.matrix(obs_counts)) obs_counts <- matrix(obs_counts, nrow = 1L)
     pv <- .marginal_pvalues(obs_counts, C_list, Npop, method)
-    U_after <- rbind(cbind(.suffix_min(pv$obs[map_idx]),
-                           apply(pv$perm[map_idx, , drop = FALSE], 2, .suffix_min)),
-                     1)
+    # apply() simplifies to a vector with one possible edge. Restore the
+    # E x B shape before adjoining the observed column and final empty step.
+    U_perm <- matrix(
+      apply(pv$perm[map_idx, , drop = FALSE], 2, .suffix_min),
+      nrow = n_edges, ncol = B)
+    U_after <- rbind(cbind(.suffix_min(pv$obs[map_idx]), U_perm), 1)
     rm(pv)
     p_at <- function(s) .combined_pvalue(T_after(s), U_after[s + 1L, ])
   } else {
