@@ -23,8 +23,9 @@
 #'   requires exactly two populations. See
 #'   \code{\link{compute_edge_pvalues}}.
 #' @param adjust_method Character string passed to \code{\link[stats]{p.adjust}}
-#'   for multiplicity correction of the marginal p-values. Default
-#'   \code{"none"}.
+#'   for multiplicity correction of the marginal p-values (one of
+#'   \code{\link[stats]{p.adjust.methods}}, validated even when the graphs have
+#'   no edges). Default \code{"none"}.
 #' @param batch_size Positive integer giving the number of edges to drop per
 #'   iteration. Larger values speed up the procedure at the cost of coarser
 #'   resolution. Default \code{1}.
@@ -157,6 +158,7 @@ identify_critical_links <- function(populations,
   a              <- .check_positive(a, "a")
   criterion      <- match.arg(criterion)
   method         <- .check_edge_method(method, length(populations))
+  adjust_method  <- .check_adjust_method(adjust_method)
 
   settings <- list(alpha = alpha, method = method,
                    adjust_method = adjust_method, batch_size = batch_size,

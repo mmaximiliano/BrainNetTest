@@ -10,3 +10,14 @@
     stop("prop.test is only implemented for two populations.", call. = FALSE)
   method
 }
+
+# Validate p-value multiplicity adjustment method eagerly.
+.check_adjust_method <- function(adjust_method) {
+  choices <- stats::p.adjust.methods
+  if (!is.character(adjust_method) || length(adjust_method) != 1L ||
+      is.na(adjust_method) || !adjust_method %in% choices) {
+    stop("Invalid `adjust_method` specified. Must be one of ",
+         paste0('"', choices, '"', collapse = ", "), ".", call. = FALSE)
+  }
+  adjust_method
+}

@@ -32,8 +32,9 @@ requires exactly two populations. See
 \code{\link{compute_edge_pvalues}}.}
 
 \item{adjust_method}{Character string passed to \code{\link[stats]{p.adjust}}
-for multiplicity correction of the marginal p-values. Default
-\code{"none"}.}
+for multiplicity correction of the marginal p-values (one of
+\code{\link[stats]{p.adjust.methods}}, validated even when the graphs have
+no edges). Default \code{"none"}.}
 
 \item{batch_size}{Positive integer giving the number of edges to drop per
 iteration. Larger values speed up the procedure at the cost of coarser
