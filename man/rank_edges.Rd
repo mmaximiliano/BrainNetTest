@@ -4,10 +4,17 @@
 \alias{rank_edges}
 \title{Rank Edges Based on P-Values}
 \usage{
-rank_edges(edge_pvalues)
+rank_edges(edge_pvalues, tie_values = NULL)
 }
 \arguments{
 \item{edge_pvalues}{A square matrix of p-values for each edge, typically obtained from \code{compute_edge_pvalues}.}
+
+\item{tie_values}{Optional square numeric matrix with the same dimensions as
+\code{edge_pvalues} (such as unadjusted marginal p-values when
+\code{edge_pvalues} has been multiplicity-adjusted with
+\code{\link[stats]{p.adjust}}), used to break ties within each primary
+numerical tie group before falling back to endpoint order. Default
+\code{NULL}.}
 }
 \value{
 A data frame with edges and their corresponding p-values, ordered from most significant.

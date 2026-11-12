@@ -166,10 +166,13 @@ identify_critical_links <- function(populations,
   make_key <- function(i, j) paste(i, j, sep = "-")
 
   freq       <- compute_edge_frequencies(populations)
+  raw_pvals  <- if (identical(adjust_method, "none")) NULL else
+    compute_edge_pvalues(freq$edge_counts, Npop, method = method,
+                         adjust_method = "none")
   edge_pvals <- compute_edge_pvalues(freq$edge_counts, Npop,
                                      method        = method,
                                      adjust_method = adjust_method)
-  edge_df    <- rank_edges(edge_pvals)
+  edge_df    <- rank_edges(edge_pvals, tie_values = raw_pvals)
   n_edges    <- nrow(edge_df)
   if (n_edges == 0L)
     return(.critical_links(NULL, list(), populations, NA_real_, 0L,

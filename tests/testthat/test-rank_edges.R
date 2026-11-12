@@ -104,3 +104,21 @@ test_that("numerical tie groups do not grow by chaining neighbours", {
   expect_identical(edf$node1, c(1L, 2L, 1L))
   expect_identical(edf$node2, c(3L, 3L, 2L))
 })
+
+test_that("adjusted p-value plateaus break ties by raw marginal evidence", {
+  # Under Bonferroni on 6 edges, raw p = 0.20 and raw p = 1.00 both clamp to
+  # adjusted p = 1.00, while raw p = 0.001 becomes 0.006. Passing raw p-values
+  # as tie_values ranks the stronger raw edge (3, 4) ahead of dead edge (1, 2)
+  # while keeping the adjusted p-values in `p_value`.
+  raw <- matrix(1, 4, 4)
+  raw[1, 3] <- raw[3, 1] <- 0.001
+  raw[3, 4] <- raw[4, 3] <- 0.20
+  adj <- matrix(1, 4, 4)
+  adj[1, 3] <- adj[3, 1] <- stats::p.adjust(raw[upper.tri(raw)], "bonferroni")[2]
+
+  edf <- rank_edges(adj, tie_values = raw)
+  expect_identical(edf$node1[1:2], c(1L, 3L))
+  expect_identical(edf$node2[1:2], c(3L, 4L))
+  expect_identical(edf$p_value[1:2], c(0.006, 1))
+  expect_error(rank_edges(adj, tie_values = matrix(1, 3, 3)), "same dimensions")
+})
