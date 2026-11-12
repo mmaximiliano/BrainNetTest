@@ -25,8 +25,8 @@ graphs. The package provides:
 * utilities to build a central (mean) graph for a population and measure
   Manhattan (L1) distances between adjacency matrices;
 * the group test statistic `T` and its permutation test (`global_test`);
-* a fast procedure (`identify_critical_links`) that pinpoints the edges
-  driving between-group differences; and
+* an exploratory procedure (`identify_critical_links`) that ranks and
+  iteratively removes edges associated with between-group differences; and
 * helpers to simulate synthetic community-structured graphs and to visualise
   networks.
 
@@ -81,8 +81,9 @@ compute_distance(population[[1]], central)
 ### The group test statistic `T`
 
 `compute_test_statistic()` aggregates within- and between-group Manhattan
-distances into the statistic `T`. Larger values indicate stronger evidence
-that the groups differ:
+distances into the statistic `T`. More negative (smaller) values indicate
+stronger evidence that the groups differ, because graphs tend to lie closer to
+their own population's central graph than to the other populations' centres:
 
 ```{r}
 control <- replicate(
@@ -99,27 +100,34 @@ compute_test_statistic(populations, a = 1)
 ### The global test
 
 `compute_test_statistic()` returns only the observed value. `global_test()`
-assesses it: it permutes the group labels across the pooled sample, keeping
-the group sizes, recomputes `T` for each permutation, and reports the
-proportion of permutations with a statistic smaller than the observed one as
-the p-value. The normalisation constant `a` is fixed at 1; the p-value does
-not depend on it.
+assesses group differences by permuting the group labels across the pooled
+sample while preserving the group sizes (requiring exchangeable group labels
+under the null; equal edge means alone are not sufficient). By default
+(`criterion = "combined"`), it combines `T` with the smallest marginal edge
+p-value `U` across the same permutations; `criterion = "original"` evaluates the
+lower tail of `T` alone. The normalisation constant `a` is fixed at 1, because
+rescaling by a positive constant leaves permutation ranks unchanged.
 
 ```{r}
 gt <- global_test(populations, n_permutations = 500, seed = 42)
 gt
 ```
 
-The permutation null distribution is kept in `gt$null_distribution`, so it
-can be inspected or plotted. With `B` permutations the p-value cannot resolve
-below `1 / B`, which is how an estimate of zero is reported.
+The permutation null distribution of `T` is kept in `gt$null_distribution`, so
+it can be inspected or plotted. Because the observed sample is counted among
+the `B + 1` values, permutation p-values are never below `1 / (B + 1)`, which is
+marked as `(minimum)` when attained.
 
-### Critical edges
+### Exploring candidate edges
 
-Once a difference is established, `identify_critical_links()` looks for the
-edges responsible. It runs the same global test first and then iteratively
-removes edges, ranked by their marginal p-values, until the populations are no
-longer distinguishable:
+Once a global difference is detected, `identify_critical_links()` explores which
+edges are associated with that difference. It runs the same global test first
+and then iteratively removes edges, ranked by their marginal p-values, until the
+test on the remaining edges rises above `alpha`. This selection step is
+exploratory: it does not establish edge-level family-wise error or false
+discovery rate control, and stopping does not prove that the remaining networks
+are equal. Always report the initial global p-value separately from the
+selected edges:
 
 ```{r}
 result <- identify_critical_links(
