@@ -11,6 +11,7 @@
 * **Print and summary methods.** They report the criterion. A p-value equal to 1 / (B + 1), the smallest attainable, is printed as "(minimum)".
 * **`method` argument in `global_test()`.** It selects the marginal test used for U.
 * **No per-graph variation by default in `generate_category_graphs()`.** The defaults of `intra_prob_variation` and `inter_prob_variation` change from 0.05 to 0, so by default every graph is drawn with the same within- and between-community probabilities and all edges are independent. A positive value still shifts the probabilities of each graph by a uniform random amount in [-v, v]. Code that relied on the old defaults must now pass 0.05 explicitly.
+* **Equal group sizes required for T-based tests.** `compute_test_statistic()`, `global_test()`, and `identify_critical_links()` now require equal group sizes (at least two groups with at least two graphs per group), because unequal group sizes can shift `T` away from the lower-tail rejection region under genuine group differences. Descriptive summaries and marginal edge tests (`compute_central_graph()`, `compute_edge_frequencies()`, and `compute_edge_pvalues()`) still accept unequal group sizes.
 * **Bug fix.** `identify_critical_links()` no longer mishandles the permutation replicates when there is a single candidate edge.
 
 # BrainNetTest 0.2.2

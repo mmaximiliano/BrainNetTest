@@ -36,3 +36,13 @@ test_that("balanced designs and descriptive summaries remain available", {
   pops <- list(A = rep(list(g), 2), B = rep(list(g), 3))
   expect_equal(compute_edge_frequencies(pops)$edge_counts, array(0, c(3, 3, 2)))
 })
+
+test_that("compute_test_statistic rejects single-group inputs and invalid a", {
+  g <- matrix(0, 3, 3)
+  expect_error(compute_test_statistic(list(A = list(g, g))),
+               "at least 2 groups")
+  pops <- list(A = list(g, g), B = list(g, g))
+  for (bad_a in list(0, -1, NA_real_, Inf, c(1, 2), "1")) {
+    expect_error(compute_test_statistic(pops, a = bad_a), "`a`")
+  }
+})

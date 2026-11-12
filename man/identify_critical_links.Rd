@@ -125,11 +125,13 @@ The implementation exploits the fact that T decomposes as a sum of
   p-value as \eqn{\#\{b : T_b < T_{obs}\} / B}.
 }
 \section{Equal group sizes}{
-The current T test requires the same number of graphs in every group.
-With unequal group sizes, a real difference can move T away from the
-rejection tail. Such designs are rejected until a revised test is
-validated. The package does not drop observations to balance groups.
+
+  The current T test requires the same number of graphs in every group.
+  With unequal group sizes, a real difference can move T away from the
+  rejection tail. Such designs are rejected until a revised test is
+  validated. The package does not drop observations to balance groups.
 }
+
 \examples{
 \donttest{
 set.seed(1)

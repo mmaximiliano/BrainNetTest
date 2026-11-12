@@ -5,11 +5,12 @@
 #' This function computes the test statistic T to assess whether different
 #' populations of brain networks originate from the same distribution.
 #'
-#' @param populations A named list where each element is a list of adjacency
-#'   matrices for a population. Every group must have the same number of
-#'   graphs; unequal group sizes are not supported by the current T test. Example:
+#' @param populations A named list with at least two elements, where each
+#'   element is a list of adjacency matrices for a population. Every group must
+#'   have the same number of graphs; unequal group sizes are not supported by
+#'   the current T test. Example:
 #'   \code{list(Control = list(G1, G2, ...), PatientA = list(G1, G2, ...), PatientB = list(G1, G2, ...))}
-#' @param a A normalization constant. Default is 1.
+#' @param a Positive numeric normalization constant. Default is 1.
 #'
 #' @return A numeric value representing the test statistic T.
 #' @export
@@ -37,8 +38,12 @@
 #' print(T_value)
 compute_test_statistic <- function(populations, a = 1) {
   .check_populations(populations)
+  a <- .check_positive(a, "a")
   
   m <- length(populations)  # Number of populations
+  if (m < 2L) {
+    stop("`populations` must be a list with at least 2 groups.", call. = FALSE)
+  }
   n_i <- lengths(populations)  # Number of graphs in each population
   n <- sum(n_i)  # Total number of graphs
   
