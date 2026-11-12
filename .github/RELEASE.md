@@ -23,12 +23,17 @@ bash .github/scripts/prepare-release.sh "$commit" /tmp/BrainNetTest-release
 The output directory must be empty. To prepare an earlier approved commit,
 replace the value of `commit` with its full SHA. Inspect that commit's DESCRIPTION
 when installing dependencies. The tool builds in a temporary extracted snapshot
-and checks the resulting tarball using `R CMD check --as-cran --no-manual`.
+and checks the resulting tarball using `R CMD check --as-cran --no-manual` with
+`NOT_CRAN=true` by default (matching the GitHub Actions workflow so tests gated
+by `skip_on_cran()` still run; set `NOT_CRAN=false` explicitly to emulate CRAN's
+skipped-test mode, and check `build-metadata.txt` for the recorded value).
 Vignettes are built normally. PDF manual generation is excluded; perform that
 additional check with a LaTeX installation before a CRAN submission.
 
-An incomplete check, nonzero exit status, errors, or warnings fail preparation.
-Notes are preserved and must be reviewed.
+An incomplete check, nonzero exit status, errors, or warnings fail preparation
+with a diagnostic message pointing to the relevant log. Notes are printed to
+stderr, recorded in `check-summary.txt` (and `check-notes.txt` when present),
+and must be reviewed.
 If a step fails, inspect `build.log`, `environment.log`, `check-console.log`, and
 the `check/` directory as available. Use a new empty output directory to retry.
 

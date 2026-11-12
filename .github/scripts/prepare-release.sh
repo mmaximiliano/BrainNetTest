@@ -31,6 +31,7 @@ fi
 
 scratch=$(mktemp -d "${TMPDIR:-/tmp}/brainnettest-release.XXXXXX")
 trap 'rm -rf "$scratch"' EXIT
+export NOT_CRAN="${NOT_CRAN:-true}"
 mkdir "$scratch/source"
 git archive "$commit" | tar -x -C "$scratch/source"
 cp "$scratch/source/DESCRIPTION" "$output/source-DESCRIPTION"
@@ -42,13 +43,14 @@ cp "$script_path" "$output/prepare-release.sh"
   printf 'Preparation tool checksum: '
   "${hash_command[@]}" "$script_path"
   printf 'Built at (UTC): %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  printf 'NOT_CRAN: %s\n' "$NOT_CRAN"
   printf 'Build: R CMD build --no-manual <committed source>\n'
   printf 'Check: R CMD check --as-cran --no-manual <source archive>\n'
   printf 'Gate: errors and warnings fail; notes require review.\n'
   printf 'PDF manual generation is excluded from this preparation check.\n'
 } > "$output/build-metadata.txt"
 
-Rscript --vanilla - "$output" <<'RSCRIPT' > "$output/environment.log" 2>&1
+if ! Rscript --vanilla - "$output" <<'RSCRIPT' > "$output/environment.log" 2>&1
 out <- commandArgs(trailingOnly = TRUE)[1L]
 if (!requireNamespace("rcmdcheck", quietly = TRUE)) {
   stop("Install rcmdcheck and the source package's Depends/Imports/Suggests first.")
@@ -59,9 +61,16 @@ fields <- c("Package", "Version", "Built", "Priority")
 write.csv(installed[order(installed[, "Package"]), fields, drop = FALSE],
           file.path(out, "installed-packages.csv"), row.names = FALSE)
 RSCRIPT
+then
+  echo "Environment capture failed; inspect $output/environment.log" >&2
+  exit 1
+fi
 
 cd "$output"
-R CMD build --no-manual "$scratch/source" > build.log 2>&1
+if ! R CMD build --no-manual "$scratch/source" > build.log 2>&1; then
+  echo "R CMD build failed; inspect $output/build.log" >&2
+  exit 1
+fi
 archive=$(Rscript --vanilla -e '
   d <- read.dcf("source-DESCRIPTION")
   cat(paste0(d[1, "Package"], "_", d[1, "Version"], ".tar.gz"))')
@@ -70,15 +79,24 @@ test -f "$archive"
 
 # Check the built tarball, not the working tree. Keep the complete check folder
 # even if the check reports problems, so an unsuccessful run remains reviewable.
-Rscript --vanilla - "$archive" <<'RSCRIPT' > check-console.log 2>&1
+if ! Rscript --vanilla - "$archive" <<'RSCRIPT' > check-console.log 2>&1
 archive <- commandArgs(trailingOnly = TRUE)[1L]
 result <- rcmdcheck::rcmdcheck(archive,
   args = c("--as-cran", "--no-manual"), check_dir = "check", error_on = "never")
 capture.output(sessionInfo(), file = "check-session-info.txt")
-writeLines(c(paste("Process exit status:", result$status),
-             paste("Errors:", length(result$errors)),
-             paste("Warnings:", length(result$warnings)),
-             paste("Notes:", length(result$notes))), "check-summary.txt")
+summary_lines <- c(
+  paste("Process exit status:", result$status),
+  paste("Errors:", length(result$errors)),
+  paste("Warnings:", length(result$warnings)),
+  paste("Notes:", length(result$notes))
+)
+if (length(result$notes)) {
+  summary_lines <- c(summary_lines, "", "Note details:", result$notes)
+}
+writeLines(summary_lines, "check-summary.txt")
+if (length(result$notes)) {
+  writeLines(result$notes, "check-notes.txt")
+}
 logs <- list.files("check", pattern = "^00check[.]log$", recursive = TRUE,
                    full.names = TRUE)
 completed <- length(logs) == 1L &&
@@ -88,4 +106,19 @@ if (!identical(result$status, 0L) || !completed ||
   stop("Source check failed; inspect check-summary.txt and the check directory.")
 }
 RSCRIPT
+then
+  echo "Source check failed; inspect $output/check-summary.txt, $output/check-console.log, and $output/check/" >&2
+  if [[ -f check-summary.txt ]]; then
+    cat check-summary.txt >&2
+  fi
+  exit 1
+fi
+
+if [[ -f check-notes.txt ]]; then
+  echo "R CMD check reported NOTE(s) requiring review:" >&2
+  cat check-notes.txt >&2
+  if [[ "${GITHUB_ACTIONS:-}" == "true" ]]; then
+    echo "::warning::R CMD check reported NOTE(s); review check-summary.txt in the release artifacts."
+  fi
+fi
 printf 'Prepared source artifacts in %s\n' "$output"
