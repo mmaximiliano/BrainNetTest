@@ -134,3 +134,65 @@ test_that("retained sums avoid subtracting a nearly equal removed prefix", {
   expect_identical(slow$edges_removed, list(c(1L, 2L)))
 })
 
+test_that("marginal symmetries stay bit-identical across prop, chisq, and Fisher", {
+  ## Regression: prop.test(c(21, 14), c(24, 24)) and prop.test(c(14, 21), c(24, 24))
+  ## differ by ~15.83 machine epsilons, which previously split mirror permutations
+  ## and produced false significance (p = 0.033 vs 0.053) on reversed group order.
+  p_ab <- sparse_populations(24, c(21, 14))
+  p_ba <- sparse_populations(24, c(14, 21))
+  for (method in c("fisher", "chi.squared", "prop")) {
+    gt_ab <- global_test(p_ab, n_permutations = 999, seed = 1,
+                         criterion = "combined", method = method)
+    gt_ba <- global_test(p_ba, n_permutations = 999, seed = 1,
+                         criterion = "combined", method = method)
+    expect_identical(gt_ab$p_value_local, gt_ba$p_value_local, info = method)
+    expect_identical(gt_ab$p_value, gt_ba$p_value, info = method)
+    expect_gt(gt_ba$p_value, 0.05)
+    icl_ba <- suppressWarnings(identify_critical_links(
+      p_ba, n_permutations = 999, seed = 1, criterion = "combined",
+      method = method))
+    expect_identical(icl_ba$p_value, gt_ba$p_value, info = method)
+    expect_length(icl_ba$edges_removed, 0L)
+  }
+
+  ## Exact row-swap and 0 <-> 1 complement bit-identity in .fisher_pvalue_table(),
+  ## including q = 100 where complements previously differed by ~79.8 eps.
+  H100 <- .fisher_pvalue_table(100L, 100L)
+  expect_identical(H100[130L + 1L, 50L + 1L], H100[130L + 1L, 80L + 1L])
+  expect_identical(H100[130L + 1L, 50L + 1L], H100[70L + 1L, 50L + 1L])
+})
+
+test_that("combined p-value never drops below min(p_global, p_local)", {
+  ## Regression: non-transitive tolerance intervals T_0 ~ T_1 and T_1 ~ T_2
+  ## with T_0 + tol < T_2 previously produced R^(T) = c(2, 3, 3) and
+  ## p_combined = 1/3 < min(p_global = 2/3, p_local = 1).
+  T_all <- c(0, 0.8e-14, 1.5e-14)
+  U_all <- c(1, 1, 1)
+  tol <- 1e-14
+  p_g <- .plus_one_pvalue(T_all, tol)
+  p_l <- .plus_one_pvalue(U_all)
+  p_c <- .combined_pvalue(T_all, U_all, tol)
+  expect_identical(p_g, 2 / 3)
+  expect_identical(p_l, 1)
+  expect_gte(p_c, min(p_g, p_l))
+  expect_identical(p_c, 2 / 3)
+})
+
+test_that("constant all-zero and all-one edges do not inflate T tolerance", {
+  small <- sparse_populations(10, c(2, 0))
+  padded <- lapply(small, function(pop) lapply(pop, function(G) {
+    M <- matrix(0L, 12, 12)
+    M[1:3, 1:3] <- G
+    ## Add constant all-one edges across every graph of both populations.
+    M[4, 5] <- M[5, 4] <- 1L
+    M[6, 7] <- M[7, 6] <- 1L
+    M
+  }))
+  g_small  <- global_test(small, n_permutations = 199, seed = 9,
+                          criterion = "original")
+  g_padded <- global_test(padded, n_permutations = 199, seed = 9,
+                          criterion = "original")
+  expect_identical(g_small$statistic, g_padded$statistic)
+  expect_identical(g_small$p_value, g_padded$p_value)
+})
+

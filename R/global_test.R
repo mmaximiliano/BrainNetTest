@@ -145,8 +145,10 @@ global_test <- function(populations, n_permutations = 1000, seed = NULL,
     C_list  <- .permuted_edge_counts(X, group_sizes, n_permutations)
     T_perm  <- both_triangles *
                colSums(.permuted_edge_deltas(C_list, group_sizes, a = 1))
-    tolerance <- both_triangles *
-      .statistic_tolerance(group_sizes, nrow(obs$indices))
+    tot_counts <- colSums(X)
+    n_active   <- sum(tot_counts > 0 & tot_counts < sum(group_sizes))
+    tolerance  <- both_triangles *
+      .statistic_tolerance(group_sizes, n_active)
     p_global <- .plus_one_pvalue(c(T_obs, T_perm), tolerance)
     p_local  <- U_obs <- NA_real_
     p_value  <- p_global

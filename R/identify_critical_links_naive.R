@@ -50,7 +50,7 @@ identify_critical_links_naive <- function(populations,
                            settings, cl))
 
   ## Helper: permutation p-value for the current populations ----------------
-  .permutation_pvalue <- function(pops, Npop_vec, n_total, n_perm, edges) {
+  .permutation_pvalue <- function(pops, Npop_vec, n_total, n_perm) {
     ## Normalisation is immaterial to ranks; keep a = 1 to avoid artificial
     ## underflow/overflow, as in the optimised implementation.
     T_obs      <- compute_test_statistic(pops, a = 1)
@@ -65,13 +65,16 @@ identify_critical_links_naive <- function(populations,
       T_perm[b] <- compute_test_statistic(perm_pops, a = 1)
     }
     ## The reference sums both triangles, hence twice the allowance used
-    ## for the same number of retained candidates by the optimised path.
+    ## for the same number of retained non-constant edges by the optimised path.
+    idx_cur  <- .edge_index(nrow(pops[[1L]][[1L]]))
+    tot_cur  <- colSums(.graph_edge_matrix(pops, idx_cur))
+    n_active <- sum(tot_cur > 0 & tot_cur < n_total)
     .plus_one_pvalue(c(T_obs, T_perm),
-      2 * .statistic_tolerance(Npop_vec, edges))
+      2 * .statistic_tolerance(Npop_vec, n_active))
   }
 
   ## 2. Global test ---------------------------------------------------------
-  initial_p <- .permutation_pvalue(populations, Npop, n, n_permutations, n_edges)
+  initial_p <- .permutation_pvalue(populations, Npop, n, n_permutations)
   if (initial_p > alpha) {
     warning("Initial test is not significant (p = ",
             round(initial_p, 4),
@@ -102,8 +105,7 @@ identify_critical_links_naive <- function(populations,
     k_removed <- batch_end
 
     ## Recompute T and permutation null FROM SCRATCH -----------------------
-    p_k <- .permutation_pvalue(populations, Npop, n, n_permutations,
-                              n_edges - k_removed)
+    p_k      <- .permutation_pvalue(populations, Npop, n, n_permutations)
     continue <- (p_k <= alpha)
   }
 

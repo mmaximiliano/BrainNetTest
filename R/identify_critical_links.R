@@ -100,13 +100,14 @@
 #'   p-value as \eqn{\#\{b : T_b < T_{obs}\} / B}.
 #'
 #'   Numerical comparisons include a conservative floating-point allowance
-#'   derived from the number of retained edges, group sizes and bounds on the
-#'   unsigned terms of T. The same allowance is applied to every assignment.
-#'   The cumulative sums are evaluated in reverse order to avoid cancellation
-#'   when a large removed prefix leaves a small remainder. Local p-values use
-#'   only a relative allowance of eight machine epsilons, with no absolute
-#'   floor. Inference uses \code{a = 1} internally: any positive normalisation
-#'   gives the same ranks.
+#'   derived from the number of retained non-constant edges, group sizes and
+#'   bounds on the unsigned terms of T. The same allowance is applied to every
+#'   assignment. The cumulative sums are evaluated in reverse order to avoid
+#'   cancellation when a large removed prefix leaves a small remainder. Local
+#'   p-values use only a relative allowance of 64 machine epsilons, with no
+#'   absolute floor, and canonicalise symmetric contingency counts. Inference
+#'   uses \code{a = 1} internally: any positive normalisation gives the same
+#'   ranks.
 #'
 #' @references
 #' Fraiman, D. and Fraiman, R. (2018) An ANOVA approach for statistical
@@ -218,7 +219,14 @@ identify_critical_links <- function(populations,
     if (s == 0L) c(T0, T_perm0) else
       c(suffix_obs[s + 1L], suffix_perm[, s + 1L])
   }
-  tolerance_at <- function(s) .statistic_tolerance(Npop, n_edges - s)
+  ## Constant edges (absent in all graphs or present in all graphs) contribute
+  ## exact IEEE-754 zero under every permutation; count only non-constant
+  ## retained edges so sparse high-node networks do not inflate the bound.
+  tot_ord <- colSums(X)[map_idx]
+  n_total <- sum(Npop)
+  active_suffix <- c(as.integer(.suffix_sum(
+    as.integer(tot_ord > 0 & tot_ord < n_total))), 0L)
+  tolerance_at <- function(s) .statistic_tolerance(Npop, active_suffix[s + 1L])
 
   if (criterion == "combined") {
     ## Local statistic U = smallest marginal p value of the remaining edges,
