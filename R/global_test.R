@@ -12,8 +12,8 @@
 #'
 #' @param populations A named \code{list} with at least two elements. Each
 #'   element is itself a list of square, binary, symmetric adjacency matrices
-#'   (zero diagonal, no self-loops) with at least two graphs. All graphs must
-#'   share the same number of nodes.
+#'   (zero diagonal, no self-loops), with at least two graphs per population.
+#'   All graphs must have at least one node and share the same number of nodes.
 #' @param n_permutations Positive integer giving the number of permutation
 #'   replicates used to approximate the null distribution of T. Default
 #'   \code{1000}.
@@ -113,15 +113,11 @@ global_test <- function(populations, n_permutations = 1000, seed = NULL,
                         method = "fisher") {
   cl <- match.call()
   if (!is.null(seed)) set.seed(seed)
-  if (!is.list(populations) || length(populations) < 2)
-    stop("`populations` must be a list with at least 2 groups.")
-  n_nodes        <- .check_populations(populations, binary = TRUE)
+  n_nodes        <- .check_inference_populations(populations)
   n_permutations <- .check_count(n_permutations, "n_permutations")
   criterion      <- match.arg(criterion)
 
   group_sizes <- lengths(populations)
-  if (any(group_sizes < 2))
-    stop("Each population must have at least two graphs.")
 
   ## compute_distance() sums both triangles of the symmetric adjacency
   ## matrices, so the value compute_test_statistic() reports is twice the sum

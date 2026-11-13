@@ -19,8 +19,8 @@ identify_critical_links(
 \arguments{
 \item{populations}{A named \code{list} with at least two elements. Each
 element is itself a list of square, binary, symmetric adjacency matrices
-(zero diagonal, no self-loops). All graphs must share the same number of
-nodes.}
+(zero diagonal, no self-loops), with at least two graphs per population.
+All graphs must have at least one node and share the same number of nodes.}
 
 \item{alpha}{Numeric significance level used both for the global test and
 for the iterative edge-removal stopping rule. Default \code{0.05}.}
