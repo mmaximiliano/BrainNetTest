@@ -41,7 +41,9 @@ An object of class \code{"global_test"}: a \code{list} with the
   components
   \describe{
     \item{statistic}{the observed value of T, computed with normalisation
-      constant \code{a = 1}.}
+      constant \code{a = 1}. Numerical comparisons use the
+      permutation-symmetric floating-point allowance described in
+      \code{\link{identify_critical_links}}.}
     \item{p_value}{the permutation \eqn{p} value of the chosen
       \code{criterion}, computed among the \eqn{B + 1} values that include
       the observed one; \code{NA} when the graphs have a single node and

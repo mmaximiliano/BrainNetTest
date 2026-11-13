@@ -50,8 +50,10 @@ identify_critical_links_naive <- function(populations,
                            settings, cl))
 
   ## Helper: permutation p-value for the current populations ----------------
-  .permutation_pvalue <- function(pops, Npop_vec, n_total, n_perm, a_val) {
-    T_obs      <- compute_test_statistic(pops, a = a_val)
+  .permutation_pvalue <- function(pops, Npop_vec, n_total, n_perm) {
+    ## Normalisation is immaterial to ranks; keep a = 1 to avoid artificial
+    ## underflow/overflow, as in the optimised implementation.
+    T_obs      <- compute_test_statistic(pops, a = 1)
     all_graphs <- unlist(pops, recursive = FALSE)
     T_perm     <- numeric(n_perm)
     for (b in seq_len(n_perm)) {
@@ -60,13 +62,19 @@ identify_critical_links_naive <- function(populations,
       perm_pops <- lapply(seq_along(Npop_vec), function(k)
         all_graphs[perm_idx[(cumN[k] + 1L):cumN[k + 1L]]])
       names(perm_pops) <- names(pops)
-      T_perm[b] <- compute_test_statistic(perm_pops, a = a_val)
+      T_perm[b] <- compute_test_statistic(perm_pops, a = 1)
     }
-    (1 + sum(T_perm <= T_obs)) / (n_perm + 1)   # observed value counted, as in Eq. (pvalue)
+    ## The reference sums both triangles, hence twice the allowance used
+    ## for the same number of retained non-constant edges by the optimised path.
+    idx_cur  <- .edge_index(nrow(pops[[1L]][[1L]]))
+    tot_cur  <- colSums(.graph_edge_matrix(pops, idx_cur))
+    n_active <- sum(tot_cur > 0 & tot_cur < n_total)
+    .plus_one_pvalue(c(T_obs, T_perm),
+      2 * .statistic_tolerance(Npop_vec, n_active))
   }
 
   ## 2. Global test ---------------------------------------------------------
-  initial_p <- .permutation_pvalue(populations, Npop, n, n_permutations, a)
+  initial_p <- .permutation_pvalue(populations, Npop, n, n_permutations)
   if (initial_p > alpha) {
     warning("Initial test is not significant (p = ",
             round(initial_p, 4),
@@ -97,7 +105,7 @@ identify_critical_links_naive <- function(populations,
     k_removed <- batch_end
 
     ## Recompute T and permutation null FROM SCRATCH -----------------------
-    p_k      <- .permutation_pvalue(populations, Npop, n, n_permutations, a)
+    p_k      <- .permutation_pvalue(populations, Npop, n, n_permutations)
     continue <- (p_k <= alpha)
   }
 

@@ -32,8 +32,11 @@ test_that("plot_critical_edges accepts pre-computed central graphs and a layout 
   skip_on_cran()
   skip_if_not_installed("igraph")
   populations <- make_populations(2)
-  result <- identify_critical_links(populations, alpha = 0.05,
-    method = "fisher", n_permutations = 100, seed = 2)
+  ## Correctly counted numerical ties make this fixture non-significant;
+  ## plotting precomputed centres must also work with an empty critical set.
+  expect_warning(result <- identify_critical_links(populations, alpha = 0.05,
+    method = "fisher", n_permutations = 100, seed = 2),
+    "Initial test is not significant")
   centrals <- lapply(populations, compute_central_graph)
   lay <- igraph::layout_in_circle(
     igraph::graph_from_adjacency_matrix(centrals[[1]] > 0.5,

@@ -31,32 +31,50 @@
 #' @noRd
 #' @keywords internal
 .observed_edge_deltas <- function(edge_counts, group_sizes, a = 1) {
-  m   <- length(group_sizes)
-  n   <- sum(group_sizes)
   idx <- .edge_index(dim(edge_counts)[1])
   if (nrow(idx) == 0L)
     return(list(indices = idx, deltas = numeric(0)))
 
-  counts <- do.call(cbind, lapply(seq_len(m),
-                   function(k) edge_counts[ , , k][idx]))
-  if (!is.matrix(counts))
-    counts <- matrix(counts, nrow = 1L)
-
-  p_mat <- sweep(counts, 2, group_sizes, "/")
-  p_tot <- rowSums(counts) / n
-  Ptot  <- matrix(p_tot, nrow = nrow(counts), ncol = m)
-
-  d_mat <- 2 * p_mat * (1 - p_mat)
-  D_mat <- p_mat + Ptot - 2 * p_mat * Ptot
-
-  coef_d <- sqrt(group_sizes) * (group_sizes / (group_sizes - 1))
-  coef_D <- sqrt(group_sizes) * (n           / (n           - 1))
-
-  delta  <- (sqrt(m) / a) *
-            (d_mat %*% coef_d - D_mat %*% coef_D)[, 1]
+  ## Evaluate the observed assignment with exactly the same operations as
+  ## every permutation. Different algebraic rearrangements can split ties.
+  counts <- lapply(seq_along(group_sizes), function(k)
+    matrix(edge_counts[, , k][idx], ncol = 1L))
+  delta <- .permuted_edge_deltas(counts, group_sizes, a)[, 1L]
 
   list(indices = idx, deltas = delta)
 }
+
+## Absolute comparison allowance for T, on the upper-triangle, a = 1 scale.
+## Each unsigned within-group term is bounded by coef_d / 2 (2p(1-p)
+## <= 1/2); each pooled-distance term by coef_D (0 <= p+q-2pq <= 1).
+## gamma_r = r*eps/(1-r*eps) is the standard accumulated floating-point
+## error bound. The operation budget covers the edge formulas, group sums,
+## edge sums and the distance-based reference's averages. Twice the bound
+## allows error in BOTH values being compared. It depends only on the
+## retained edge count and group sizes, never on which assignment is observed.
+## This is a conservative numerical allowance, not a statistical tolerance
+## or decimal rounding of the statistic. An empty graph has exactly zero
+## allowance. Local p-values U never use this absolute allowance.
+## Being a worst-case bound, it grows quadratically with n_edges, much faster
+## than the null spread of T, so it becomes more conservative for very large
+## networks.
+.statistic_tolerance <- function(group_sizes, n_edges) {
+  if (n_edges == 0L) return(0)
+  n <- sum(group_sizes)
+  m <- length(group_sizes)
+  operations <- 32 + 4 * m + 2 * n_edges + 2 * n
+  error <- operations * .Machine$double.eps
+  scale <- sqrt(m) * n_edges * sum(sqrt(group_sizes) *
+    (group_sizes / (2 * (group_sizes - 1)) + n / (n - 1)))
+  tolerance <- 2 * error / (1 - error) * scale
+  if (error >= 1 || !is.finite(tolerance))
+    stop("The statistic exceeds the supported floating-point precision.")
+  tolerance
+}
+
+## Sum the retained terms directly: total minus a nearly equal prefix loses
+## precision, and can leave a nonzero statistic after removing every edge.
+.suffix_sum <- function(x) rev(cumsum(rev(x)))
 
 #' Edge-wise contributions Delta_e for every permutation replicate
 #'

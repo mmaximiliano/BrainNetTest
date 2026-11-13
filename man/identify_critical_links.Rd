@@ -46,7 +46,10 @@ replicates used to approximate the null distribution of T. Default
 \code{1000}.}
 
 \item{a}{Positive numeric normalisation constant for the test statistic T
-(see \code{\link{compute_test_statistic}}). Default \code{1}.}
+(see \code{\link{compute_test_statistic}}). It is validated and recorded
+in \code{settings} but does not affect the result: a positive rescaling
+leaves every permutation rank unchanged, so inference uses \code{a = 1}.
+Default \code{1}.}
 
 \item{seed}{Optional integer seed for reproducibility of the permutation
 replicates. Default \code{NULL}.}
@@ -130,6 +133,16 @@ The implementation exploits the fact that T decomposes as a sum of
   With \code{criterion = "original"} and the same seed, the critical edges
   can differ slightly from those of versions up to 0.2.2, which estimated the
   p-value as \eqn{\#\{b : T_b < T_{obs}\} / B}.
+
+  Numerical comparisons include a conservative floating-point allowance
+  derived from the number of retained non-constant edges, group sizes and
+  bounds on the unsigned terms of T. The same allowance is applied to every
+  assignment. The cumulative sums are evaluated in reverse order to avoid
+  cancellation when a large removed prefix leaves a small remainder. Local
+  p-values use only a relative allowance of 64 machine epsilons, with no
+  absolute floor, and canonicalise symmetric contingency counts. Inference
+  uses \code{a = 1} internally: any positive normalisation gives the same
+  ranks.
 }
 \examples{
 \donttest{
