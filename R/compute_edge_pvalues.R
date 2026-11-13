@@ -8,7 +8,11 @@
 #' @param edge_counts An array of edge counts from \code{compute_edge_frequencies}.
 #' @param N A vector of sample sizes for each population.
 #' @param method The statistical test method to use: "fisher", "chi.squared", or "prop". Default is "fisher".
-#' @param adjust_method The method for p-value adjustment for multiple testing. Default is "none".
+#'   The "prop" method requires exactly two populations. The method is
+#'   validated even when the graphs have no edges.
+#' @param adjust_method The method for p-value adjustment for multiple testing
+#'   (one of \code{\link[stats]{p.adjust.methods}}). Default is "none".
+#'   Validated even when the graphs have no edges.
 #' @importFrom stats fisher.test chisq.test prop.test p.adjust
 #' @return A matrix of p-values for each edge.
 #' @export
@@ -21,8 +25,6 @@
 #'   n_communities = 2,
 #'   base_intra_prob = 0.8,
 #'   base_inter_prob = 0.2,
-#'   intra_prob_variation = 0.05,
-#'   inter_prob_variation = 0.05,
 #'   seed = 1
 #' )
 #' patient_graphs <- generate_category_graphs(
@@ -31,8 +33,6 @@
 #'   n_communities = 2,
 #'   base_intra_prob = 0.6,
 #'   base_inter_prob = 0.4,
-#'   intra_prob_variation = 0.05,
-#'   inter_prob_variation = 0.05,
 #'   seed = 2
 #' )
 #' populations <- list(Control = control_graphs, Patient = patient_graphs)
@@ -49,6 +49,8 @@
 compute_edge_pvalues <- function(edge_counts, N, method = "fisher", adjust_method = "none") {
   n_nodes <- dim(edge_counts)[1]
   num_populations <- dim(edge_counts)[3]
+  method <- .check_edge_method(method, num_populations)
+  adjust_method <- .check_adjust_method(adjust_method)
   edge_pvalues <- matrix(1, nrow = n_nodes, ncol = n_nodes)
   
   # For each pair of nodes (edge).  seq_len() rather than 1:(n_nodes - 1) so
@@ -98,8 +100,6 @@ compute_edge_pvalues <- function(edge_counts, N, method = "fisher", adjust_metho
         }
       } else if (method == "prop") {
         # Use prop.test for two populations
-        if (num_populations != 2) stop("prop.test is only implemented for two populations.")
-        
         # Check for zero values that might cause issues
         x <- c(edge_counts[i, j, 1], edge_counts[i, j, 2])
         n <- c(N[1], N[2])
@@ -128,6 +128,19 @@ compute_edge_pvalues <- function(edge_counts, N, method = "fisher", adjust_metho
   }
   
   # Adjust p-values for multiple testing if needed
+  edge_pvalues <- .adjust_edge_pvalues(edge_pvalues, adjust_method)
+
+  return(edge_pvalues)
+}
+
+#' Multiplicity-adjust a symmetric matrix of edge p-values
+#'
+#' @param edge_pvalues Symmetric matrix of unadjusted edge p-values.
+#' @param adjust_method Method passed to `stats::p.adjust()`.
+#' @return The matrix with its off-diagonal entries adjusted.
+#' @noRd
+#' @keywords internal
+.adjust_edge_pvalues <- function(edge_pvalues, adjust_method) {
   if (adjust_method != "none") {
     # Adjust using only the upper triangle, then mirror to the lower triangle.
     # Note: assigning the same vector to both upper.tri() and lower.tri() would
@@ -135,11 +148,8 @@ compute_edge_pvalues <- function(edge_counts, N, method = "fisher", adjust_metho
     # order over different index sets), producing an asymmetric matrix. We
     # therefore write the upper triangle first and then transpose.
     ut <- upper.tri(edge_pvalues)
-    p_values_vec <- edge_pvalues[ut]
-    adjusted_p_values <- p.adjust(p_values_vec, method = adjust_method)
-    edge_pvalues[ut] <- adjusted_p_values
+    edge_pvalues[ut] <- p.adjust(edge_pvalues[ut], method = adjust_method)
     edge_pvalues[lower.tri(edge_pvalues)] <- t(edge_pvalues)[lower.tri(edge_pvalues)]
   }
-  
-  return(edge_pvalues)
+  edge_pvalues
 }

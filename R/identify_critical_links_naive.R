@@ -3,8 +3,8 @@
 # ---------------------------------------------------------------------------
 # This function recomputes the test statistic T from scratch after every edge
 # removal and regenerates the full permutation null at each step.  Its
-# complexity is O(K * B * |E| * m) -- the "naive" baseline described in the
-# paper.  It is kept internally for benchmarking and as a correctness
+# distance-based complexity is O(K * B * |E| * m * n), where n is the total
+# number of graphs. It is kept internally for benchmarking and as a correctness
 # reference for the optimised `identify_critical_links()`; it is NOT exported.
 #
 #' @noRd
@@ -20,17 +20,18 @@ identify_critical_links_naive <- function(populations,
 
   cl <- match.call()
   if (!is.null(seed)) set.seed(seed)
-  if (!is.list(populations) || length(populations) < 2)
-    stop("`populations` must be a list with at least 2 groups.")
-  .check_populations(populations, binary = TRUE)
+  .check_inference_populations(populations)
   batch_size     <- .check_count(batch_size, "batch_size")
   n_permutations <- .check_count(n_permutations, "n_permutations")
   alpha          <- .check_proportion(alpha, "alpha")
   a              <- .check_positive(a, "a")
+  method         <- .check_edge_method(method, length(populations))
+  adjust_method  <- .check_adjust_method(adjust_method)
 
   settings <- list(alpha = alpha, method = method,
                    adjust_method = adjust_method, batch_size = batch_size,
-                   n_permutations = n_permutations, a = a, seed = seed)
+                   n_permutations = n_permutations, a = a, seed = seed,
+                   criterion = "original")
 
   ## 0. Metadata ------------------------------------------------------------
   Npop <- lengths(populations)
@@ -39,18 +40,20 @@ identify_critical_links_naive <- function(populations,
 
   ## 1. Rank edges by marginal p-value (same as optimised) -----------------
   freq       <- compute_edge_frequencies(populations)
-  edge_pvals <- compute_edge_pvalues(freq$edge_counts, Npop,
-                                     method        = method,
-                                     adjust_method = adjust_method)
-  edge_df    <- rank_edges(edge_pvals)
+  raw_pvals  <- compute_edge_pvalues(freq$edge_counts, Npop, method = method)
+  edge_pvals <- .adjust_edge_pvalues(raw_pvals, adjust_method)
+  edge_df    <- rank_edges(edge_pvals, tie_values =
+    if (identical(adjust_method, "none")) NULL else raw_pvals)
   n_edges    <- nrow(edge_df)
   if (n_edges == 0L)
     return(.critical_links(NULL, list(), populations, NA_real_, 0L,
                            settings, cl))
 
   ## Helper: permutation p-value for the current populations ----------------
-  .permutation_pvalue <- function(pops, Npop_vec, n_total, n_perm, a_val) {
-    T_obs      <- compute_test_statistic(pops, a = a_val)
+  .permutation_pvalue <- function(pops, Npop_vec, n_total, n_perm) {
+    ## Normalisation is immaterial to ranks; keep a = 1 to avoid artificial
+    ## underflow/overflow, as in the optimised implementation.
+    T_obs      <- compute_test_statistic(pops, a = 1)
     all_graphs <- unlist(pops, recursive = FALSE)
     T_perm     <- numeric(n_perm)
     for (b in seq_len(n_perm)) {
@@ -59,13 +62,19 @@ identify_critical_links_naive <- function(populations,
       perm_pops <- lapply(seq_along(Npop_vec), function(k)
         all_graphs[perm_idx[(cumN[k] + 1L):cumN[k + 1L]]])
       names(perm_pops) <- names(pops)
-      T_perm[b] <- compute_test_statistic(perm_pops, a = a_val)
+      T_perm[b] <- compute_test_statistic(perm_pops, a = 1)
     }
-    mean(T_perm < T_obs)
+    ## The reference sums both triangles, hence twice the allowance used
+    ## for the same number of retained non-constant edges by the optimised path.
+    idx_cur  <- .edge_index(nrow(pops[[1L]][[1L]]))
+    tot_cur  <- colSums(.graph_edge_matrix(pops, idx_cur))
+    n_active <- sum(tot_cur > 0 & tot_cur < n_total)
+    .plus_one_pvalue(c(T_obs, T_perm),
+      2 * .statistic_tolerance(Npop_vec, n_active))
   }
 
   ## 2. Global test ---------------------------------------------------------
-  initial_p <- .permutation_pvalue(populations, Npop, n, n_permutations, a)
+  initial_p <- .permutation_pvalue(populations, Npop, n, n_permutations)
   if (initial_p > alpha) {
     warning("Initial test is not significant (p = ",
             round(initial_p, 4),
@@ -96,7 +105,7 @@ identify_critical_links_naive <- function(populations,
     k_removed <- batch_end
 
     ## Recompute T and permutation null FROM SCRATCH -----------------------
-    p_k      <- .permutation_pvalue(populations, Npop, n, n_permutations, a)
+    p_k      <- .permutation_pvalue(populations, Npop, n, n_permutations)
     continue <- (p_k <= alpha)
   }
 

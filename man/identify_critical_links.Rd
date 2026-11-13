@@ -2,7 +2,7 @@
 % Please edit documentation in R/identify_critical_links.R
 \name{identify_critical_links}
 \alias{identify_critical_links}
-\title{Identify Critical Edges That Explain Population Differences}
+\title{Explore Edges Associated with Population Differences}
 \usage{
 identify_critical_links(
   populations,
@@ -12,40 +12,54 @@ identify_critical_links(
   batch_size = 1,
   n_permutations = 1000,
   a = 1,
-  seed = NULL
+  seed = NULL,
+  criterion = c("combined", "original")
 )
 }
 \arguments{
 \item{populations}{A named \code{list} with at least two elements. Each
 element is itself a list of square, binary, symmetric adjacency matrices
-(zero diagonal, no self-loops). All graphs must share the same number of
-nodes.}
+(zero diagonal, no self-loops), with at least two graphs per population.
+All graphs must have at least one node and share the same number of nodes.}
 
 \item{alpha}{Numeric significance level used both for the global test and
 for the iterative edge-removal stopping rule. Default \code{0.05}.}
 
 \item{method}{Character string selecting the marginal edge test used to
 rank candidate edges. One of \code{"fisher"} (default),
-\code{"chi.squared"}, or \code{"prop"}. See
+\code{"chi.squared"}, or \code{"prop"}. The \code{"prop"} method
+requires exactly two populations. See
 \code{\link{compute_edge_pvalues}}.}
 
 \item{adjust_method}{Character string passed to \code{\link[stats]{p.adjust}}
-for multiplicity correction of the marginal p-values. Default
-\code{"none"}.}
+for multiplicity correction of the marginal p-values (one of
+\code{\link[stats]{p.adjust.methods}}, validated even when the graphs have
+no edges). Default \code{"none"}.}
 
 \item{batch_size}{Positive integer giving the number of edges to drop per
 iteration. Larger values speed up the procedure at the cost of coarser
-resolution. Default \code{1}.}
+resolution. A batch larger than the remaining candidate set removes all
+remaining edges. Default \code{1}.}
 
 \item{n_permutations}{Positive integer giving the number of permutation
 replicates used to approximate the null distribution of T. Default
 \code{1000}.}
 
 \item{a}{Positive numeric normalisation constant for the test statistic T
-(see \code{\link{compute_test_statistic}}). Default \code{1}.}
+(see \code{\link{compute_test_statistic}}). It is validated and recorded
+in \code{settings} but does not affect the result: a positive rescaling
+leaves every permutation rank unchanged, so inference uses \code{a = 1}.
+Default \code{1}.}
 
 \item{seed}{Optional integer seed for reproducibility of the permutation
 replicates. Default \code{NULL}.}
+
+\item{criterion}{Character string selecting the test used at every step
+of the procedure. \code{"combined"} (default) evaluates T together with
+the local statistic U, the smallest marginal p-value of the remaining
+edges, in one permutation test, so that differences concentrated in a
+few edges are not diluted; \code{"original"} uses T alone, as in
+versions up to 0.2.2. See Details.}
 }
 \value{
 An object of class \code{"critical_links"}: a \code{list} with the
@@ -54,13 +68,18 @@ An object of class \code{"critical_links"}: a \code{list} with the
     \item{critical_edges}{a \code{data.frame} with columns \code{node1},
       \code{node2}, \code{p_value}, listing the edges removed until the test
       became non-significant, ordered from most to least significant;
-      \code{NULL} if the global test was not significant.}
+      \code{NULL} if the global test was not significant. \code{p_value}
+      holds the marginal p-values after \code{adjust_method}. Because
+      \code{\link[stats]{p.adjust}} preserves their order and the ties it
+      creates are broken by the unadjusted p-values, the adjustment does
+      not change which edges are removed.}
     \item{edges_removed}{a list of length-2 integer vectors giving the
       \code{(i, j)} indices of the removed edges, in removal order.}
     \item{modified_populations}{the input \code{populations} with the
       critical edges zeroed out in every graph.}
     \item{p_value}{the permutation \eqn{p} value of the global test on the
-      unmodified data, \code{NA} when there were no candidate edges.}
+      unmodified data (combined or original, according to
+      \code{criterion}), \code{NA} when there were no candidate edges.}
     \item{n_edges}{the number of candidate edges considered.}
     \item{settings}{the arguments the analysis ran with.}
     \item{call}{the matched call.}
@@ -71,26 +90,85 @@ An object of class \code{"critical_links"}: a \code{list} with the
   unchanged from earlier versions, so code that extracts them keeps working.
 }
 \description{
-Iteratively identifies the edges that drive the observed difference between
+Iteratively explores edges associated with the observed difference between
 two or more populations of brain networks, using the permutation-based
 L1-distance ANOVA test of Fraiman and Fraiman (2018). Edges are ranked by
 their marginal p-value, then removed in batches until the global test is no
-longer significant. The permutation null is re-evaluated incrementally via
-a prefix-sum decomposition of T, which avoids recomputing the statistic
+longer significant. The permutation null is re-evaluated using
+cumulative sums of edge contributions to T, which avoid recomputing the statistic
 from scratch at every step.
 }
 \details{
-The implementation exploits the fact that T decomposes as a sum of
-  per-edge contributions \eqn{\Delta_e}. Removing an edge e is equivalent
-  to subtracting \eqn{\Delta_e} from T, so prefix sums of the sorted
-  \eqn{\Delta_e} values give the test statistic after any number of
-  removals in O(1). The permutation null is built once via a single BLAS
-  matrix multiplication and reused for every iteration, reducing the
-  overall complexity from O(K * B * |E| * m) (naive) to O(B * |E| * m).
+The implementation uses the decomposition of T into per-edge
+  contributions \eqn{\Delta_e}. Cumulative sums give the statistic after
+  each removal without rebuilding the graphs or recomputing distances.
+  Let n be the total number of graphs, m the number of groups, E the number
+  of possible edges, B the number of permutations and K the number of
+  removal steps. The dense matrix products for permuted counts cost
+  O(m * n * B * E); summing contributions costs O(m * B * E). The naive
+  distance-based path repeats O(m * n * B * E) work at each of K steps.
+  These bounds exclude ranking and marginal tests. The Fisher lookup table
+  can cost O(n^3) for balanced groups; other methods test each distinct count
+  vector. With the combined criterion, ranking B + 1 values at each of K
+  removal steps adds O(K * B * log B) time. Stored graph, label and count
+  matrices need O(n * E + m * n * B + m * E * B) memory. The combined
+  criterion also stores O(E * B) marginal p-values.
 
   Permutation replicates are generated by uniformly permuting the group
   labels across the pooled sample of all graphs, while preserving the
   original group sizes (sampling without replacement).
+
+  All p-values treat the observed data as one more element of the set of
+  \eqn{B + 1} values: \eqn{p = (1 + \#\{b : T_b \le T_{obs}\}) / (B + 1)},
+  giving \eqn{p \ge 1 / (B + 1)} (Phipson and Smyth, 2010). For the initial
+  global test, the false-positive bound requires exchangeable group labels
+  under the null; see \code{\link{global_test}}. Equal central graphs alone
+  do not ensure this condition.
+
+  With \code{criterion = "combined"}, the global p-value of T and the
+  local p-value of U are computed for the observed data and for every
+  replicate, among the same \eqn{B + 1} values; \eqn{Q_j} is the smaller of
+  the two, and the combined p-value is the proportion of the \eqn{B + 1}
+  values of Q that are at most \eqn{Q_0}, the observed one. Because both
+  statistics come from the same permutations, no correction for using two
+  statistics is needed for the initial global test. After removing the
+  first s ranked edges, U is the smallest raw marginal p-value among the
+  remaining edges, evaluated separately for each replicate. The observed
+  edge order is held fixed across replicates. For two populations and
+  Fisher's test, the marginal p-values of the replicates are read from a
+  precomputed table of the hypergeometric distribution; otherwise each
+  distinct vector of edge counts is tested once, which is slower. The
+  combined criterion stores an |E| x B matrix of p-values in addition to the
+  matrix of contributions to T.
+
+  The selected edges are exploratory. Only the initial global test has a
+  guaranteed false-positive rate; the procedure does not establish
+  edge-level family-wise error or false discovery rate control. This is not
+  because the removal order is learned from the data: step-down procedures
+  such as the minimum-p method of Westfall and Young (1993) do the same and
+  still control the family-wise error rate (under subset pivotality),
+  because their statistic can only become less extreme as edges are
+  removed. T sums signed contributions of the remaining edges and has no
+  such monotonicity, so the later tests do not form a closed testing
+  procedure. Multiplicity adjustment with \code{adjust_method} does not
+  provide such a guarantee either: it rescales the marginal p-values but
+  preserves their order. A stopping p-value above alpha does not prove that
+  the remaining networks are equal. Report the initial global p-value
+  separately from the selected edges.
+
+  With \code{criterion = "original"} and the same seed, the critical edges
+  can differ slightly from those of versions up to 0.2.2, which estimated the
+  p-value as \eqn{\#\{b : T_b < T_{obs}\} / B}.
+
+  Numerical comparisons include a conservative floating-point allowance
+  derived from the number of retained non-constant edges, group sizes and
+  bounds on the unsigned terms of T. The same allowance is applied to every
+  assignment. The cumulative sums are evaluated in reverse order to avoid
+  cancellation when a large removed prefix leaves a small remainder. Local
+  p-values use only a relative allowance of 64 machine epsilons, with no
+  absolute floor, and canonicalise symmetric contingency counts. Inference
+  uses \code{a = 1} internally: any positive normalisation gives the same
+  ranks.
 }
 \examples{
 \donttest{
@@ -114,6 +192,14 @@ head(result$critical_edges)
 Fraiman, D. and Fraiman, R. (2018) An ANOVA approach for statistical
 comparisons of brain networks. \emph{Scientific Reports}, 8, 4746.
 \doi{10.1038/s41598-018-23152-5}.
+
+Phipson, B. and Smyth, G. K. (2010) Permutation p-values should never be
+zero: calculating exact p-values when permutations are randomly drawn.
+\emph{Statistical Applications in Genetics and Molecular Biology}, 9(1),
+Article 39. \doi{10.2202/1544-6115.1585}.
+
+Westfall, P. H. and Young, S. S. (1993) \emph{Resampling-Based Multiple
+Testing}. Wiley, New York.
 }
 \seealso{
 \code{\link{print.critical_links}},

@@ -18,6 +18,12 @@ A numeric value representing the Manhattan distance between G and M.
 This function calculates the Manhattan norm (L1 norm) distance between two
 adjacency matrices representing brain networks.
 }
+\details{
+The distance is \code{sum(abs(G - M))} over all matrix entries.
+  For symmetric matrices with zero diagonal, each undirected edge is
+  counted twice. This convention also sets the scale of the reported T
+  statistic; using only the upper triangle would divide both values by two.
+}
 \examples{
 # Generate synthetic data
 G1 <- generate_random_graph(n_nodes = 5, edge_prob = 0.1)

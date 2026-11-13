@@ -42,8 +42,10 @@ test_that("global_test returns a classed list with the documented components", {
   gt <- global_test(pops, n_permutations = 200, seed = 42)
 
   expect_s3_class(gt, "global_test")
-  expect_named(gt, c("statistic", "p_value", "null_distribution",
+  expect_named(gt, c("statistic", "p_value", "p_value_global", "p_value_local",
+                     "local_statistic", "criterion", "null_distribution",
                      "n_permutations", "group_sizes", "n_nodes", "call"))
+  expect_identical(gt$criterion, "combined")
   expect_length(gt$statistic, 1L)
   expect_null(names(gt$statistic))
   expect_true(gt$p_value >= 0 && gt$p_value <= 1)
@@ -76,10 +78,19 @@ test_that("the null distribution matches the direct permutation loop", {
   expect_equal(gt$null_distribution, direct, tolerance = 1e-10)
 })
 
-test_that("the p value is a proportion of the replicates", {
-  gt <- global_test(make_null_like(), n_permutations = 400, seed = 7)
-  expect_equal(gt$p_value * 400, round(gt$p_value * 400))
-  expect_equal(gt$p_value, mean(gt$null_distribution < gt$statistic))
+test_that("the p value counts the observed statistic among B + 1 values", {
+  gt <- global_test(make_null_like(), n_permutations = 400, seed = 7,
+                    criterion = "original")
+  expect_equal(gt$p_value * 401, round(gt$p_value * 401))
+  expect_equal(gt$p_value,
+               (1 + sum(gt$null_distribution <= gt$statistic)) / 401)
+  expect_identical(gt$p_value, gt$p_value_global)
+  expect_true(is.na(gt$p_value_local))
+
+  cb <- global_test(make_null_like(), n_permutations = 400, seed = 7)
+  expect_identical(cb$p_value_global, gt$p_value)   # same permutations
+  expect_equal(cb$p_value * 401, round(cb$p_value * 401))
+  expect_gte(cb$p_value, 1 / 401)
 })
 
 test_that("the p value is the one identify_critical_links() records", {
@@ -95,12 +106,18 @@ test_that("the p value is the one identify_critical_links() records", {
   gt  <- global_test(pops, n_permutations = 200, seed = 42)
   icl <- identify_critical_links(pops, n_permutations = 200, seed = 42)
   expect_identical(gt$p_value, icl$p_value)
+
+  gt  <- global_test(pops, n_permutations = 200, seed = 42, criterion = "original")
+  icl <- identify_critical_links(pops, n_permutations = 200, seed = 42,
+                                 criterion = "original")
+  expect_identical(gt$p_value, icl$p_value)
 })
 
 test_that("a clear difference is detected and near-identical populations are not", {
   strong <- global_test(make_populations(), n_permutations = 500, seed = 42)
   expect_lt(strong$statistic, 0)
-  expect_identical(strong$p_value, 0)
+  expect_lt(strong$p_value, 0.05)
+  expect_identical(strong$p_value_global, 1 / 501)
 
   same <- generate_category_graphs(n_graphs = 30, n_nodes = 10,
     n_communities = 2, base_intra_prob = 0.5, base_inter_prob = 0.5, seed = 3)
@@ -128,21 +145,25 @@ test_that("print reports the comparison and returns its argument invisibly", {
   txt <- paste(out, collapse = "\n")
   expect_match(txt, "Populations:  2 \\(Control, Patient\\), 20 / 20 graphs")
   expect_match(txt, "Nodes:        10 \\(45 possible edges\\)")
-  expect_match(txt, "T = -13.2", fixed = TRUE)
-  # p = 0 out of 200 replicates is reported at the resolution of the estimate
-  expect_match(txt, "p value:      < 0.005 (200 permutations)", fixed = TRUE)
+  expect_match(txt, "T = -16.1", fixed = TRUE)
+  expect_match(txt, sprintf("p value:      %.4f; combined criterion, 200 permutations",
+                            gt$p_value), fixed = TRUE)
+  # T alone attains the smallest possible value, 1 / (B + 1)
+  expect_match(txt, "T alone: 0.005 (minimum)", fixed = TRUE)
 
-  mid <- global_test(make_null_like(), n_permutations = 400, seed = 7)
+  mid <- global_test(make_null_like(), n_permutations = 400, seed = 7,
+                     criterion = "original")
   expect_match(paste(capture.output(print(mid)), collapse = "\n"),
-               sprintf("p value:      %.4f (400 permutations)", mid$p_value),
-               fixed = TRUE)
+               sprintf("p value:      %.4f; original criterion, 400 permutations",
+                       mid$p_value), fixed = TRUE)
 })
 
 test_that("the resolution bound is rounded to two significant digits", {
-  gt <- global_test(make_populations(), n_permutations = 3000, seed = 1)
-  expect_identical(gt$p_value, 0)
+  gt <- global_test(make_populations(), n_permutations = 3000, seed = 1,
+                    criterion = "original")
+  expect_identical(gt$p_value, 1 / 3001)
   expect_match(paste(capture.output(print(gt)), collapse = "\n"),
-               "< 0.00033", fixed = TRUE)
+               "0.00033 (minimum)", fixed = TRUE)
 })
 
 test_that("input validation names the problem", {

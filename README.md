@@ -16,10 +16,9 @@ The package includes:
 * `compute_test_statistic()` for the group test statistic T, and
   `global_test()` for its permutation p-value: the test of whether the
   populations differ at all.
-* `identify_critical_links()` for a fast permutation-based identification of
-  the edges driving between-group differences, using a prefix-sum
-  decomposition that reduces the complexity from O(K * B * |E| * m) to
-  O(B * |E| * m).
+* `identify_critical_links()` for exploring edges associated with group
+  differences. It reuses per-edge contributions and one set of permutations
+  throughout the removal steps. The selected edges are exploratory.
   The result is a `critical_links` object with `print()`, `summary()` and
   `plot()` methods.
 * `get_critical_nodes()` to summarise the critical edges at the node level.
@@ -58,7 +57,7 @@ populations <- list(Control = control, Patient = patient)
 # Do the populations differ at all? Statistic T and its permutation p-value
 global_test(populations, n_permutations = 1000, seed = 42)
 
-# Which edges are responsible? Global test plus critical-edge identification
+# Explore which edges are associated with the observed difference
 result <- identify_critical_links(
   populations, alpha = 0.05, method = "fisher",
   n_permutations = 1000, seed = 42)
@@ -68,6 +67,36 @@ summary(result)         # settings and node-level ranking
 head(result$critical_edges)
 get_critical_nodes(result)
 ```
+
+## Interpreting results
+
+The initial permutation test requires exchangeable group labels under the
+null: shuffling whole graphs must preserve the joint distribution of the
+observations. Independent graphs from the same graph distribution meet this
+condition. Equal edge means alone do not. Paired data, repeated measures,
+blocks and covariates need a different permutation design.
+
+The test uses a permutation distribution, not a normal approximation.
+`criterion = "combined"` (the default) combines T with the smallest marginal
+edge p-value. Use `criterion = "original"` to test with T alone, and report
+the criterion, number of permutations, seed and package version.
+
+Report the initial global p-value separately from the selected edges.
+Edge removal is an exploratory procedure: it does not control the false
+discovery rate or family-wise error rate of the selected set. Adjusting the
+marginal p-values with `adjust_method` does not change that, because the
+adjustment preserves their order. A non-significant
+stopping result does not prove that the remaining networks are equal.
+
+Distances sum both matrix triangles. For symmetric graphs with zero diagonal,
+the reported T is twice its value under an upper-triangle-only convention;
+this common scale factor does not change the permutation p-value.
+
+For n graphs, m groups, E possible edges and B permutations, the dense
+permuted-count calculation costs O(m * n * B * E). It is done once, instead
+of repeating the distance calculation at every removal step. Ranking and
+marginal tests add work: the balanced two-group Fisher lookup can cost
+O(n^3). See `?identify_critical_links` for time and memory details.
 
 ## References
 

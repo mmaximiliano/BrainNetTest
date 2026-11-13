@@ -25,17 +25,17 @@
 
 #' Format a permutation p value for display
 #'
-#' The estimate is a proportion out of `n_permutations` draws, so it cannot
-#' resolve below 1 / n_permutations; report that bound rather than a
-#' misleading zero. The bound is rounded to two significant digits so that,
-#' say, 3000 replicates read "< 0.00033" rather than "< 0.0003333333".
+#' The observed value is counted among B + 1 values, so the minimum p-value
+#' is 1 / (B + 1). Mark that minimum and round it to two significant digits.
 #'
 #' @noRd
 #' @keywords internal
 .format_pvalue <- function(p, n_permutations) {
   if (is.na(p)) return("NA")
-  eps <- 1 / n_permutations
-  if (p < eps) paste0("< ", format(signif(eps, 2), scientific = FALSE))
+  ## p-values are computed among B + 1 values and are never below 1 / (B + 1)
+  p_min <- 1 / (n_permutations + 1)
+  if (p <= p_min * (1 + 1e-9))
+    paste0(format(signif(p_min, 2), scientific = FALSE), " (minimum)")
   else format(round(p, 4), nsmall = 4, scientific = FALSE)
 }
 
@@ -92,8 +92,9 @@ print.critical_links <- function(x, n = 6, digits = getOption("digits"), ...) {
   if (is.na(x$p_value)) {
     cat("Global test:     not evaluated (no candidate edges)\n")
   } else {
-    cat(sprintf("Global test:     p %s (%d permutations, alpha = %s)\n",
+    cat(sprintf("Global test:     p = %s; %s criterion, %d permutations, alpha = %s\n",
                 .format_pvalue(x$p_value, s$n_permutations),
+                if (is.null(s$criterion)) "original" else s$criterion,
                 s$n_permutations, format(s$alpha)))
   }
 
@@ -195,12 +196,14 @@ print.summary.critical_links <- function(x, n = 10,
               paste(x$group_sizes, collapse = " / ")))
   cat(sprintf("Candidate edges: %d\n", x$n_edges))
   if (!is.na(x$p_value))
-    cat(sprintf("Global test:     p %s\n",
+    cat(sprintf("Global test:     p = %s\n",
                 .format_pvalue(x$p_value, s$n_permutations)))
   cat(sprintf("Critical edges:  %d (%.1f%% of candidates)\n",
               x$n_critical, 100 * x$n_critical / max(x$n_edges, 1)))
 
   cat("\nSettings:\n")
+  cat(sprintf("  stopping criterion   %s\n",
+              if (is.null(s$criterion)) "original" else s$criterion))
   cat(sprintf("  marginal test        %s\n", .method_label(s$method)))
   cat(sprintf("  multiplicity         %s\n", s$adjust_method))
   cat(sprintf("  significance level   %s\n", format(s$alpha)))

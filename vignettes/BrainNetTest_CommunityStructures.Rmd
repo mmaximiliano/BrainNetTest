@@ -21,8 +21,8 @@ knitr::opts_chunk$set(
 This vignette shows the full `BrainNetTest` workflow on synthetic populations
 of brain networks with community (block) structure. We simulate two groups of
 graphs with different intra- and inter-community connection probabilities,
-run the global L1-distance ANOVA test, and identify the edges and nodes that
-drive the observed difference.
+run the global L1-distance ANOVA test, and explore the edges and nodes
+associated with the observed difference.
 
 ```{r}
 library(BrainNetTest)
@@ -57,8 +57,10 @@ illustrated at the end of this vignette.
 ## Simulating populations of graphs
 
 `generate_category_graphs()` produces a list of graphs that share a common
-community structure but vary slightly in their edge probabilities across
-replicates, modelling natural between-subject variability.
+community structure: each edge is present independently with the within- or
+between-community probability, the same for every graph. (The arguments
+`intra_prob_variation` and `inter_prob_variation` can add a random shift of the
+probabilities of each graph; they are 0 by default.)
 
 ```{r}
 control <- generate_category_graphs(
@@ -67,8 +69,6 @@ control <- generate_category_graphs(
   n_communities        = 2,
   base_intra_prob      = 0.8,
   base_inter_prob      = 0.2,
-  intra_prob_variation = 0.05,
-  inter_prob_variation = 0.05,
   seed                 = 1)
 
 patient <- generate_category_graphs(
@@ -77,8 +77,6 @@ patient <- generate_category_graphs(
   n_communities        = 2,
   base_intra_prob      = 0.6,
   base_inter_prob      = 0.4,
-  intra_prob_variation = 0.05,
-  inter_prob_variation = 0.05,
   seed                 = 2)
 
 populations <- list(Control = control, Patient = patient)
@@ -92,11 +90,14 @@ T_obs <- compute_test_statistic(populations, a = 1)
 T_obs
 ```
 
-## Identifying critical edges
+## Exploring candidate edges
 
-`identify_critical_links()` performs the full pipeline: marginal edge
-p-values, permutation null for `T`, and iterative edge removal. It returns
-the edges whose removal eliminates the group-level difference.
+`identify_critical_links()` runs the global permutation test (using the
+combined `T` and `U` criterion by default) and, when significant, iteratively
+removes edges ordered by their marginal p-values until the test on the
+remaining edges exceeds `alpha`. The selected set is exploratory rather than an
+error-rate-controlled set of true edges, and stopping above `alpha` does not
+establish that the remaining networks are identical.
 
 ```{r}
 result <- identify_critical_links(

@@ -1,39 +1,51 @@
 # R/identify_critical_links.R
 # Fast, mathematically exact implementation.
 
-#' Identify Critical Edges That Explain Population Differences
+#' Explore Edges Associated with Population Differences
 #'
-#' Iteratively identifies the edges that drive the observed difference between
+#' Iteratively explores edges associated with the observed difference between
 #' two or more populations of brain networks, using the permutation-based
 #' L1-distance ANOVA test of Fraiman and Fraiman (2018). Edges are ranked by
 #' their marginal p-value, then removed in batches until the global test is no
-#' longer significant. The permutation null is re-evaluated incrementally via
-#' a prefix-sum decomposition of T, which avoids recomputing the statistic
+#' longer significant. The permutation null is re-evaluated using
+#' cumulative sums of edge contributions to T, which avoid recomputing the statistic
 #' from scratch at every step.
 #'
 #' @param populations A named \code{list} with at least two elements. Each
 #'   element is itself a list of square, binary, symmetric adjacency matrices
-#'   (zero diagonal, no self-loops). All graphs must share the same number of
-#'   nodes.
+#'   (zero diagonal, no self-loops), with at least two graphs per population.
+#'   All graphs must have at least one node and share the same number of nodes.
 #' @param alpha Numeric significance level used both for the global test and
 #'   for the iterative edge-removal stopping rule. Default \code{0.05}.
 #' @param method Character string selecting the marginal edge test used to
 #'   rank candidate edges. One of \code{"fisher"} (default),
-#'   \code{"chi.squared"}, or \code{"prop"}. See
+#'   \code{"chi.squared"}, or \code{"prop"}. The \code{"prop"} method
+#'   requires exactly two populations. See
 #'   \code{\link{compute_edge_pvalues}}.
 #' @param adjust_method Character string passed to \code{\link[stats]{p.adjust}}
-#'   for multiplicity correction of the marginal p-values. Default
-#'   \code{"none"}.
+#'   for multiplicity correction of the marginal p-values (one of
+#'   \code{\link[stats]{p.adjust.methods}}, validated even when the graphs have
+#'   no edges). Default \code{"none"}.
 #' @param batch_size Positive integer giving the number of edges to drop per
 #'   iteration. Larger values speed up the procedure at the cost of coarser
-#'   resolution. Default \code{1}.
+#'   resolution. A batch larger than the remaining candidate set removes all
+#'   remaining edges. Default \code{1}.
 #' @param n_permutations Positive integer giving the number of permutation
 #'   replicates used to approximate the null distribution of T. Default
 #'   \code{1000}.
 #' @param a Positive numeric normalisation constant for the test statistic T
-#'   (see \code{\link{compute_test_statistic}}). Default \code{1}.
+#'   (see \code{\link{compute_test_statistic}}). It is validated and recorded
+#'   in \code{settings} but does not affect the result: a positive rescaling
+#'   leaves every permutation rank unchanged, so inference uses \code{a = 1}.
+#'   Default \code{1}.
 #' @param seed Optional integer seed for reproducibility of the permutation
 #'   replicates. Default \code{NULL}.
+#' @param criterion Character string selecting the test used at every step
+#'   of the procedure. \code{"combined"} (default) evaluates T together with
+#'   the local statistic U, the smallest marginal p-value of the remaining
+#'   edges, in one permutation test, so that differences concentrated in a
+#'   few edges are not diluted; \code{"original"} uses T alone, as in
+#'   versions up to 0.2.2. See Details.
 #'
 #' @return An object of class \code{"critical_links"}: a \code{list} with the
 #'   components
@@ -41,13 +53,18 @@
 #'     \item{critical_edges}{a \code{data.frame} with columns \code{node1},
 #'       \code{node2}, \code{p_value}, listing the edges removed until the test
 #'       became non-significant, ordered from most to least significant;
-#'       \code{NULL} if the global test was not significant.}
+#'       \code{NULL} if the global test was not significant. \code{p_value}
+#'       holds the marginal p-values after \code{adjust_method}. Because
+#'       \code{\link[stats]{p.adjust}} preserves their order and the ties it
+#'       creates are broken by the unadjusted p-values, the adjustment does
+#'       not change which edges are removed.}
 #'     \item{edges_removed}{a list of length-2 integer vectors giving the
 #'       \code{(i, j)} indices of the removed edges, in removal order.}
 #'     \item{modified_populations}{the input \code{populations} with the
 #'       critical edges zeroed out in every graph.}
 #'     \item{p_value}{the permutation \eqn{p} value of the global test on the
-#'       unmodified data, \code{NA} when there were no candidate edges.}
+#'       unmodified data (combined or original, according to
+#'       \code{criterion}), \code{NA} when there were no candidate edges.}
 #'     \item{n_edges}{the number of candidate edges considered.}
 #'     \item{settings}{the arguments the analysis ran with.}
 #'     \item{call}{the matched call.}
@@ -57,22 +74,89 @@
 #'   \code{\link[=plot.critical_links]{plot}}. The first three components are
 #'   unchanged from earlier versions, so code that extracts them keeps working.
 #'
-#' @details The implementation exploits the fact that T decomposes as a sum of
-#'   per-edge contributions \eqn{\Delta_e}. Removing an edge e is equivalent
-#'   to subtracting \eqn{\Delta_e} from T, so prefix sums of the sorted
-#'   \eqn{\Delta_e} values give the test statistic after any number of
-#'   removals in O(1). The permutation null is built once via a single BLAS
-#'   matrix multiplication and reused for every iteration, reducing the
-#'   overall complexity from O(K * B * |E| * m) (naive) to O(B * |E| * m).
+#' @details The implementation uses the decomposition of T into per-edge
+#'   contributions \eqn{\Delta_e}. Cumulative sums give the statistic after
+#'   each removal without rebuilding the graphs or recomputing distances.
+#'   Let n be the total number of graphs, m the number of groups, E the number
+#'   of possible edges, B the number of permutations and K the number of
+#'   removal steps. The dense matrix products for permuted counts cost
+#'   O(m * n * B * E); summing contributions costs O(m * B * E). The naive
+#'   distance-based path repeats O(m * n * B * E) work at each of K steps.
+#'   These bounds exclude ranking and marginal tests. The Fisher lookup table
+#'   can cost O(n^3) for balanced groups; other methods test each distinct count
+#'   vector. With the combined criterion, ranking B + 1 values at each of K
+#'   removal steps adds O(K * B * log B) time. Stored graph, label and count
+#'   matrices need O(n * E + m * n * B + m * E * B) memory. The combined
+#'   criterion also stores O(E * B) marginal p-values.
 #'
 #'   Permutation replicates are generated by uniformly permuting the group
 #'   labels across the pooled sample of all graphs, while preserving the
 #'   original group sizes (sampling without replacement).
 #'
+#'   All p-values treat the observed data as one more element of the set of
+#'   \eqn{B + 1} values: \eqn{p = (1 + \#\{b : T_b \le T_{obs}\}) / (B + 1)},
+#'   giving \eqn{p \ge 1 / (B + 1)} (Phipson and Smyth, 2010). For the initial
+#'   global test, the false-positive bound requires exchangeable group labels
+#'   under the null; see \code{\link{global_test}}. Equal central graphs alone
+#'   do not ensure this condition.
+#'
+#'   With \code{criterion = "combined"}, the global p-value of T and the
+#'   local p-value of U are computed for the observed data and for every
+#'   replicate, among the same \eqn{B + 1} values; \eqn{Q_j} is the smaller of
+#'   the two, and the combined p-value is the proportion of the \eqn{B + 1}
+#'   values of Q that are at most \eqn{Q_0}, the observed one. Because both
+#'   statistics come from the same permutations, no correction for using two
+#'   statistics is needed for the initial global test. After removing the
+#'   first s ranked edges, U is the smallest raw marginal p-value among the
+#'   remaining edges, evaluated separately for each replicate. The observed
+#'   edge order is held fixed across replicates. For two populations and
+#'   Fisher's test, the marginal p-values of the replicates are read from a
+#'   precomputed table of the hypergeometric distribution; otherwise each
+#'   distinct vector of edge counts is tested once, which is slower. The
+#'   combined criterion stores an |E| x B matrix of p-values in addition to the
+#'   matrix of contributions to T.
+#'
+#'   The selected edges are exploratory. Only the initial global test has a
+#'   guaranteed false-positive rate; the procedure does not establish
+#'   edge-level family-wise error or false discovery rate control. This is not
+#'   because the removal order is learned from the data: step-down procedures
+#'   such as the minimum-p method of Westfall and Young (1993) do the same and
+#'   still control the family-wise error rate (under subset pivotality),
+#'   because their statistic can only become less extreme as edges are
+#'   removed. T sums signed contributions of the remaining edges and has no
+#'   such monotonicity, so the later tests do not form a closed testing
+#'   procedure. Multiplicity adjustment with \code{adjust_method} does not
+#'   provide such a guarantee either: it rescales the marginal p-values but
+#'   preserves their order. A stopping p-value above alpha does not prove that
+#'   the remaining networks are equal. Report the initial global p-value
+#'   separately from the selected edges.
+#'
+#'   With \code{criterion = "original"} and the same seed, the critical edges
+#'   can differ slightly from those of versions up to 0.2.2, which estimated the
+#'   p-value as \eqn{\#\{b : T_b < T_{obs}\} / B}.
+#'
+#'   Numerical comparisons include a conservative floating-point allowance
+#'   derived from the number of retained non-constant edges, group sizes and
+#'   bounds on the unsigned terms of T. The same allowance is applied to every
+#'   assignment. The cumulative sums are evaluated in reverse order to avoid
+#'   cancellation when a large removed prefix leaves a small remainder. Local
+#'   p-values use only a relative allowance of 64 machine epsilons, with no
+#'   absolute floor, and canonicalise symmetric contingency counts. Inference
+#'   uses \code{a = 1} internally: any positive normalisation gives the same
+#'   ranks.
+#'
 #' @references
 #' Fraiman, D. and Fraiman, R. (2018) An ANOVA approach for statistical
 #' comparisons of brain networks. \emph{Scientific Reports}, 8, 4746.
 #' \doi{10.1038/s41598-018-23152-5}.
+#'
+#' Phipson, B. and Smyth, G. K. (2010) Permutation p-values should never be
+#' zero: calculating exact p-values when permutations are randomly drawn.
+#' \emph{Statistical Applications in Genetics and Molecular Biology}, 9(1),
+#' Article 39. \doi{10.2202/1544-6115.1585}.
+#'
+#' Westfall, P. H. and Young, S. S. (1993) \emph{Resampling-Based Multiple
+#' Testing}. Wiley, New York.
 #'
 #' @seealso \code{\link{print.critical_links}},
 #'   \code{\link{summary.critical_links}}, \code{\link{plot.critical_links}},
@@ -104,31 +188,34 @@ identify_critical_links <- function(populations,
                                     batch_size     = 1,
                                     n_permutations = 1000,
                                     a              = 1,
-                                    seed           = NULL) {
+                                    seed           = NULL,
+                                    criterion      = c("combined", "original")) {
 
   cl <- match.call()
   if (!is.null(seed)) set.seed(seed)
-  if (!is.list(populations) || length(populations) < 2)
-    stop("`populations` must be a list with at least 2 groups.")
-  .check_populations(populations, binary = TRUE)
+  .check_inference_populations(populations)
   batch_size     <- .check_count(batch_size, "batch_size")
   n_permutations <- .check_count(n_permutations, "n_permutations")
   alpha          <- .check_proportion(alpha, "alpha")
   a              <- .check_positive(a, "a")
+  criterion      <- match.arg(criterion)
+  method         <- .check_edge_method(method, length(populations))
+  adjust_method  <- .check_adjust_method(adjust_method)
 
   settings <- list(alpha = alpha, method = method,
                    adjust_method = adjust_method, batch_size = batch_size,
-                   n_permutations = n_permutations, a = a, seed = seed)
+                   n_permutations = n_permutations, a = a, seed = seed,
+                   criterion = criterion)
 
   Npop <- lengths(populations)
 
   make_key <- function(i, j) paste(i, j, sep = "-")
 
   freq       <- compute_edge_frequencies(populations)
-  edge_pvals <- compute_edge_pvalues(freq$edge_counts, Npop,
-                                     method        = method,
-                                     adjust_method = adjust_method)
-  edge_df    <- rank_edges(edge_pvals)
+  raw_pvals  <- compute_edge_pvalues(freq$edge_counts, Npop, method = method)
+  edge_pvals <- .adjust_edge_pvalues(raw_pvals, adjust_method)
+  edge_df    <- rank_edges(edge_pvals, tie_values =
+    if (identical(adjust_method, "none")) NULL else raw_pvals)
   n_edges    <- nrow(edge_df)
   if (n_edges == 0L)
     return(.critical_links(NULL, list(), populations, NA_real_, 0L,
@@ -137,26 +224,68 @@ identify_critical_links <- function(populations,
   ## Edge-wise decomposition of T (Section 3 of the paper) and the vectorised
   ## permutation null; the helpers live in R/permutation-null.R and are shared
   ## with global_test().
-  obs_delta_info <- .observed_edge_deltas(freq$edge_counts, Npop, a)
+  ## A positive a cannot affect ranks. Use a = 1 for inference so extreme
+  ## user-supplied normalisations cannot underflow/overflow the comparisons.
+  obs_delta_info <- .observed_edge_deltas(freq$edge_counts, Npop, a = 1)
 
   key_all   <- make_key(obs_delta_info$indices[, 1], obs_delta_info$indices[, 2])
   map_idx   <- match(make_key(edge_df$node1, edge_df$node2), key_all)
   delta_ord <- obs_delta_info$deltas[map_idx]
 
-  prefix_obs <- cumsum(delta_ord)
-  T0         <- sum(obs_delta_info$deltas)
+  suffix_obs <- c(.suffix_sum(delta_ord), 0)
+  T0         <- colSums(matrix(obs_delta_info$deltas, ncol = 1L))[1L]
 
   X           <- .graph_edge_matrix(populations, obs_delta_info$indices)
   C_list      <- .permuted_edge_counts(X, Npop, n_permutations)
-  delta_all   <- .permuted_edge_deltas(C_list, Npop, a)
+  delta_all   <- .permuted_edge_deltas(C_list, Npop, a = 1)
   perm_deltas <- t(delta_all[map_idx, , drop = FALSE])
 
   ## Summed in the same (upper-triangle) order as in global_test(), so that
   ## the two functions evaluate bit-identical statistics on the same draws.
   T_perm0     <- colSums(delta_all)
-  prefix_perm <- t(apply(perm_deltas, 1, cumsum))
+  ## Sum only retained edges, avoiding total - prefix cancellation. The
+  ## final column is exactly zero, including one-edge/one-replicate cases.
+  suffix_perm <- cbind(t(matrix(vapply(seq_len(n_permutations), function(b)
+    .suffix_sum(perm_deltas[b, ]), numeric(n_edges)), nrow = n_edges)), 0)
 
-  initial_p <- mean(T_perm0 < T0)
+  B  <- n_permutations
+  ## T after removing the first s ranked edges, observed value first, then the
+  ## B permutation replicates (s = 0: no edge removed).
+  T_after <- function(s) {
+    if (s == 0L) c(T0, T_perm0) else
+      c(suffix_obs[s + 1L], suffix_perm[, s + 1L])
+  }
+  ## Constant edges (absent in all graphs or present in all graphs) contribute
+  ## exact IEEE-754 zero under every permutation; count only non-constant
+  ## retained edges so sparse high-node networks do not inflate the bound.
+  tot_ord <- colSums(X)[map_idx]
+  n_total <- sum(Npop)
+  active_suffix <- c(as.integer(.suffix_sum(
+    as.integer(tot_ord > 0 & tot_ord < n_total))), 0L)
+  tolerance_at <- function(s) .statistic_tolerance(Npop, active_suffix[s + 1L])
+
+  if (criterion == "combined") {
+    ## Local statistic U = smallest marginal p value of the remaining edges,
+    ## in the observed data and in every replicate (same permutations as T).
+    ## Row s + 1 of U_after holds U after removing the first s ranked edges.
+    obs_counts <- do.call(cbind, lapply(seq_along(Npop), function(k)
+      freq$edge_counts[, , k][obs_delta_info$indices]))
+    if (!is.matrix(obs_counts)) obs_counts <- matrix(obs_counts, nrow = 1L)
+    pv <- .marginal_pvalues(obs_counts, C_list, Npop, method)
+    # apply() simplifies to a vector with one possible edge. Restore the
+    # E x B shape before adjoining the observed column and final empty step.
+    U_perm <- matrix(
+      apply(pv$perm[map_idx, , drop = FALSE], 2, .suffix_min),
+      nrow = n_edges, ncol = B)
+    U_after <- rbind(cbind(.suffix_min(pv$obs[map_idx]), U_perm), 1)
+    rm(pv)
+    p_at <- function(s)
+      .combined_pvalue(T_after(s), U_after[s + 1L, ], tolerance_at(s))
+  } else {
+    p_at <- function(s) .plus_one_pvalue(T_after(s), tolerance_at(s))
+  }
+
+  initial_p <- p_at(0L)
   if (initial_p > alpha) {
     warning("Initial test is not significant (p = ",
             round(initial_p, 4),
@@ -165,16 +294,28 @@ identify_critical_links <- function(populations,
                            settings, cl))
   }
 
-  batch_steps <- seq(batch_size, n_edges, by = batch_size)
+  batch_steps <- seq(min(batch_size, n_edges), n_edges, by = batch_size)
   if (length(batch_steps) == 0L || batch_steps[length(batch_steps)] != n_edges)
     batch_steps <- c(batch_steps, n_edges)
 
-  delta_vec  <- T_perm0 - T0
-  R_at_steps <- sweep(prefix_perm[, batch_steps, drop = FALSE],
-                      2, prefix_obs[batch_steps])
-  p_at_steps <- colMeans(R_at_steps > delta_vec)
-
-  nonsig_idx <- which(p_at_steps > alpha)[1]
+  if (criterion == "original") {
+    ## All steps at once: T values after every batch of removals, compared
+    ## with the observed value of the same step.
+    T_obs_steps  <- suffix_obs[batch_steps + 1L]
+    T_perm_steps <- suffix_perm[, batch_steps + 1L, drop = FALSE]
+    margins <- .comparison_margin(T_obs_steps,
+      vapply(batch_steps, tolerance_at, numeric(1)))
+    p_at_steps <- (1 + colSums(sweep(T_perm_steps, 2,
+      T_obs_steps + margins, "<="))) / (B + 1)
+    nonsig_idx   <- which(p_at_steps > alpha)[1]
+  } else {
+    ## The ranks of T and U change with every step, so the combined p value is
+    ## evaluated step by step until it exceeds alpha.
+    nonsig_idx <- NA_integer_
+    for (b in seq_along(batch_steps)) {
+      if (p_at(batch_steps[b]) > alpha) { nonsig_idx <- b; break }
+    }
+  }
   k_removed  <- if (is.na(nonsig_idx)) n_edges else batch_steps[nonsig_idx]
 
   edges_removed <- vector("list", k_removed)
