@@ -114,9 +114,10 @@
 ## Combined p value from the B + 1 values (observed first) of T and U:
 ## Q_j = min(rank of T_j, rank of U_j), ties taking the largest rank within
 ## the numerical allowance, and p = max(Q_0, #{j : Q_j <= Q_0}) / (B + 1).
-## Flooring the count at Q_0 preserves exact randomization calibration while
-## guaranteeing p_combined >= min(p_global, p_local) even when non-transitive
-## tolerance intervals bridge nearby values.
+## Flooring the count at Q_0 keeps the test valid (it can only raise p, and it
+## never binds when the ranks are exact) while guaranteeing
+## p_combined >= min(p_global, p_local) even when non-transitive tolerance
+## intervals bridge nearby values.
 .combined_pvalue <- function(T_all, U_all, tolerance = 0) {
   if (length(T_all) != length(U_all))
     stop("T and U must contain the same observed and permuted assignments.")

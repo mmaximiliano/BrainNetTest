@@ -31,7 +31,10 @@
 #'   replicates used to approximate the null distribution of T. Default
 #'   \code{1000}.
 #' @param a Positive numeric normalisation constant for the test statistic T
-#'   (see \code{\link{compute_test_statistic}}). Default \code{1}.
+#'   (see \code{\link{compute_test_statistic}}). It is validated and recorded
+#'   in \code{settings} but does not affect the result: a positive rescaling
+#'   leaves every permutation rank unchanged, so inference uses \code{a = 1}.
+#'   Default \code{1}.
 #' @param seed Optional integer seed for reproducibility of the permutation
 #'   replicates. Default \code{NULL}.
 #' @param criterion Character string selecting the test used at every step

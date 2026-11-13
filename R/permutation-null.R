@@ -55,6 +55,9 @@
 ## This is a conservative numerical allowance, not a statistical tolerance
 ## or decimal rounding of the statistic. An empty graph has exactly zero
 ## allowance. Local p-values U never use this absolute allowance.
+## Being a worst-case bound, it grows quadratically with n_edges, much faster
+## than the null spread of T, so it becomes more conservative for very large
+## networks.
 .statistic_tolerance <- function(group_sizes, n_edges) {
   if (n_edges == 0L) return(0)
   n <- sum(group_sizes)
