@@ -11,9 +11,13 @@ compute_edge_pvalues(edge_counts, N, method = "fisher", adjust_method = "none")
 
 \item{N}{A vector of sample sizes for each population.}
 
-\item{method}{The statistical test method to use: "fisher", "chi.squared", or "prop". Default is "fisher".}
+\item{method}{The statistical test method to use: "fisher", "chi.squared", or "prop". Default is "fisher".
+The "prop" method requires exactly two populations. The method is
+validated even when the graphs have no edges.}
 
-\item{adjust_method}{The method for p-value adjustment for multiple testing. Default is "none".}
+\item{adjust_method}{The method for p-value adjustment for multiple testing
+(one of \code{\link[stats]{p.adjust.methods}}). Default is "none".
+Validated even when the graphs have no edges.}
 }
 \value{
 A matrix of p-values for each edge.

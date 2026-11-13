@@ -25,6 +25,8 @@ identify_critical_links_naive <- function(populations,
   n_permutations <- .check_count(n_permutations, "n_permutations")
   alpha          <- .check_proportion(alpha, "alpha")
   a              <- .check_positive(a, "a")
+  method         <- .check_edge_method(method, length(populations))
+  adjust_method  <- .check_adjust_method(adjust_method)
 
   settings <- list(alpha = alpha, method = method,
                    adjust_method = adjust_method, batch_size = batch_size,

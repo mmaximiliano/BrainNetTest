@@ -32,7 +32,9 @@ permutation test; \code{"original"} uses T alone. See
 
 \item{method}{Marginal edge test used for U when \code{criterion =
 "combined"}: \code{"fisher"} (default), \code{"chi.squared"} or
-\code{"prop"}, as in \code{\link{compute_edge_pvalues}}.}
+\code{"prop"}, as in \code{\link{compute_edge_pvalues}}. The
+\code{"prop"} method requires exactly two populations. The method is
+validated for both criteria, including when the graphs have no edges.}
 }
 \value{
 An object of class \code{"global_test"}: a \code{list} with the
