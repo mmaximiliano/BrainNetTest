@@ -14,6 +14,7 @@
 * **Marginal-test arguments are validated before any computation.** `method` must be exactly `"fisher"`, `"chi.squared"` or `"prop"` in `global_test()`, `identify_critical_links()` and `compute_edge_pvalues()`, and `adjust_method` exactly one of `p.adjust.methods` in the latter two. Both are checked even for networks without edges and with `criterion = "original"`. Abbreviations such as `adjust_method = "bonf"`, which `p.adjust()` used to accept, are now rejected. `"prop"` requires exactly two populations everywhere; for more populations, `"chi.squared"` gives the same Pearson test.
 * **No per-graph variation by default in `generate_category_graphs()`.** The defaults of `intra_prob_variation` and `inter_prob_variation` change from 0.05 to 0, so by default every graph is drawn with the same within- and between-community probabilities and all edges are independent. A positive value still shifts the probabilities of each graph by a uniform random amount in [-v, v]. Code that relied on the old defaults must now pass 0.05 explicitly.
 * **Bug fix.** `identify_critical_links()` no longer mishandles the permutation replicates when there is a single candidate edge.
+* **Bug fix.** `identify_critical_links()` no longer fails with "wrong sign in 'by' argument" when the initial test is significant and `batch_size` exceeds the number of candidate edges; such a batch removes all of them.
 
 # BrainNetTest 0.2.2
 

@@ -38,7 +38,8 @@ no edges). Default \code{"none"}.}
 
 \item{batch_size}{Positive integer giving the number of edges to drop per
 iteration. Larger values speed up the procedure at the cost of coarser
-resolution. Default \code{1}.}
+resolution. A batch larger than the remaining candidate set removes all
+remaining edges. Default \code{1}.}
 
 \item{n_permutations}{Positive integer giving the number of permutation
 replicates used to approximate the null distribution of T. Default
