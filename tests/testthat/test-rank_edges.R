@@ -52,3 +52,95 @@ test_that("rank_edges handles the 2-node degenerate case", {
   expect_equal(edf$node2, 2L)
   expect_equal(edf$p_value, 0.02)
 })
+
+test_that("machine-level Fisher ties use a stable endpoint order", {
+  # These values exchanged edges at the stopping boundary of the manuscript's
+  # 64-node distance example across R versions, despite the same random seed.
+  tied <- c(0.048337915123163772979, 0.048337915123163759101)
+  for (values in list(tied, rev(tied))) {
+    pv <- matrix(1, 64, 64)
+    pv[1, 2] <- values[1]
+    pv[38, 44] <- values[2]
+    edf <- rank_edges(pv)
+    expect_identical(edf$node1[1:2], c(1L, 38L))
+    expect_identical(edf$node2[1:2], c(2L, 44L))
+    expect_identical(edf$p_value[1:2], values)
+  }
+})
+
+test_that("relative ties preserve tiny p-values and distinguish zero", {
+  pv <- matrix(1, 4, 4)
+  pv[1, 2] <- 1e-300 * (1 + 4 * .Machine$double.eps)
+  pv[1, 3] <- 1e-300
+  pv[2, 3] <- 2e-300
+  pv[1, 4] <- 0
+  edf <- rank_edges(pv)
+  expect_identical(edf$node1[1:4], c(1L, 1L, 1L, 2L))
+  expect_identical(edf$node2[1:4], c(4L, 2L, 3L, 3L))
+  expect_identical(edf$p_value[1:4], pv[cbind(c(1, 1, 1, 2),
+                                           c(4, 2, 3, 3))])
+})
+
+test_that("meaningfully distinct p-values keep their original order", {
+  pv <- matrix(1, 4, 4)
+  pv[1, 2] <- 0.05 + 1e-12
+  pv[1, 3] <- 0.05 - 1e-12
+  pv[2, 3] <- 0.1 * (1 + 128 * .Machine$double.eps)
+  pv[1, 4] <- 0.1
+  edf <- rank_edges(pv)
+  expect_identical(edf$node1[1:4], c(1L, 1L, 1L, 2L))
+  expect_identical(edf$node2[1:4], c(3L, 2L, 4L, 3L))
+  # The ranking policy must never round a p-value across a test threshold.
+  expect_identical(edf$p_value < 0.05,
+                   pv[cbind(edf$node1, edf$node2)] < 0.05)
+})
+
+test_that("numerical tie groups do not grow by chaining neighbours", {
+  pv <- matrix(1, 3, 3)
+  pv[1, 2] <- 0.1 * (1 + 96 * .Machine$double.eps)
+  pv[1, 3] <- 0.1 * (1 + 48 * .Machine$double.eps)
+  pv[2, 3] <- 0.1
+  edf <- rank_edges(pv)
+  expect_identical(edf$node1, c(1L, 2L, 1L))
+  expect_identical(edf$node2, c(3L, 3L, 2L))
+})
+
+test_that("adjusted p-value plateaus break ties by raw marginal evidence", {
+  # Under Bonferroni on 6 edges, raw p = 0.20 and raw p = 1.00 both clamp to
+  # adjusted p = 1.00, while raw p = 0.001 becomes 0.006. Passing raw p-values
+  # as tie_values ranks the stronger raw edge (3, 4) ahead of dead edge (1, 2)
+  # while keeping the adjusted p-values in `p_value`.
+  raw <- matrix(1, 4, 4)
+  raw[1, 3] <- raw[3, 1] <- 0.001
+  raw[3, 4] <- raw[4, 3] <- 0.20
+  adj <- matrix(1, 4, 4)
+  adj[1, 3] <- adj[3, 1] <- stats::p.adjust(raw[upper.tri(raw)], "bonferroni")[2]
+
+  edf <- rank_edges(adj, tie_values = raw)
+  expect_identical(edf$node1[1:2], c(1L, 3L))
+  expect_identical(edf$node2[1:2], c(3L, 4L))
+  expect_identical(edf$p_value[1:2], c(0.006, 1))
+  expect_error(rank_edges(adj, tie_values = matrix(1, 3, 3)), "same dimensions")
+})
+
+test_that("multiplicity adjustment never changes which edges are removed", {
+  control <- generate_category_graphs(n_graphs = 15, n_nodes = 10,
+    n_communities = 2, base_intra_prob = 0.8, base_inter_prob = 0.2, seed = 1)
+  patient <- generate_category_graphs(n_graphs = 15, n_nodes = 10,
+    n_communities = 2, base_intra_prob = 0.5, base_inter_prob = 0.5, seed = 2)
+  pops <- list(Control = control, Patient = patient)
+  for (criterion in c("original", "combined")) {
+    none <- identify_critical_links(pops, n_permutations = 99, seed = 3,
+                                    criterion = criterion)
+    expect_gt(length(none$edges_removed), 1L)
+    for (adj in c("bonferroni", "holm", "BH")) {
+      res <- identify_critical_links(pops, n_permutations = 99, seed = 3,
+                                     criterion = criterion, adjust_method = adj)
+      expect_identical(res$edges_removed, none$edges_removed,
+                       info = paste(criterion, adj))
+      expect_identical(res$p_value, none$p_value)
+      expect_true(all(res$critical_edges$p_value >=
+                        none$critical_edges$p_value))
+    }
+  }
+})

@@ -4,10 +4,17 @@
 \alias{rank_edges}
 \title{Rank Edges Based on P-Values}
 \usage{
-rank_edges(edge_pvalues)
+rank_edges(edge_pvalues, tie_values = NULL)
 }
 \arguments{
 \item{edge_pvalues}{A square matrix of p-values for each edge, typically obtained from \code{compute_edge_pvalues}.}
+
+\item{tie_values}{Optional square numeric matrix with the same dimensions as
+\code{edge_pvalues} (such as unadjusted marginal p-values when
+\code{edge_pvalues} has been multiplicity-adjusted with
+\code{\link[stats]{p.adjust}}), used to break ties within each primary
+numerical tie group before falling back to endpoint order. Default
+\code{NULL}.}
 }
 \value{
 A data frame with edges and their corresponding p-values, ordered from most significant.
@@ -15,6 +22,12 @@ A data frame with edges and their corresponding p-values, ordered from most sign
 \description{
 This function ranks edges based on their p-values obtained from statistical tests,
 ordering them from lowest to highest p-value (most to least significant).
+Values differing by at most 64 machine epsilons relative to the smallest
+value in a tie group are treated as numerical ties. Tied edges are ordered
+by their second endpoint, then their first endpoint (upper-triangle order).
+This removes floating-point noise from the ordering without rounding small
+p-values to zero. The returned p-values are unchanged; this tolerance is
+used only for ranking, not for significance thresholds.
 }
 \examples{
 # Generate synthetic populations

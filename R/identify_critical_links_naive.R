@@ -40,10 +40,10 @@ identify_critical_links_naive <- function(populations,
 
   ## 1. Rank edges by marginal p-value (same as optimised) -----------------
   freq       <- compute_edge_frequencies(populations)
-  edge_pvals <- compute_edge_pvalues(freq$edge_counts, Npop,
-                                     method        = method,
-                                     adjust_method = adjust_method)
-  edge_df    <- rank_edges(edge_pvals)
+  raw_pvals  <- compute_edge_pvalues(freq$edge_counts, Npop, method = method)
+  edge_pvals <- .adjust_edge_pvalues(raw_pvals, adjust_method)
+  edge_df    <- rank_edges(edge_pvals, tie_values =
+    if (identical(adjust_method, "none")) NULL else raw_pvals)
   n_edges    <- nrow(edge_df)
   if (n_edges == 0L)
     return(.critical_links(NULL, list(), populations, NA_real_, 0L,

@@ -50,7 +50,11 @@
 #'     \item{critical_edges}{a \code{data.frame} with columns \code{node1},
 #'       \code{node2}, \code{p_value}, listing the edges removed until the test
 #'       became non-significant, ordered from most to least significant;
-#'       \code{NULL} if the global test was not significant.}
+#'       \code{NULL} if the global test was not significant. \code{p_value}
+#'       holds the marginal p-values after \code{adjust_method}. Because
+#'       \code{\link[stats]{p.adjust}} preserves their order and the ties it
+#'       creates are broken by the unadjusted p-values, the adjustment does
+#'       not change which edges are removed.}
 #'     \item{edges_removed}{a list of length-2 integer vectors giving the
 #'       \code{(i, j)} indices of the removed edges, in removal order.}
 #'     \item{modified_populations}{the input \code{populations} with the
@@ -169,10 +173,10 @@ identify_critical_links <- function(populations,
   make_key <- function(i, j) paste(i, j, sep = "-")
 
   freq       <- compute_edge_frequencies(populations)
-  edge_pvals <- compute_edge_pvalues(freq$edge_counts, Npop,
-                                     method        = method,
-                                     adjust_method = adjust_method)
-  edge_df    <- rank_edges(edge_pvals)
+  raw_pvals  <- compute_edge_pvalues(freq$edge_counts, Npop, method = method)
+  edge_pvals <- .adjust_edge_pvalues(raw_pvals, adjust_method)
+  edge_df    <- rank_edges(edge_pvals, tie_values =
+    if (identical(adjust_method, "none")) NULL else raw_pvals)
   n_edges    <- nrow(edge_df)
   if (n_edges == 0L)
     return(.critical_links(NULL, list(), populations, NA_real_, 0L,

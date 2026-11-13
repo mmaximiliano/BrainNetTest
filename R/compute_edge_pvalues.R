@@ -128,6 +128,19 @@ compute_edge_pvalues <- function(edge_counts, N, method = "fisher", adjust_metho
   }
   
   # Adjust p-values for multiple testing if needed
+  edge_pvalues <- .adjust_edge_pvalues(edge_pvalues, adjust_method)
+
+  return(edge_pvalues)
+}
+
+#' Multiplicity-adjust a symmetric matrix of edge p-values
+#'
+#' @param edge_pvalues Symmetric matrix of unadjusted edge p-values.
+#' @param adjust_method Method passed to `stats::p.adjust()`.
+#' @return The matrix with its off-diagonal entries adjusted.
+#' @noRd
+#' @keywords internal
+.adjust_edge_pvalues <- function(edge_pvalues, adjust_method) {
   if (adjust_method != "none") {
     # Adjust using only the upper triangle, then mirror to the lower triangle.
     # Note: assigning the same vector to both upper.tri() and lower.tri() would
@@ -135,11 +148,8 @@ compute_edge_pvalues <- function(edge_counts, N, method = "fisher", adjust_metho
     # order over different index sets), producing an asymmetric matrix. We
     # therefore write the upper triangle first and then transpose.
     ut <- upper.tri(edge_pvalues)
-    p_values_vec <- edge_pvalues[ut]
-    adjusted_p_values <- p.adjust(p_values_vec, method = adjust_method)
-    edge_pvalues[ut] <- adjusted_p_values
+    edge_pvalues[ut] <- p.adjust(edge_pvalues[ut], method = adjust_method)
     edge_pvalues[lower.tri(edge_pvalues)] <- t(edge_pvalues)[lower.tri(edge_pvalues)]
   }
-  
-  return(edge_pvalues)
+  edge_pvalues
 }
