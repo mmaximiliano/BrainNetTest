@@ -40,7 +40,10 @@ the `check/` directory as available. Use a new empty output directory to retry.
 ## GitHub Actions
 
 Run **Prepare source release artifacts** manually from the Actions tab and enter
-the approved source SHA. The workflow uses release R on Linux and records the
+the approved source SHA, or run
+`gh workflow run package-release-artifacts.yaml -f commit=<full SHA>`. GitHub
+offers manual runs only for workflows present on the default branch, so until
+this workflow is merged there, use the local command above. The workflow uses release R on Linux and records the
 resolved environment. The preparation tool is taken from the workflow revision;
 the package is taken from the requested source commit, which may predate the
 tool. Both revisions are recorded. The workflow retains artifacts for 30 days,

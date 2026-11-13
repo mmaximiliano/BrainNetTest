@@ -9,7 +9,10 @@ fi
 commit=$1
 output=$2
 script_path=$(cd "$(dirname "$0")" && pwd)/$(basename "$0")
-resolved=$(git rev-parse --verify "${commit}^{commit}")
+if ! resolved=$(git rev-parse --verify --quiet "${commit}^{commit}" 2>/dev/null); then
+  echo "$commit does not name a commit in this repository; check the SHA or fetch the commit first." >&2
+  exit 2
+fi
 if [[ "$resolved" != "$commit" ]]; then
   echo "The requested revision is not an exact commit SHA." >&2
   exit 2
@@ -71,10 +74,13 @@ if ! R CMD build --no-manual "$scratch/source" > build.log 2>&1; then
   echo "R CMD build failed; inspect $output/build.log" >&2
   exit 1
 fi
-archive=$(Rscript --vanilla -e '
+if ! archive=$(Rscript --vanilla -e '
   d <- read.dcf("source-DESCRIPTION")
-  cat(paste0(d[1, "Package"], "_", d[1, "Version"], ".tar.gz"))')
-test -f "$archive"
+  cat(paste0(d[1, "Package"], "_", d[1, "Version"], ".tar.gz"))') ||
+   [[ ! -f "$archive" ]]; then
+  echo "R CMD build did not produce the expected source archive; inspect $output/build.log" >&2
+  exit 1
+fi
 "${hash_command[@]}" "$archive" > SHA256SUMS
 
 # Check the built tarball, not the working tree. Keep the complete check folder
