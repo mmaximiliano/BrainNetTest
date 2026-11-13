@@ -112,6 +112,12 @@
 #'   \code{\link{print.global_test}}.
 #'
 #' @export
+#' @section Equal group sizes:
+#'   The current T test requires the same number of graphs in every group.
+#'   With unequal group sizes, a real difference can move T away from the
+#'   rejection tail. Such designs are rejected until a revised test is
+#'   validated. The package does not drop observations to balance groups.
+#'
 #' @examples
 #' control <- generate_category_graphs(n_graphs = 20, n_nodes = 10,
 #'   n_communities = 2, base_intra_prob = 0.6, base_inter_prob = 0.2, seed = 1)
@@ -146,6 +152,7 @@ global_test <- function(populations, n_permutations = 1000, seed = NULL,
   ## here, so that `statistic` agrees with compute_test_statistic(); the common
   ## factor leaves every comparison, and hence the p value, unchanged.
   both_triangles <- 2
+  .check_equal_group_sizes(group_sizes)
 
   freq  <- compute_edge_frequencies(populations)
   obs   <- .observed_edge_deltas(freq$edge_counts, group_sizes, a = 1)

@@ -170,6 +170,14 @@ The implementation uses the decomposition of T into per-edge
   uses \code{a = 1} internally: any positive normalisation gives the same
   ranks.
 }
+\section{Equal group sizes}{
+
+  The current T test requires the same number of graphs in every group.
+  With unequal group sizes, a real difference can move T away from the
+  rejection tail. Such designs are rejected until a revised test is
+  validated. The package does not drop observations to balance groups.
+}
+
 \examples{
 \donttest{
 set.seed(1)
