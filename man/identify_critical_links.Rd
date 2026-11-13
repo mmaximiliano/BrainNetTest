@@ -131,14 +131,20 @@ The implementation uses the decomposition of T into per-edge
   combined criterion stores an |E| x B matrix of p-values in addition to the
   matrix of contributions to T.
 
-  The selected edges are exploratory. The order of removal is learned from
-  the same data, so the initial global test's false-positive guarantee does
-  not extend to later tests on the selected subsets. The procedure does not
-  establish edge-level family-wise error or false discovery rate control.
-  Setting \code{adjust_method} changes marginal p-values used for ranking;
-  it does not give such a guarantee for the final selected set. A stopping
-  p-value above alpha does not prove that the remaining networks are equal.
-  Report the initial global p-value separately from the selected edges.
+  The selected edges are exploratory. Only the initial global test has a
+  guaranteed false-positive rate; the procedure does not establish
+  edge-level family-wise error or false discovery rate control. This is not
+  because the removal order is learned from the data: step-down procedures
+  such as the minimum-p method of Westfall and Young (1993) do the same and
+  still control the family-wise error rate (under subset pivotality),
+  because their statistic can only become less extreme as edges are
+  removed. T sums signed contributions of the remaining edges and has no
+  such monotonicity, so the later tests do not form a closed testing
+  procedure. Multiplicity adjustment with \code{adjust_method} does not
+  provide such a guarantee either: it rescales the marginal p-values but
+  preserves their order. A stopping p-value above alpha does not prove that
+  the remaining networks are equal. Report the initial global p-value
+  separately from the selected edges.
 
   With \code{criterion = "original"} and the same seed, the critical edges
   can differ slightly from those of versions up to 0.2.2, which estimated the

@@ -82,8 +82,10 @@ compute_distance(population[[1]], central)
 
 `compute_test_statistic()` aggregates within- and between-group Manhattan
 distances into the statistic `T`. More negative (smaller) values indicate
-stronger evidence that the groups differ, because graphs tend to lie closer to
-their own population's central graph than to the other populations' centres:
+stronger evidence that the groups differ: with equal group sizes, the expected
+value of `T` is zero when all populations have the same edge probabilities and
+becomes more negative the more those probabilities differ between groups (see
+`?compute_test_statistic`):
 
 ```{r}
 control <- replicate(

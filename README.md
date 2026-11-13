@@ -84,7 +84,8 @@ the criterion, number of permutations, seed and package version.
 Report the initial global p-value separately from the selected edges.
 Edge removal is an exploratory procedure: it does not control the false
 discovery rate or family-wise error rate of the selected set. Adjusting the
-marginal p-values used for ranking does not change that. A non-significant
+marginal p-values with `adjust_method` does not change that, because the
+adjustment preserves their order. A non-significant
 stopping result does not prove that the remaining networks are equal.
 
 Distances sum both matrix triangles. For symmetric graphs with zero diagonal,

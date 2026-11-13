@@ -25,6 +25,22 @@ This function returns a statistic, not a normal-score test or a
   p-value. Distances count both matrix triangles, so T is twice its value
   under an upper-triangle-only distance convention. For permutation
   inference and its assumptions, see \code{\link{global_test}}.
+
+  Consider independent binary graphs, q in each of m groups (n = mq in
+  total), where edge e is present with probability \eqn{p_{ke}} in group k.
+  Then
+  \deqn{E(T) = -\frac{4n}{n - 1} \, \frac{\sqrt{mq}}{a} \sum_e \sum_{k = 1}^{m}
+    (p_{ke} - \bar{p}_e)^2,}{E(T) = -(4n / (n - 1)) * (sqrt(m q) / a) *
+    sum_e sum_k (p_ke - pbar_e)^2,}
+  where \eqn{\bar{p}_e}{pbar_e} is the average of \eqn{p_{ke}} over the
+  groups. It is zero when all groups share their edge probabilities and
+  negative otherwise, which is why small values are evidence of a
+  difference. Individual graphs need not be closer to their own central
+  graph: in Manhattan distance, graphs whose edge probabilities are below
+  1/2 are on average closer to any central graph with smaller entries than
+  to their own. With unequal group sizes the expectation can be positive
+  even when the groups differ, so the lower-tail test can miss such
+  differences.
 }
 \examples{
 # Generate synthetic populations data
