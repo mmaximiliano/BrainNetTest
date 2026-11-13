@@ -122,3 +122,25 @@ test_that("adjusted p-value plateaus break ties by raw marginal evidence", {
   expect_identical(edf$p_value[1:2], c(0.006, 1))
   expect_error(rank_edges(adj, tie_values = matrix(1, 3, 3)), "same dimensions")
 })
+
+test_that("multiplicity adjustment never changes which edges are removed", {
+  control <- generate_category_graphs(n_graphs = 15, n_nodes = 10,
+    n_communities = 2, base_intra_prob = 0.8, base_inter_prob = 0.2, seed = 1)
+  patient <- generate_category_graphs(n_graphs = 15, n_nodes = 10,
+    n_communities = 2, base_intra_prob = 0.5, base_inter_prob = 0.5, seed = 2)
+  pops <- list(Control = control, Patient = patient)
+  for (criterion in c("original", "combined")) {
+    none <- identify_critical_links(pops, n_permutations = 99, seed = 3,
+                                    criterion = criterion)
+    expect_gt(length(none$edges_removed), 1L)
+    for (adj in c("bonferroni", "holm", "BH")) {
+      res <- identify_critical_links(pops, n_permutations = 99, seed = 3,
+                                     criterion = criterion, adjust_method = adj)
+      expect_identical(res$edges_removed, none$edges_removed,
+                       info = paste(criterion, adj))
+      expect_identical(res$p_value, none$p_value)
+      expect_true(all(res$critical_edges$p_value >=
+                        none$critical_edges$p_value))
+    }
+  }
+})
