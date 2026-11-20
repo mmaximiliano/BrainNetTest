@@ -168,6 +168,14 @@ The implementation uses the decomposition of T into per-edge
   p-values and change which edges are selected. When reproducing a result,
   record the R version and BLAS library as well as the seed.
 }
+\section{Equal group sizes}{
+
+  The current T test requires the same number of graphs in every group.
+  With unequal group sizes, a real difference can move T away from the
+  rejection tail. Such designs are rejected until a revised test is
+  validated. The package does not drop observations to balance groups.
+}
+
 \examples{
 \donttest{
 set.seed(1)

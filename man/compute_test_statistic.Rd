@@ -7,11 +7,13 @@
 compute_test_statistic(populations, a = 1)
 }
 \arguments{
-\item{populations}{A named list where each element is a list of adjacency
-matrices for a population. Example:
+\item{populations}{A named list with at least two elements, where each
+element is a list of adjacency matrices for a population. Every group must
+have the same number of graphs; unequal group sizes are not supported by
+the current T test. Example:
 \code{list(Control = list(G1, G2, ...), PatientA = list(G1, G2, ...), PatientB = list(G1, G2, ...))}}
 
-\item{a}{A normalization constant. Default is 1.}
+\item{a}{Positive numeric normalization constant. Default is 1.}
 }
 \value{
 A numeric value representing the test statistic T.

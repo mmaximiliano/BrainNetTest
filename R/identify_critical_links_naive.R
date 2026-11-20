@@ -35,6 +35,7 @@ identify_critical_links_naive <- function(populations,
 
   ## 0. Metadata ------------------------------------------------------------
   Npop <- lengths(populations)
+  .check_equal_group_sizes(Npop)
   m    <- length(populations)
   n    <- sum(Npop)
 
