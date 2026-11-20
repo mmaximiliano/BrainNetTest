@@ -1,0 +1,54 @@
+# R CMD check on R-devel built without long double, as in CRAN's noLD
+# additional check. Extended precision elsewhere can hide the rounding
+# differences that the permutation tie handling must tolerate. Uses the same
+# R-hub platform definition as rhub.yaml.
+name: noLD check
+
+on:
+  pull_request:
+    paths:
+      - 'R/**'
+      - 'tests/**'
+      - 'DESCRIPTION'
+      - '.github/workflows/nold-check.yaml'
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      containers: ${{ steps.rhub-setup.outputs.containers }}
+    steps:
+      - uses: r-hub/actions/setup@v1
+        id: rhub-setup
+        with:
+          config: nold
+
+  nold:
+    needs: setup
+    runs-on: ubuntu-latest
+    name: ${{ matrix.config.label }}
+    strategy:
+      fail-fast: false
+      matrix:
+        config: ${{ fromJson(needs.setup.outputs.containers) }}
+    container:
+      image: ${{ matrix.config.container }}
+    env:
+      NOT_CRAN: 'true'
+    steps:
+      - uses: r-hub/actions/checkout@v1
+      - uses: r-hub/actions/platform-info@v1
+        with:
+          job-config: ${{ matrix.config.job-config }}
+      - uses: r-hub/actions/setup-deps@v1
+        with:
+          job-config: ${{ matrix.config.job-config }}
+      - uses: r-hub/actions/run-check@v1
+        with:
+          job-config: ${{ matrix.config.job-config }}

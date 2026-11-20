@@ -139,3 +139,19 @@ test_that("generate_category_graphs supports vector base_intra_prob", {
     expect_equal(diag(G), rep(0, 20))
   }
 })
+
+test_that("generate_category_graphs has no per-graph variation by default", {
+  g0 <- generate_category_graphs(n_graphs = 3, n_nodes = 12, n_communities = 2,
+    base_intra_prob = 0.7, base_inter_prob = 0.2, seed = 7)
+  g1 <- generate_category_graphs(n_graphs = 3, n_nodes = 12, n_communities = 2,
+    base_intra_prob = 0.7, base_inter_prob = 0.2, intra_prob_variation = 0,
+    inter_prob_variation = 0, seed = 7)
+  expect_identical(g0, g1)
+  ## with no variation the mean density matches the base probabilities
+  g <- generate_category_graphs(n_graphs = 200, n_nodes = 20, n_communities = 2,
+    base_intra_prob = 0.7, base_inter_prob = 0.2, seed = 8)
+  comm <- rep(1:2, each = 10); same <- outer(comm, comm, "==") & upper.tri(diag(20))
+  diff <- outer(comm, comm, "!=") & upper.tri(diag(20))
+  expect_equal(mean(sapply(g, function(A) mean(A[same]))), 0.7, tolerance = 0.02)
+  expect_equal(mean(sapply(g, function(A) mean(A[diff]))), 0.2, tolerance = 0.02)
+})

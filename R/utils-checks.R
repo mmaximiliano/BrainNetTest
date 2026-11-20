@@ -74,13 +74,12 @@
 
 #' Validate the nested list structure used to represent graph populations
 #'
-#' Walks the structure only: the per-graph work is a `dim()` lookup, so the
-#' cost is negligible next to the analysis itself. The optional `binary` scan
-#' does touch every entry and is therefore requested only by
-#' `identify_critical_links()`, which documents binary input.
+#' Checks common dimensions and finite entries. Binary inference additionally
+#' requires undirected graphs without self-loops; general helpers can still
+#' accept finite weighted matrices.
 #'
 #' @param populations Candidate populations object.
-#' @param binary If `TRUE`, also require that every entry is 0 or 1.
+#' @param binary If `TRUE`, require binary, symmetric, zero-diagonal graphs.
 #' @param arg Argument name to use in error messages.
 #' @return Invisibly, the common number of nodes.
 #' @noRd
@@ -118,6 +117,9 @@
         stop(where, " is not square (", nrow(G), " by ", ncol(G), ").",
              call. = FALSE)
       }
+      if (nrow(G) == 0L) {
+        stop(where, " must have at least one node.", call. = FALSE)
+      }
       if (is.na(n_nodes)) {
         n_nodes <- nrow(G)
       } else if (nrow(G) != n_nodes) {
@@ -125,12 +127,31 @@
              n_nodes, "; all graphs must share the same vertex set.",
              call. = FALSE)
       }
-      if (binary && (anyNA(G) || any(G != 0 & G != 1))) {
+      if (binary && (any(!is.finite(G)) || any(G != 0 & G != 1))) {
         stop(where, " is not binary; adjacency matrices must contain only ",
              "0 and 1.", call. = FALSE)
+      }
+      if (any(!is.finite(G))) {
+        stop(where, " must contain only finite entries.", call. = FALSE)
+      }
+      if (binary && any(G != t(G))) {
+        stop(where, " must be symmetric.", call. = FALSE)
+      }
+      if (binary && any(diag(G) != 0)) {
+        stop(where, " must have a zero diagonal (no self-loops).", call. = FALSE)
       }
     }
   }
 
   invisible(n_nodes)
+}
+
+# Validate the shared input contract of the permutation inference functions.
+.check_inference_populations <- function(populations) {
+  if (!is.list(populations) || length(populations) < 2L)
+    stop("`populations` must be a list with at least 2 groups.", call. = FALSE)
+  n_nodes <- .check_populations(populations, binary = TRUE)
+  if (any(lengths(populations) < 2L))
+    stop("Each population must have at least two graphs.", call. = FALSE)
+  n_nodes
 }

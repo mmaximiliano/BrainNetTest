@@ -123,7 +123,8 @@ test_that("the naive implementation returns the same structure", {
   pops <- list(A = ctrl, B = dis)
 
   slow <- naive(pops, n_permutations = 200, seed = 321)
-  fast <- identify_critical_links(pops, n_permutations = 200, seed = 321)
+  fast <- identify_critical_links(pops, n_permutations = 200, seed = 321,
+                                  criterion = "original")
 
   expect_s3_class(slow, "critical_links")
   expect_identical(names(slow), names(fast))

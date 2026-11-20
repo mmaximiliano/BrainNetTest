@@ -3,9 +3,11 @@
 #' Generate a Set of Graphs with Similar Community Structures for a Category
 #'
 #' This function generates a list of adjacency matrices representing brain networks
-#' belonging to the same category (e.g., Control group). The generated graphs have
-#' similar community structures but vary slightly in their intra-community and
-#' inter-community connection probabilities to reflect natural variability.
+#' belonging to the same category (e.g., Control group). Every graph has the same
+#' community structure, and each edge is an independent Bernoulli variable with the
+#' within- or between-community probability. By default all graphs share the same
+#' probabilities; optionally, the probabilities of each graph can be shifted at random
+#' (see \code{intra_prob_variation} and \code{inter_prob_variation}).
 #'
 #' @param n_graphs An integer specifying the number of graphs to generate. Default is 10.
 #' @param n_nodes An integer specifying the total number of nodes (brain regions). Default is 100.
@@ -18,10 +20,14 @@
 #'   sets the base probability for the corresponding community. Default is 0.8.
 #' @param base_inter_prob A numeric value between 0 and 1 specifying the base probability
 #'   of an edge existing between nodes from different communities. Default is 0.2.
-#' @param intra_prob_variation A numeric value specifying the maximum variation to apply
-#'   to the intra-community probability for each graph. Default is 0.05.
-#' @param inter_prob_variation A numeric value specifying the maximum variation to apply
-#'   to the inter-community probability for each graph. Default is 0.05.
+#' @param intra_prob_variation A numeric value \eqn{v \ge 0}. If positive, the
+#'   within-community probability of each community is shifted, in every graph, by an
+#'   amount drawn uniformly from \eqn{[-v, v]}, independently for each community and
+#'   each graph (and truncated to \eqn{[0, 1]}). Default is 0: no variation, all
+#'   graphs share the same probabilities.
+#' @param inter_prob_variation A numeric value \eqn{v \ge 0}. If positive, the
+#'   between-community probability of every graph is shifted by an amount drawn
+#'   uniformly from \eqn{[-v, v]}, independently for each graph. Default is 0.
 #' @param seed An optional integer for setting the random seed to ensure reproducibility.
 #'   Default is NULL.
 #'
@@ -36,7 +42,7 @@
 #'                                            base_intra_prob = 0.8, base_inter_prob = 0.2)
 generate_category_graphs <- function(n_graphs = 10, n_nodes = 100, n_communities = 4, community_sizes = NULL,
                                      base_intra_prob = 0.8, base_inter_prob = 0.2,
-                                     intra_prob_variation = 0.05, inter_prob_variation = 0.05, seed = NULL) {
+                                     intra_prob_variation = 0, inter_prob_variation = 0, seed = NULL) {
   if (!is.null(seed)) {
     set.seed(seed)
   }
@@ -87,7 +93,7 @@ generate_category_graphs <- function(n_graphs = 10, n_nodes = 100, n_communities
   graph_list <- vector("list", n_graphs)
   
   for (g in seq_len(n_graphs)) {
-    # Apply slight variations to probabilities
+    # Optional per-graph variation of the probabilities (none by default)
     intra_prob <- base_intra_prob + runif(length(base_intra_prob),
                                           -intra_prob_variation, intra_prob_variation)
     inter_prob <- base_inter_prob + runif(1, -inter_prob_variation, inter_prob_variation)

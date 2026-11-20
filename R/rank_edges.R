@@ -4,8 +4,16 @@
 #'
 #' This function ranks edges based on their p-values obtained from statistical tests,
 #' ordering them from lowest to highest p-value (most to least significant).
+#' The ranking compares the stored p-values directly. For equal values it
+#' uses the optional secondary values, then upper-triangle order (second
+#' endpoint first, then first endpoint).
 #'
 #' @param edge_pvalues A square matrix of p-values for each edge, typically obtained from \code{compute_edge_pvalues}.
+#' @param tie_values Optional square numeric matrix with the same dimensions as
+#'   \code{edge_pvalues} (such as unadjusted marginal p-values when
+#'   \code{edge_pvalues} has been multiplicity-adjusted with
+#'   \code{\link[stats]{p.adjust}}), used to order edges with exactly equal
+#'   primary p-values. Default \code{NULL}.
 #' @return A data frame with edges and their corresponding p-values, ordered from most significant.
 #' @export
 #'
@@ -41,7 +49,18 @@
 #' edge_df <- rank_edges(edge_pvalues)
 #' # View the top ranked edges
 #' head(edge_df)
-rank_edges <- function(edge_pvalues) {
+rank_edges <- function(edge_pvalues, tie_values = NULL) {
+  if (!is.matrix(edge_pvalues) || !is.numeric(edge_pvalues) ||
+      nrow(edge_pvalues) != ncol(edge_pvalues)) {
+    stop("`edge_pvalues` must be a square numeric matrix.", call. = FALSE)
+  }
+  if (!is.null(tie_values) &&
+      (!is.matrix(tie_values) || !is.numeric(tie_values) ||
+       !identical(dim(tie_values), dim(edge_pvalues)))) {
+    stop("`tie_values` must be NULL or a numeric matrix with the same dimensions as `edge_pvalues`.",
+         call. = FALSE)
+  }
+
   # Convert upper triangle of p-value matrix to a vector
   edge_indices <- which(upper.tri(edge_pvalues), arr.ind = TRUE)
   p_values <- edge_pvalues[edge_indices]
@@ -52,12 +71,12 @@ rank_edges <- function(edge_pvalues) {
     node2 = edge_indices[, 2],
     p_value = p_values
   )
-  
-  # Order by p-value ascending (most significant first).  Row names are reset
-  # so that the returned ranking reads 1, 2, 3, ... rather than carrying the
-  # positions the edges happened to occupy before sorting.
-  edge_df <- edge_df[order(edge_df$p_value, decreasing = FALSE), ]
+
+  # The upper triangle is already in endpoint order. Stable sorting preserves
+  # that order when the primary and any supplied secondary values are equal.
+  ord <- if (is.null(tie_values)) order(p_values) else
+    order(p_values, tie_values[edge_indices])
+  edge_df <- edge_df[ord, ]
   rownames(edge_df) <- NULL
-  
-  return(edge_df)
+  edge_df
 }

@@ -4,10 +4,16 @@
 \alias{rank_edges}
 \title{Rank Edges Based on P-Values}
 \usage{
-rank_edges(edge_pvalues)
+rank_edges(edge_pvalues, tie_values = NULL)
 }
 \arguments{
 \item{edge_pvalues}{A square matrix of p-values for each edge, typically obtained from \code{compute_edge_pvalues}.}
+
+\item{tie_values}{Optional square numeric matrix with the same dimensions as
+\code{edge_pvalues} (such as unadjusted marginal p-values when
+\code{edge_pvalues} has been multiplicity-adjusted with
+\code{\link[stats]{p.adjust}}), used to order edges with exactly equal
+primary p-values. Default \code{NULL}.}
 }
 \value{
 A data frame with edges and their corresponding p-values, ordered from most significant.
@@ -15,6 +21,9 @@ A data frame with edges and their corresponding p-values, ordered from most sign
 \description{
 This function ranks edges based on their p-values obtained from statistical tests,
 ordering them from lowest to highest p-value (most to least significant).
+The ranking compares the stored p-values directly. For equal values it
+uses the optional secondary values, then upper-triangle order (second
+endpoint first, then first endpoint).
 }
 \examples{
 # Generate synthetic populations

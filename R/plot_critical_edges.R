@@ -86,14 +86,12 @@
 #' control <- generate_category_graphs(
 #'   n_graphs = 50, n_nodes = 17, n_communities = 5,
 #'   community_sizes = community_sizes,
-#'   base_intra_prob = rep(0.70, 5), base_inter_prob = 0.05,
-#'   intra_prob_variation = 0.02, inter_prob_variation = 0.01)
+#'   base_intra_prob = rep(0.70, 5), base_inter_prob = 0.05)
 #' patient <- generate_category_graphs(
 #'   n_graphs = 50, n_nodes = 17, n_communities = 5,
 #'   community_sizes = community_sizes,
 #'   base_intra_prob = c(0.40, 0.70, 0.70, 0.70, 0.70),
-#'   base_inter_prob = 0.05,
-#'   intra_prob_variation = 0.02, inter_prob_variation = 0.01)
+#'   base_inter_prob = 0.05)
 #' populations <- list(Control = control, Patient = patient)
 #' result <- identify_critical_links(populations, alpha = 0.05,
 #'   method = "fisher", n_permutations = 200, seed = 1)
