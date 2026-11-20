@@ -64,13 +64,7 @@ identify_critical_links_naive <- function(populations,
       names(perm_pops) <- names(pops)
       T_perm[b] <- compute_test_statistic(perm_pops, a = 1)
     }
-    ## The reference sums both triangles, hence twice the allowance used
-    ## for the same number of retained non-constant edges by the optimised path.
-    idx_cur  <- .edge_index(nrow(pops[[1L]][[1L]]))
-    tot_cur  <- colSums(.graph_edge_matrix(pops, idx_cur))
-    n_active <- sum(tot_cur > 0 & tot_cur < n_total)
-    .plus_one_pvalue(c(T_obs, T_perm),
-      2 * .statistic_tolerance(Npop_vec, n_active))
+    .plus_one_pvalue(c(T_obs, T_perm))
   }
 
   ## 2. Global test ---------------------------------------------------------

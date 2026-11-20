@@ -100,8 +100,8 @@ from scratch at every step.
 }
 \details{
 The implementation uses the decomposition of T into per-edge
-  contributions \eqn{\Delta_e}. Cumulative sums give the statistic after
-  each removal without rebuilding the graphs or recomputing distances.
+  contributions \eqn{\Delta_e}. After each removal, the statistic equals
+  the initial total minus the cumulative sum for the removed edges.
   Let n be the total number of graphs, m the number of groups, E the number
   of possible edges, B the number of permutations and K the number of
   removal steps. The dense matrix products for permuted counts cost
@@ -121,9 +121,9 @@ The implementation uses the decomposition of T into per-edge
   All p-values treat the observed data as one more element of the set of
   \eqn{B + 1} values: \eqn{p = (1 + \#\{b : T_b \le T_{obs}\}) / (B + 1)},
   giving \eqn{p \ge 1 / (B + 1)} (Phipson and Smyth, 2010). For the initial
-  global test, the false-positive bound requires exchangeable group labels
-  under the null; see \code{\link{global_test}}. Equal central graphs alone
-  do not ensure this condition.
+  global test, the false-positive bound assumes exact arithmetic and
+  exchangeable group labels under the null. Equal central graphs alone
+  do not ensure this condition. See \code{\link{global_test}}.
 
   With \code{criterion = "combined"}, the global p-value of T and the
   local p-value of U are computed for the observed data and for every
@@ -135,15 +135,16 @@ The implementation uses the decomposition of T into per-edge
   first s ranked edges, U is the smallest raw marginal p-value among the
   remaining edges, evaluated separately for each replicate. The observed
   edge order is held fixed across replicates. For two populations and
-  Fisher's test, the marginal p-values of the replicates are read from a
-  precomputed table of the hypergeometric distribution; otherwise each
-  distinct vector of edge counts is tested once, which is slower. The
-  combined criterion stores an |E| x B matrix of p-values in addition to the
+  Fisher's test, the observed and permuted marginal p-values are read from
+  a hypergeometric lookup table indexed by the total count and the count
+  in the first population. Other methods and tests with more than two
+  populations evaluate each distinct count vector once. The combined
+  criterion stores an |E| x B matrix of p-values in addition to the
   matrix of contributions to T.
 
-  The selected edges are exploratory. Only the initial global test has a
-  guaranteed false-positive rate; the procedure does not establish
-  edge-level family-wise error or false discovery rate control. This is not
+  The selected edges are exploratory. The false-positive bound applies to
+  the initial global test. The procedure does not establish edge-level
+  family-wise error or false discovery rate control. This is not
   because the removal order is learned from the data: step-down procedures
   such as the minimum-p method of Westfall and Young (1993) do the same and
   still control the family-wise error rate (under subset pivotality),
@@ -160,15 +161,12 @@ The implementation uses the decomposition of T into per-edge
   can differ slightly from those of versions up to 0.2.2, which estimated the
   p-value as \eqn{\#\{b : T_b < T_{obs}\} / B}.
 
-  Numerical comparisons include a conservative floating-point allowance
-  derived from the number of retained non-constant edges, group sizes and
-  bounds on the unsigned terms of T. The same allowance is applied to every
-  assignment. The cumulative sums are evaluated in reverse order to avoid
-  cancellation when a large removed prefix leaves a small remainder. Local
-  p-values use only a relative allowance of 64 machine epsilons, with no
-  absolute floor, and canonicalise symmetric contingency counts. Inference
-  uses \code{a = 1} internally: any positive normalisation gives the same
-  ranks.
+  Permutation ranks compare the stored T and U values directly and assign
+  exactly equal values their largest rank. Roundoff can split mathematical
+  ties, particularly in sparse networks, or affect a small residual obtained
+  by subtracting two large totals. This can produce spuriously small
+  p-values and change which edges are selected. When reproducing a result,
+  record the R version and BLAS library as well as the seed.
 }
 \examples{
 \donttest{

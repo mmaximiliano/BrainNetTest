@@ -41,9 +41,7 @@ An object of class \code{"global_test"}: a \code{list} with the
   components
   \describe{
     \item{statistic}{the observed value of T, computed with normalisation
-      constant \code{a = 1}. Numerical comparisons use the
-      permutation-symmetric floating-point allowance described in
-      \code{\link{identify_critical_links}}.}
+      constant \code{a = 1}.}
     \item{p_value}{the permutation \eqn{p} value of the chosen
       \code{criterion}, computed among the \eqn{B + 1} values that include
       the observed one; \code{NA} when the graphs have a single node and
@@ -83,8 +81,10 @@ The statistic T contrasts the mean distance of each graph to its
   permuting the group labels across the pooled sample while preserving the
   group sizes, T is recomputed for each, and
   \eqn{p = (1 + \#\{b : T_b \le T_{obs}\}) / (B + 1)}, which is never below
-  \eqn{1 / (B + 1)}. The combined criterion is described in
-  \code{\link{identify_critical_links}}.
+  \eqn{1 / (B + 1)}. Ties are counted by comparing the stored values
+  directly. On sparse networks, floating-point roundoff can separate
+  mathematically equal statistics and produce spuriously small p-values.
+  See \code{\link{identify_critical_links}} for the combined criterion.
 
   Group labels must be exchangeable under the null: shuffling whole graphs
   must preserve the joint distribution of the observations. Independent
