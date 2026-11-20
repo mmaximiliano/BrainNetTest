@@ -35,9 +35,7 @@
 #'   components
 #'   \describe{
 #'     \item{statistic}{the observed value of T, computed with normalisation
-#'       constant \code{a = 1}. Numerical comparisons use the
-#'       permutation-symmetric floating-point allowance described in
-#'       \code{\link{identify_critical_links}}.}
+#'       constant \code{a = 1}.}
 #'     \item{p_value}{the permutation \eqn{p} value of the chosen
 #'       \code{criterion}, computed among the \eqn{B + 1} values that include
 #'       the observed one; \code{NA} when the graphs have a single node and
@@ -66,8 +64,10 @@
 #'   permuting the group labels across the pooled sample while preserving the
 #'   group sizes, T is recomputed for each, and
 #'   \eqn{p = (1 + \#\{b : T_b \le T_{obs}\}) / (B + 1)}, which is never below
-#'   \eqn{1 / (B + 1)}. The combined criterion is described in
-#'   \code{\link{identify_critical_links}}.
+#'   \eqn{1 / (B + 1)}. Ties are counted by comparing the stored values
+#'   directly. On sparse networks, floating-point roundoff can separate
+#'   mathematically equal statistics and produce spuriously small p-values.
+#'   See \code{\link{identify_critical_links}} for the combined criterion.
 #'
 #'   Group labels must be exchangeable under the null: shuffling whole graphs
 #'   must preserve the joint distribution of the observations. Independent
@@ -149,7 +149,7 @@ global_test <- function(populations, n_permutations = 1000, seed = NULL,
 
   freq  <- compute_edge_frequencies(populations)
   obs   <- .observed_edge_deltas(freq$edge_counts, group_sizes, a = 1)
-  T_obs <- both_triangles * colSums(matrix(obs$deltas, ncol = 1L))[1L]
+  T_obs <- both_triangles * sum(obs$deltas)
 
   if (nrow(obs$indices) == 0L) {
     ## A single node: no edges, every distance is zero and T is identically 0.
@@ -160,11 +160,7 @@ global_test <- function(populations, n_permutations = 1000, seed = NULL,
     C_list  <- .permuted_edge_counts(X, group_sizes, n_permutations)
     T_perm  <- both_triangles *
                colSums(.permuted_edge_deltas(C_list, group_sizes, a = 1))
-    tot_counts <- colSums(X)
-    n_active   <- sum(tot_counts > 0 & tot_counts < sum(group_sizes))
-    tolerance  <- both_triangles *
-      .statistic_tolerance(group_sizes, n_active)
-    p_global <- .plus_one_pvalue(c(T_obs, T_perm), tolerance)
+    p_global <- .plus_one_pvalue(c(T_obs, T_perm))
     p_local  <- U_obs <- NA_real_
     p_value  <- p_global
     if (criterion == "combined") {
@@ -175,7 +171,7 @@ global_test <- function(populations, n_permutations = 1000, seed = NULL,
       U_all   <- c(min(pv$obs), apply(pv$perm, 2, min))
       U_obs   <- U_all[1L]
       p_local <- .plus_one_pvalue(U_all)
-      p_value <- .combined_pvalue(c(T_obs, T_perm), U_all, tolerance)
+      p_value <- .combined_pvalue(c(T_obs, T_perm), U_all)
     }
   }
 
